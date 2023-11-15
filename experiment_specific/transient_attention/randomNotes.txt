@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/Users/ingamaria/transient_attention/HolcombeKristjansson.py", line 12, in <module>
-    from EyelinkEyetrackerForPsychopySUPA3 import EyeLinkCoreGraphicsPsychopy, Tracker_EyeLink #Chris Fajou integration
-  File "/Users/ingamaria/transient_attention/EyelinkEyetrackerForPsychopySUPA3.py", line 24, in <module>
-    class EyeLinkCoreGraphicsPsychopy(pylink.EyeLinkCustomDisplay):# Draw the Calibrating Display
-AttributeError: 'module' object has no attribute 'EyeLinkCustomDisplay'
-
-Developing my experiment with github means others can easily join. Interested in exogenous cuing and motion? https://github.com/alexholcombe/MOTcircular/tree/master/experiment_specific/transient_attention

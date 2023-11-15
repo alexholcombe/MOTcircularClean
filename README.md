@@ -10,8 +10,7 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 
 ## Eyetracking Nov 2023
 
-When does driftCorrect happen?
-Look into how to turn off online drift correction, is it driftcorrect_cr_disable=OFF ?
+Try drift correction and try without it
 
 ## Eyetracking
 
@@ -29,3 +28,5 @@ For fixation report analysis from EDF files, see https://github.com/alexholcombe
 - [Centered vs. peripheral](https://github.com/alexholcombe/MOTcircular/tree/master/experiment_specific/rps_limit), including data
 
 - [Square traj, modulations](https://github.com/alexholcombe/MOTcircular/blob/master/experiment_specific/rps_limit/square.md), including data
+
+- [Transient attention abandoned with Ingrid and Arni](https://github.com/alexholcombe/MOTcircular/tree/master/experiment_specific/transient_attention)
