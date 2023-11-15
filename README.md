@@ -16,7 +16,7 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 ## Eyetracking Nov 2023
 
 When does driftCorrect happen?
-
+Look into how to turn off online drift correction, is it driftcorrect_cr_disable=OFF ?
 
 ## Eyetracking
 

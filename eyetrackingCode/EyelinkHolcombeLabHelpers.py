@@ -25,7 +25,7 @@ GRAY = GREY = (128,128,128)
 BLACK = (0,0,0)
 spath = os.path.dirname(sys.argv[0])
 if len(spath) !=0: os.chdir(spath)
-  
+use_retina = False
  
 class EyeLinkTrack_Holcombe(): 
     def __init__(self, win, clock, sj = "TEST", saccadeSensitivity = HIGH, calibrationType = 'HV9',calibrationTargetColor = WHITE,calibrationBgColor = BLACK, CalibrationSounds = False,screen=(1024,768)):
@@ -59,12 +59,40 @@ class EyeLinkTrack_Holcombe():
         self.tracker = pylink.EyeLink()
         self.timeCorrection = clock.getTime() - self.tracker.trackerTime()
         print("Loading custom graphics")
-        #Initializes Experiment Graphics
-        genv = EyeLinkCoreGraphicsPsychopyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win, screen)
+
+        # Instantiate a graphics environment (genv) just to draw calibration targets on experiment computer screen
+        genv = EyeLinkCoreGraphicsPsychoPyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
+
+        # Set background and foreground colors for calibration
+        foreground_color = (-1, -1, -1)
+        background_color = win.color
+        genv.setCalibrationColors(foreground_color, background_color)
+
+        # The target could be a "circle" (default), a "picture", a "movie" clip,
+        # or a rotating "spiral".
+        genv.setTargetType('circle')
+        # Configure the size of the calibration target (in pixels)
+        genv.setTargetSize(24)
+
+        #Set the calibration settings:
+        #pylink.setCalibrationColors(WHITE, BLACK) # Sets the calibration target and background color(foreground_color, background_color)
+        #AH November 2023 why does the below not work? It says the Psychopy object doesn't have a setCalibrationSounds function, but genv is what's used in eyeTrackerBasedOnPicture.py
+        # if CalibrationSounds:
+        #     genv.setCalibrationSounds("", "", "")
+        #     genv.setDriftCorrectSounds("", "off", "off")
+        # else:
+        #     genv.setCalibrationSounds("off", "off", "off")
+        #     genv.setDriftCorrectSounds("off", "off", "off")
+
+        if use_retina:
+            genv.fixMacRetinaDisplay()
+
+        # Request Pylink to use the genv PsychoPy window we opened above for calibration
         pylink.openGraphicsEx(genv)
-        # opendatafile
+
+        # open data file on eyetracking PC
         self.tracker.openDataFile(self.edfFileName)
-        
+
         #EyeLink Tracker Configuration
         pylink.flushGetkeyQueue();# Initializes the key queue used by getkey(). It may be called at any time to get rid any of old keys from the queue.
         self.tracker.setOfflineMode();#Recommended that first place EyeLink tracker in off-line (idle) mode.
@@ -104,17 +132,13 @@ class EyeLinkTrack_Holcombe():
         
         #self.tracker.setAcceptTargetFixationButton(1) # This programs a specific button for use in drift correction.
         
-          #Set the calibration settings:
-        #pylink.setCalibrationColors(WHITE, BLACK) # Sets the calibration target and background color(foreground_color, background_color)
-        if CalibrationSounds:
-            pylink.setCalibrationSounds("", "", "")
-            pylink.setDriftCorrectSounds("", "off", "off")
-        else:
-            pylink.setCalibrationSounds("off", "off", "off")
-            pylink.setDriftCorrectSounds("off", "off", "off")
-            
+
         print("Beginning tracker setup")
-        self.tracker.doTrackerSetup()
+        try:
+            el_tracker.doTrackerSetup() #This brings up the grey screen and tries to do the calibration, drawing calibration targets
+        except RuntimeError as err:
+            print('ERROR when trying to calibrate:', err)
+            el_tracker.exitCalibration()
  
     def sendMessage(self, msg):
         '''Record a message to the tracker'''
