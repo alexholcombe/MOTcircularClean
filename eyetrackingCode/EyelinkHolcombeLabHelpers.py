@@ -98,7 +98,12 @@ class EyeLinkTrack_Holcombe():
         self.tracker.setOfflineMode();#Recommended that first place EyeLink tracker in off-line (idle) mode.
         self.tracker.sendCommand("screen_pixel_coords =  0 0 %d %d"%( tuple(screen) ))
         self.tracker.setCalibrationType(calibrationType)
-        self.tracker.sendCommand("driftcorrect_cr_disable=OFF") #CF - OFF: turns on drift CORRECT; AUTO: Turns on drift CHECK; ON: Turns off both
+        self.tracker.sendCommand("driftcorrect_cr_disable=AUTO") #OFF: enables drift correction; AUTO: Turns on drift check (not correction); ON: Turns off both
+        #If driftcorrect_cr_disable is OFF, drift correction is enabled and one needs to set a landmark:
+        #self.tracker.sendCommand("online_dcorr_refposn = %d %d"%( tuple(screen/2) ))
+        #I'm not sure if the next line is necessary or not
+        #self.tracker.sendCommand("online_dcorr_button=ON") #ON Next the “Drift Corr” button is enabled onthe Recording Screen by turning it on. The drift correction will be by clicking the button. 
+
         #self.tracker.sendCommand("generate_default_targets = NO") 
         #self.tracker.sendCommand("calibration_targets = 512,384 512,417 512,351 402,384 622,384 402,417 622,417 402,351 622,351")
         #self.tracker.sendCommand("validation_targets = 512,384 512,417 512,351 402,384 622,384 402,417 622,417 402,351 622,351")
