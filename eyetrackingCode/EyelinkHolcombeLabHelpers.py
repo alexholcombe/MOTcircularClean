@@ -1,9 +1,9 @@
-
-# EyeLinkForPsychopyInSUPA.py
+# EyeLinkHolcombeLabHelpers.py
 #
-# Copyright (C) 2011 Wing (Wei-Ying Chen)  modified from pylink ATI and open source code
+# Started 2011 Wing (Wei-Ying Chen), modified from pylink ATI and open source code
 # Modified by Chris Fajou, pre-April 2015.
-# Provides a standard set of functions for using an eye tracker that allows experiment code to be simple and tracker agnostic.( For EyeLink1000)
+# Modified by Alex, November 2023
+# Provides functions for using an eye tracker that allows experiment code to be simple and For EyeLink1000
 
 import pylink
 import sys, os, gc
@@ -20,90 +20,9 @@ GRAY = GREY = (128,128,128)
 BLACK = (0,0,0)
 spath = os.path.dirname(sys.argv[0])
 if len(spath) !=0: os.chdir(spath)
+  
  
-class EyeLinkCoreGraphicsPsychopy(pylink.EyeLinkCustomDisplay):# Draw the Calibrating Display
-    def __init__(self, tracker, display, displaySize):
-        '''Initialize a Custom EyeLinkCoreGraphics for Psychopy 
-        tracker: the TRACKER() object
-        display: the Psychopy display window'''
-        pylink.EyeLinkCustomDisplay.__init__(self)
-        self.display = display
-        self.displaySize = displaySize
-        self.tracker = tracker
-        self.mouse = event.Mouse(visible=False)
-        self.target = visual.PatchStim(display, tex = None, mask = 'circle',units='pix', pos=(0,0),size=(6,6), color = [1,1,1] ) # calibrating dot
-        print("Finished initializing custom graphics")
- 
-    def setup_cal_display(self):
-        '''This function is called just before entering calibration or validation modes'''
-        self.display.flip()
-    def exit_cal_display(self):
-        '''This function is called just before exiting calibration/validation mode'''
-        self.display.flip()
-    def record_abort_hide(self):
-        '''This function is called if aborted'''
-        pass
-    def clear_cal_display(self):
-        '''Clear the calibration display'''
-        self.display.flip()
-    def erase_cal_target(self):
-        '''Erase the calibration or validation target drawn by previous call to draw_cal_target()'''
-        self.display.flip()
-    def draw_cal_target(self, x, y):
-        '''Draw calibration/validation target'''
-        self.target.setPos((x - 0.5*self.displaySize[0], 0.5*self.displaySize[1] - y))
-        self.target.draw()
-        self.display.flip()
-    def play_beep(self, beepid):
-        ''' Play a sound during calibration/drift correct.'''
-        pass
-    def draw_line(self, x1,y1,x2,y2,colorindex):
-        '''Draw a line to the display screen. This is used for drawing crosshairs'''
-        color = self.getColorFromIndex(colorindex)
-        line = visual.ShapeStim(self.display, vertices = ( (x1,y1),(x2,y2) ),lineWidth=1.0, lineColor=color )
-        line.draw()
-    def draw_losenge(self, x,y,width,height,colorindex):
-        '''Draw the cross hair at (x,y) '''
-        color = self.getColorFromIndex(colorindex)
-    def get_mouse_state(self):
-        '''Get the current mouse position and status'''
-        pos = self.mouse.getPos()
-        state = self.mouse.getPressed()[0]
-    def get_input_key(self):
-        '''Check the event buffer for special keypresses'''
-        k= event.getKeys([])
-    def exit_image_display(self):
-        '''Called to end camera display'''
-        self.display.flip()
-    def alert_printf(self,msg):
-        '''Print error messages.'''
-    def setup_image_display(self, width, height):
-        self.display.flip()
-    def image_title(self, text):
-        '''Draw title text at the top of the screen for camera setup'''
-        title = visual.TextStim(self.display, text = text, pos=(-10,0), units=cm)
-        title.draw()
-        self.display.flip()
-        title.draw()
-    def draw_image_line(self, width,line, totlines, buff):
-        '''Display image given pixel by pixel'''
-        pass 
-    def set_image_palette(self, r,g,b): 
-        '''Given a set of RGB colors, create a list of 24bit numbers representing the pallet.
-        I.e., RGB of (1,64,127) would be saved as 82047, or the number 00000001 01000000 011111111'''
-        self.imagebuffer = array.array('l')
-        self.clear_cal_display()
-        sz = len(r)
-        i =0
-        self.pal = []
-        while i < sz:
-            rf = int(b[i])
-            gf = int(g[i])
-            bf = int(r[i])
-            self.pal.append((rf<<16) |  (gf<<8) | (bf)) 
-            i = i+1        
- 
-class Tracker_EyeLink(): 
+class EyeLinkTrack_Holcombe(): 
     def __init__(self, win, clock, sj = "TEST", saccadeSensitivity = HIGH, calibrationType = 'HV9',calibrationTargetColor = WHITE,calibrationBgColor = BLACK, CalibrationSounds = False,screen=(1024,768)):
         '''win: psychopy visual window used for the experiment
           clock: psychopy time clock recording time for whole experiment
