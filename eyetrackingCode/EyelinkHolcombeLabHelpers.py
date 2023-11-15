@@ -6,7 +6,12 @@
 # Provides functions for using an eye tracker that allows experiment code to be simple and For EyeLink1000
 
 import pylink
-import sys, os, gc
+try:
+    from eyetrackingCode import EyeLinkCoreGraphicsPsychoPyHolcombeLab #imports from eyetrackingCode subfolder the file provided by Eyelink
+except Exception as e:
+    print("An exception occurred in EyelinkHolcombeLabHelpers.py:",str(e))
+    print('Could not import EyeLinkCoreGraphicsPsychoPyHolcombeLab.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+import sys, os, gc, string
 from psychopy import visual, info, misc, monitors, event, core
 from numpy import array, hstack
  
@@ -40,20 +45,29 @@ class EyeLinkTrack_Holcombe():
             One of: BLACK, WHITE, GRAY
         calibrationSounds:
             True: enable feedback sounds when calibrating'''
-        self.edfFileName = str(sj)+".EDF"   # Subject name only can put 8 characters
+        self.edfFileName = str(sj)+".EDF"   # EDF filename on tracker machine can only be 8 characters!
+        # check if the filename is valid (length <= 8 & no special char)
+        allowed_char = string.ascii_letters + string.digits + '_' + '.'
+        if not all([c in allowed_char for c in self.edfFileName]):
+            print('ERROR: Invalid EDF filename characters in',self.edfFileName)
+        if len(edf_fname) > 8:
+            print('ERROR: EDF eyetracker machine filename should not exceed 8 characters, shortening it to first eight:',
+                   self.edfFileName[0:8])
+            self.edfFileName = self.edfFileName[0:8]
+        print("Eyetracker PC filename will be:",self.edfFileName)
         print("Connecting to eyetracker.")
         self.tracker = pylink.EyeLink()
         self.timeCorrection = clock.getTime() - self.tracker.trackerTime()
         print("Loading custom graphics")
         #Initializes Experiment Graphics
-        genv = EyeLinkCoreGraphicsPsychopy(self.tracker, win, screen)
+        genv = EyeLinkCoreGraphicsPsychopyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win, screen)
         pylink.openGraphicsEx(genv)
         # opendatafile
         self.tracker.openDataFile(self.edfFileName)
         
         #EyeLink Tracker Configuration
         pylink.flushGetkeyQueue();# Initializes the key queue used by getkey(). It may be called at any time to get rid any of old keys from the queue.
-        self.tracker.setOfflineMode();#Places EyeLink tracker in off-line (idle) mode. Wait till the tracker has finished the mode transition
+        self.tracker.setOfflineMode();#Recommended that first place EyeLink tracker in off-line (idle) mode.
         self.tracker.sendCommand("screen_pixel_coords =  0 0 %d %d"%( tuple(screen) ))
         self.tracker.setCalibrationType(calibrationType)
         self.tracker.sendCommand("driftcorrect_cr_disable=OFF") #CF - OFF: turns on drift CORRECT; AUTO: Turns on drift CHECK; ON: Turns off both
@@ -146,12 +160,17 @@ class EyeLinkTrack_Holcombe():
             self.tracker.enableAutoCalibration()
             while True:
                 try:
-                    error = self.tracker.doDriftCorrect(widthPix/2,heightPix/2,1,1) # 0: the fixation target must be drawn by the user
+                    # Eyelink recommends drift-check at the beginning of each trial
+                    # the doDriftCorrect() function requires target position in integers
+                    # the last two arguments:
+                    # draw_target (1-default, 0-you draw the target then call doDriftCorrect)
+                    # allow_setup (1-press ESCAPE to recalibrate, 0-not allowed)                    
+                    error = self.tracker.doDriftCorrect(widthPix/2,heightPix/2,1,1) 
                     if error != 27:
                         #self.tracker.applyDriftCorrect
                         break
                     else:
-                        self.tracker.doTrackerSetup() #this does the actual calibration?
+                        self.tracker.doTrackerSetup() #this starts the actual calibration, bringing up the gray calibration screen
                 except:
                     print("Exception")
                     break

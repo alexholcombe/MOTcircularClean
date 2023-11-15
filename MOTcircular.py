@@ -25,11 +25,11 @@ try:
     from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder.
     #EyeLinkTrack_Holcombe class originally created by Chris Fajou to combine lots of eyelink commands to create simpler functions
 except Exception as e:
-    print("An exception occurred: {str(e)}")
+    print("An exception occurred:",str(e))
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 
 from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTargets, LCM, gcd
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the Windows machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the Windows machine over the ethernet cable, 
 #usually better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 
 quitFinder = False #Not sure this works
@@ -690,7 +690,7 @@ ts = list();
 
 if eyetracking:
     EDF_fname_local=('EyeTrack_'+subject+'_'+timeAndDateStr+'.EDF')
-    my_tracker = EyeLinkTrack_Holcombe(myWin,trialClock,subject,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
+    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,subject,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
 
 randomStartAngleEachRing = True
 randomInitialDirExceptRing0 = True
