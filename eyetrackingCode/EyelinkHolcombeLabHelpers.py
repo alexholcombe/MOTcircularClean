@@ -64,37 +64,44 @@ class EyeLinkTrack_Holcombe():
             core.quit()
                 
         self.timeCorrection = clock.getTime() - self.tracker.trackerTime()
-        print("Loading custom graphics")
 
-        # Instantiate a graphics environment (genv) just to draw calibration targets on experiment computer screen
-        genv = EyeLinkCoreGraphicsPsychoPyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
-
-        # Set background and foreground colors for calibration
-        foreground_color = (-1, -1, -1)
-        background_color = win.color
-        genv.setCalibrationColors(foreground_color, background_color)
-
-        # The target could be a "circle" (default), a "picture", a "movie" clip,
-        # or a rotating "spiral".
-        genv.setTargetType('circle')
-        # Configure the size of the calibration target (in pixels)
-        genv.setTargetSize(24)
-
-        #Set the calibration settings:
-        #pylink.setCalibrationColors(WHITE, BLACK) # Sets the calibration target and background color(foreground_color, background_color)
-        #AH November 2023 why does the below not work? It says the Psychopy object doesn't have a setCalibrationSounds function, but genv is what's used in eyeTrackerBasedOnPicture.py
-        # if CalibrationSounds:
-        #     genv.setCalibrationSounds("", "", "")
-        #     genv.setDriftCorrectSounds("", "off", "off")
-        # else:
-        #     genv.setCalibrationSounds("off", "off", "off")
-        #     genv.setDriftCorrectSounds("off", "off", "off")
-
-        if use_retina:
-            genv.fixMacRetinaDisplay()
-
-        # Request Pylink to use the genv PsychoPy window we opened above for calibration
-        pylink.openGraphicsEx(genv)
+        print("Trying to enable Eyelink to draw calibration targets by creating or linking to graphics window")
+        oldSchoolWayOfEyelinkDrawingToScreen = False
+        if oldSchoolWayOfEyelinkDrawingToScreen:
+            # Instantiate a graphics environment (genv) just to draw calibration targets on experiment computer screen
+            genv = EyeLinkCoreGraphicsPsychoPyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
+    
+            # Set background and foreground colors for calibration
+            foreground_color = (-1, -1, -1)
+            background_color = win.color
+            genv.setCalibrationColors(foreground_color, background_color)
+    
+            # The target could be a "circle" (default), a "picture", a "movie" clip,
+            # or a rotating "spiral".
+            genv.setTargetType('circle')
+            # Configure the size of the calibration target (in pixels)
+            genv.setTargetSize(24)
+    
+            #Set the calibration settings:
+            #pylink.setCalibrationColors(WHITE, BLACK) # Sets the calibration target and background color(foreground_color, background_color)
+            #AH November 2023 why does the below not work? It says the Psychopy object doesn't have a setCalibrationSounds function, but genv is what's used in eyeTrackerBasedOnPicture.py
+            # if CalibrationSounds:
+            #     genv.setCalibrationSounds("", "", "")
+            #     genv.setDriftCorrectSounds("", "off", "off")
+            # else:
+            #     genv.setCalibrationSounds("off", "off", "off")
+            #     genv.setDriftCorrectSounds("off", "off", "off")
+    
+            if use_retina:
+                genv.fixMacRetinaDisplay()
+    
+            # Request Pylink to use the genv PsychoPy window we opened above for calibration
+            pylink.openGraphicsEx(genv)
+        else:
+            #More modern way of doing it? Tries to use existing graphics window opened by Psychopy
+            #If there is already an active Pygame window, Pylink will use it for calibration when we call pylink.openGraphics().
+            pylink.openGraphics()  
+            #pygame.display.set_mode((SCN_W, SCN_H), DOUBLEBUF | FULLSCREEN) #https://link.springer.com/chapter/10.1007/978-3-030-82635-2_4#Sec15
 
         # open data file on eyetracking PC
         self.tracker.openDataFile(self.edfFileName)
@@ -143,13 +150,12 @@ class EyeLinkTrack_Holcombe():
         
         #self.tracker.setAcceptTargetFixationButton(1) # This programs a specific button for use in drift correction.
         
-
         print("Beginning tracker setup")
         try:
-            el_tracker.doTrackerSetup() #This brings up the grey screen and tries to do the calibration, drawing calibration targets
+            self.tracker.doTrackerSetup() #This brings up the grey screen and tries to do the calibration, drawing calibration targets
         except RuntimeError as err:
             print('ERROR when trying to calibrate:', err)
-            el_tracker.exitCalibration()
+            self.tracker.exitCalibration()
  
     def sendMessage(self, msg):
         '''Record a message to the tracker'''

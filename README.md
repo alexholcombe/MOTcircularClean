@@ -12,6 +12,12 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 
 Try drift correction and try without it
 
+On Alex's Mac, it never connects to the eye tracker, like an ethernet problem.
+
+On Joshua's Win laptop, the sounds crash if I use the old genv way of allowing the Eyelink to draw the calibration targets, but not if I use the             pylink.openGraphics()  
+
+On Joshua's Win laptop, if oldSchoolWayOfEyelinkDrawingToScreen=False, then Eyelink successfully starts drawing the calibration targets, but it never goes back to drawing the experiment stimuli and it seems to be a separate graphics window, as revealed by 
+
 ## Eyetracking
 
 
