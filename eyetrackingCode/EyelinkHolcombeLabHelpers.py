@@ -6,7 +6,7 @@
 # Provides functions for using an eye tracker that allows experiment code to be simple and For EyeLink1000
 
 import pylink
-try:
+try: #This only works if the code executing is one folder up, making eyetrackingCode a sub-folder
     from eyetrackingCode import EyeLinkCoreGraphicsPsychoPyHolcombeLab #imports from eyetrackingCode subfolder the file provided by Eyelink
 except Exception as e:
     print("An exception occurred in EyelinkHolcombeLabHelpers.py:",str(e))
@@ -50,13 +50,19 @@ class EyeLinkTrack_Holcombe():
         allowed_char = string.ascii_letters + string.digits + '_' + '.'
         if not all([c in allowed_char for c in self.edfFileName]):
             print('ERROR: Invalid EDF filename characters in',self.edfFileName)
-        if len(edf_fname) > 8:
-            print('ERROR: EDF eyetracker machine filename should not exceed 8 characters, shortening it to first eight:',
-                   self.edfFileName[0:8])
+        if len(self.edfFileName) > 8:
+            print('ERROR: EDF eyetracker machine filename should not exceed 8 characters, shortening it to first eight:',self.edfFileName[0:8])
             self.edfFileName = self.edfFileName[0:8]
         print("Eyetracker PC filename will be:",self.edfFileName)
+        
         print("Connecting to eyetracker.")
-        self.tracker = pylink.EyeLink()
+        try:
+            self.tracker = pylink.EyeLink() #pylink.EyeLink('100.1.1.1')
+        except RuntimeError as err:
+            fix = '\nFailed to connect to eyetracker. Try checking ethernet connection and the IP address of the stimulus presentation PC!'
+            print(err, fix)
+            core.quit()
+                
         self.timeCorrection = clock.getTime() - self.tracker.trackerTime()
         print("Loading custom graphics")
 
