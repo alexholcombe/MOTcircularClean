@@ -7,7 +7,7 @@
 
 import pylink
 try: #This only works if the code executing is one folder up, making eyetrackingCode a sub-folder
-    from eyetrackingCode import EyeLinkCoreGraphicsPsychoPyHolcombeLab #imports from eyetrackingCode subfolder the file provided by Eyelink
+    from eyetrackingCode import EyeLinkCoreGraphicsPsychoPy #imports from eyetrackingCode subfolder the file provided by Eyelink
 except Exception as e:
     print("An exception occurred in EyelinkHolcombeLabHelpers.py:",str(e))
     print('Could not import EyeLinkCoreGraphicsPsychoPyHolcombeLab.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
@@ -69,7 +69,8 @@ class EyeLinkTrack_Holcombe():
         oldSchoolWayOfEyelinkDrawingToScreen = False
         if oldSchoolWayOfEyelinkDrawingToScreen:
             # Instantiate a graphics environment (genv) just to draw calibration targets on experiment computer screen
-            genv = EyeLinkCoreGraphicsPsychoPyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
+            genv = EyeLinkCoreGraphicsPsychoPy.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
+            #genv = EyeLinkCoreGraphicsPsychoPyHolcombeLab.EyeLinkCoreGraphicsPsychoPy(self.tracker, win)
     
             # Set background and foreground colors for calibration
             foreground_color = (-1, -1, -1)
@@ -94,7 +95,6 @@ class EyeLinkTrack_Holcombe():
     
             if use_retina:
                 genv.fixMacRetinaDisplay()
-    
             # Request Pylink to use the genv PsychoPy window we opened above for calibration
             pylink.openGraphicsEx(genv)
         else:
