@@ -3,7 +3,7 @@ __author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be si
 ###For set-up on a new machine, some variables to consider
 ###
 ### useClock
-### For set-up of new experiment variant, variables to consider: 
+### For setup of new experiment variant, variables to consider: 
 ### trialDurMin, trackVariableIntervMax
 ##############
 import psychopy.info
@@ -17,11 +17,6 @@ from math import atan, pi, cos, sin, sqrt, ceil
 import time, random, sys, platform, os, gc, io #io is successor to StringIO
 
 try:
-    from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder the file provided by Eyelink
-except Exception as e:
-    print("An exception occurred: {str(e)}")
-    print('Could not import EyeLinkCoreGraphicsPsychoPyHolcombeLab.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
-try:
     from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder.
     #EyeLinkTrack_Holcombe class originally created by Chris Fajou to combine lots of eyelink commands to create simpler functions
 except Exception as e:
@@ -29,21 +24,22 @@ except Exception as e:
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 
 from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTargets, LCM, gcd
-eyetracking = True; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the Windows machine over the ethernet cable, 
-#usually better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+#sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 
-quitFinder = False #Not sure this works
+quitFinder = False #This doesn't work anymore
 if quitFinder:
     applescript="\'tell application \"Finder\" to quit\'" #quit Finder.
     shellCmd = 'osascript -e '+applescript
     os.system(shellCmd)
-process_priority = 'realtime' # 'normal' 'high' or 'realtime'
+process_priority = 'realtime' # 'normal' 'high' or 'realtime', but don't know if this works
 disable_gc = True
 
 subject='test'#'test'
 autoLogging = False
+quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot=False
+autopilot= False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -55,21 +51,26 @@ respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
 numRings=3
-radii=[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
+radii=[1,2,3] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=1; scrn=0
+fullscr=0; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
+resolutionOfScreens = subprocess.check_output("system_profiler SPDisplaysDataType | grep -i 'Resolution'",shell=True)
+print("resolution of screens reported by system_profiler = ",resolutionOfScreens)
 if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shell=True) == 0:
     has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
-# create a dialog from dictionary 
+dlgBoxTitle = 'MOT'
+if has_retina_scrn:
+    dlgBoxTitle = 'MOT (and at least one screen is Retina screen)'
+# create a dialog box from dictionary 
 infoFirst = { 'Autopilot':autopilot, 'Check refresh etc':True, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
-    title='MOT', 
+    title=dlgBoxTitle, 
     order=['Autopilot','Check refresh etc', 'Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
     tip={'Check refresh etc': 'To confirm refresh rate and that can keep up, at least when drawing a grating',
             'Screen to use': '0 means primary screen, 1 means second screen'},
@@ -89,8 +90,8 @@ trackingExtraTime=1.0; #giving the person time to attend to the cue (secs). This
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo:trialDurMin = 5;refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
-rampUpDur=0; #duration of speed ramp from stationary, during cue
-rampDownDur=0 #duration of speedramp down to the end of the trial
+cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
+cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
 
 def maxTrialDur():
     return( trialDurMin+trackingExtraTime+trackVariableIntervMax)
@@ -106,10 +107,10 @@ def getReversalTimes():
             reversalTimesEachRing[r].append(thisReversalDur)
     return reversalTimesEachRing
     
-toTrackCueDur = rampUpDur+rampDownDur+trackingExtraTime  #giving the person time to attend to the cue (secs)
+cueDur = cueRampUpDur+cueRampDownDur+trackingExtraTime  #giving the person time to attend to the cue (secs)
 trialDurFrames=int(trialDurMin*refreshRate)+int( trackingExtraTime*refreshRate )
-rampUpFrames = refreshRate*rampUpDur;   rampDownFrames = refreshRate*rampDownDur;
-ShowTrackCueFrames = int( refreshRate*toTrackCueDur )
+rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampDownDur;
+cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8
 mouseChoiceArea = ballStdDev*0.8 # origin =1.3
@@ -119,8 +120,8 @@ timeTillReversalMax = 1.5# 1.3 #2.9
 colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (all identical) in a ring. Need as many as max num objects in a ring
 cueColor = np.array([1,1,1])
 #monitor parameters
-widthPixRequested = 800 #1440  #monitor width in pixels
-heightPixRequested =600  #900 #monitor height in pixels
+widthPixRequested = 3200 #1440  #monitor width in pixels
+heightPixRequested =1800  #900 #monitor height in pixels
 monitorwidth = 30; #38.5 #monitor width in centimeters
 viewdist = 57.; #cm
 bgColor = [-1,-1,-1] #black background
@@ -299,12 +300,13 @@ fixationPoint = visual.PatchStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circ
 NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextRemindPctDoneText = visual.TextStim(myWin,pos=(-.1, -.4),colorSpace='rgb',color= (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextRemindCountText = visual.TextStim(myWin,pos=(.1, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
+speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',text="0.00rps",autoLog=False)
 
 stimList = []
 # temporalfrequency limit test
-numObjsInRing =         [  2,                    8        ]
-speedsEachNumObjs =  [ [0.1, 0.5], [0.1, 0.5 ] ]   #[ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ]     #dont want to go faster than 2 because of blur problem
-numTargets = np.array([2,3])  # np.array([1,2,3])
+numObjsInRing =         [  10,                   10        ]
+speedsEachNumObjs =  [[1.0], [1.0]] # [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ]     #dont want to go faster than 2 because of blur problem
+numTargets = np.array([2,3])
 
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
@@ -373,7 +375,7 @@ logF = io.StringIO()  #kludge so I dont have to change all the print >>logF stat
 msg = 'numtrials='+ str(trials.nTotal)+', trialDurMin= '+str(trialDurMin)+ ' trackVariableIntervMax= '+ str(trackVariableIntervMax) + 'refreshRate=' +str(refreshRate)     
 logging.info( msg )
 print(msg)
-msg = 'rampUpDur=' + str(rampUpDur) + ' rampDownDur= ' + str(rampDownDur) + ' secs'
+msg = 'cueRampUpDur=' + str(cueRampUpDur) + ' cueRampDownDur= ' + str(cueRampDownDur) + ' secs'
 print(msg, file=logF);
 logging.info( logF.getvalue() )
 logging.info('task='+'track'+'   respType='+respType)
@@ -469,7 +471,7 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
     angleMove = initialDirectionEachRing[numRing] * speed*2*pi*(thisFrameN-lastFrameN) / refreshRate
     return angleMove
 
-def oneFrameOfStim(thisTrial,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobToCueEachRing,isReversed,reversalNumEachRing,ShowTrackCueFrames): 
+def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
       global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes python treat it as a local variable
       global angleIniEachRing, correctAnswers
@@ -492,11 +494,6 @@ def oneFrameOfStim(thisTrial,currFrame,clock,useClock,offsetXYeachRing,initialDi
         fixationBlank.draw()
       fixationPoint.draw()
       for numRing in range(numRings):
-        speed = thisTrial['speed']
-        if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
-            perimeter = radii[numRing]*4.0
-            circum = 2*pi*radii[numRing]
-            speed = thisTrial['speed'] * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
         angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
         currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
         angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
@@ -520,8 +517,8 @@ def oneFrameOfStim(thisTrial,currFrame,clock,useClock,offsetXYeachRing,initialDi
             x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
-            if n< ShowTrackCueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
-                weightToTrueColor = n*1.0/ShowTrackCueFrames #compute weighted average to ramp from white to correct color
+            if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
+                weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
                 blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
                 blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
                 #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
@@ -530,6 +527,9 @@ def oneFrameOfStim(thisTrial,currFrame,clock,useClock,offsetXYeachRing,initialDi
             gaussian.setColor( blobColor, log=autoLogging )
             gaussian.setPos([x,y])
             gaussian.draw()
+      if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
+        speedText.setText( str(round(currentSpeed,1)) )
+        speedText.draw()
       if blindspotFill:
           blindspotStim.draw()
       return angleIniEachRing,currAngle,isReversed,reversalNumEachRing   
@@ -697,11 +697,24 @@ randomInitialDirExceptRing0 = True
 oppositeInitialDirFirstTwoRings = True
 
 while trialNum < trials.nTotal and expStop==False:
-    accelerateComputer(1,process_priority, disable_gc) 
-
+    accelerateComputer(1,process_priority, disable_gc) #I don't know if this does anything
+    if quickMeasurement:
+        maxSpeed = 1.0; numObjects = 10; numTargets = 3
+        # create a dialog box from dictionary 
+        infoFirst = { 'maxSpeed':maxSpeed, 'numObjects':numObjects, 'numTargets':numTargets  }
+        manualParams = psychopy.gui.DlgFromDict(dictionary=infoFirst, title='Quick speed limit measurement', 
+            order=['maxSpeed','numObjects', 'numTargets'], 
+            tip={'Maximum speed for speed ramp': 'How many objects','How many targets': 'no more than 3'}
+            )
+        maxSpeed = infoFirst['maxSpeed']
+        numObjects = infoFirst['numObjects']
+        numTargets = infoFirst['numTargets']
+    if not OK.OK:
+        print('User cancelled from dialog box'); core.quit()
+    
     if not queryEachRingEquallyOften: #then need to randomly set ringToQuery and whichIsTargetEachRing
         #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
-        rings = list( range(numRings) )
+        rings = list(range(numRings) )
         random.shuffle(rings)
         whichRingsHaveTargets = rings[ 0:thisTrial['numTargets'] ]
         print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
@@ -759,18 +772,33 @@ while trialNum < trials.nTotal and expStop==False:
     stimClock.reset()
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
     
+    speed = thisTrial['speed']
+    currentSpeed = speed #In normal experiment, no speed ramp
+    
+    if quickMeasurement: #in quick measurement mode
+        speed = maxSpeed
+        currentSpeed = 0.01
+        speedRampStep = 0.01
+        print('currentSpeed =',round(currentSpeed,2))
+    
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
         offsetXYeachRing=[ [0,0],[0,0],[0,0] ]
+        if (currentSpeed < speed):
+            currentSpeed = currentSpeed + speedRampStep
+        if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
+            perimeter = radii[numRing]*4.0
+            circum = 2*pi*radii[numRing]
+            finalspeed = thisTrial['speed'] * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
-            oneFrameOfStim(thisTrial,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,ShowTrackCueFrames) #da big function
+            oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
 
         if exportImages:
             myWin.getMovieFrame(buffer='back') #for later saving
             framesSaved +=1
         myWin.flip(clearBuffer=True)
         
-        #time management
+        #time management. Record how long this frame was. Later, check if it was longer than the refresh rate.
         t=trialClock.getTime()-t0;
         ts.append(t);
         if useClock: #Rather than necessarily showing every frame, allowing for skipped frames by showing frame that is correct for this time.
@@ -951,6 +979,7 @@ while trialNum < trials.nTotal and expStop==False:
                     waitingForKeypress=False
         myWin.clearBuffer()
         thisTrial = trials.next()
+        
     core.wait(.1); time.sleep(.1)
     #end trials loop  ###########################################################
 if expStop == True:

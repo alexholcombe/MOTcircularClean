@@ -10,7 +10,7 @@ try: #This only works if the code executing is one folder up, making eyetracking
     from eyetrackingCode import EyeLinkCoreGraphicsPsychoPy #imports from eyetrackingCode subfolder the file provided by Eyelink
 except Exception as e:
     print("An exception occurred in EyelinkHolcombeLabHelpers.py:",str(e))
-    print('Could not import EyeLinkCoreGraphicsPsychoPyHolcombeLab.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+    print('Could not import EyeLinkCoreGraphicsPsychoPy.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 import sys, os, gc, string
 from psychopy import visual, info, misc, monitors, event, core
 from numpy import array, hstack
