@@ -1,4 +1,4 @@
-__author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be silently removed, single quotes will be left, eg, O'Connor
+#  __author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be silently removed, single quotes will be left, eg, O'Connor
 ############################################################
 ###For set-up on a new machine, some variables to consider
 ###
@@ -6,6 +6,7 @@ __author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be si
 ### For setup of new experiment variant, variables to consider: 
 ### trialDurMin, trackVariableIntervMax
 ##############
+import pylink
 import psychopy.info
 from psychopy import sound, monitors, logging, visual, data, core
 useSound=True
@@ -24,7 +25,7 @@ except Exception as e:
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 
 from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTargets, LCM, gcd
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 
 quitFinder = False #This doesn't work anymore
@@ -51,12 +52,12 @@ respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
 numRings=3
-radii=[1,2,3] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
+radii=[2.19,8.33,13.16] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=0; scrn=1
+fullscr=1; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
@@ -120,10 +121,10 @@ timeTillReversalMax = 1.5# 1.3 #2.9
 colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (all identical) in a ring. Need as many as max num objects in a ring
 cueColor = np.array([1,1,1])
 #monitor parameters
-widthPixRequested = 3200 #1440  #monitor width in pixels
-heightPixRequested =1800  #900 #monitor height in pixels
-monitorwidth = 30; #38.5 #monitor width in centimeters
-viewdist = 57.; #cm
+widthPixRequested = 800 #1440  #monitor width in pixels
+heightPixRequested = 600  #900 #monitor height in pixels
+monitorwidth = 38; #30  38.5 #monitor width in centimeters
+viewdist = 50.; #57 cm
 bgColor = [-1,-1,-1] #black background
 monitorname = 'testMonitor' # 'mitsubishi' #in psychopy Monitors Center
 if exportImages:
@@ -301,7 +302,18 @@ NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anc
 NextRemindPctDoneText = visual.TextStim(myWin,pos=(-.1, -.4),colorSpace='rgb',color= (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextRemindCountText = visual.TextStim(myWin,pos=(.1, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',text="0.00rps",autoLog=False)
-
+if useSound: 
+    ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
+    soundDir = 'sounds'
+    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9)
+    respPromptSounds = [-99] * len(ringQuerySoundFileNames)
+    for i in range(len(ringQuerySoundFileNames)):
+        soundFileName = ringQuerySoundFileNames[i]
+        soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
+        respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2)
+    corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
+    corrSound = sound.Sound(corrSoundPathAndFile)
+    
 stimList = []
 # temporalfrequency limit test
 numTargets =                                [2,                 3]
@@ -543,13 +555,13 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 
 showclickableRegions = True
 showClickedRegion = False
-def collectResponses(thisTrial,n,responses,responsesAutopilot,offsetXYeachRing,respRadius,currAngle,expStop ):
+def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop ):
     optionSets=numRings
     #Draw/play response cues
     timesRespPromptSoundPlayed=0
     if timesRespPromptSoundPlayed<1: #2
         if numRings > 1:
-            if useSound: respPromptSound.play()
+            if useSound: respPromptSounds[respPromptSoundFileNum].play()
         timesRespPromptSoundPlayed +=1
     #respText.draw()
 
@@ -763,7 +775,8 @@ while trialNum < trials.nTotal and expStop==False:
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
             #and calibrate. Does this allow it to draw on the screen for the calibration?
-
+        pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of 2023, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
+        
     fixatnPeriodFrames = int(   (np.random.rand(1)/2.+0.8)   *refreshRate)  #random interval between x and x+800ms
     for i in range(fixatnPeriodFrames):
         if i%2:
@@ -864,12 +877,12 @@ while trialNum < trials.nTotal and expStop==False:
     ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
     soundDir = 'sounds'
     if numRings==3:
-        soundFileNum = thisTrial['ringToQuery']
+        respPromptSoundFileNum = thisTrial['ringToQuery']
     else: #eg if numRings==2:
-        soundFileNum = thisTrial['ringToQuery']*2 #outer, not middle for ring==1
+        respPromptSoundFileNum = thisTrial['ringToQuery']*2 #outer, not middle for ring==1
     
     if useSound:
-        respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ soundFileNum ])
+        respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ respPromptSoundFileNum ])
         respPromptSound = sound.Sound(respPromptSoundPathAndFile, secs=.2)
         corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
         corrSound = sound.Sound(corrSoundPathAndFile)
@@ -878,7 +891,7 @@ while trialNum < trials.nTotal and expStop==False:
 
     responses = list();  responsesAutopilot = list()
     responses,responsesAutopilot,respondedEachToken,expStop = \
-            collectResponses(thisTrial,n,responses,responsesAutopilot,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
+            collectResponses(thisTrial,n,responses,responsesAutopilot,respPromptSoundFileNum,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
     #print("responses=",responses,";respondedEachToken=",respondedEachToken,"expStop=",expStop) 
     core.wait(.1)
     if exportImages:  #maybe catch one frame of response
