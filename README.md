@@ -8,22 +8,27 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 -Improve anonymisation algorithm
 
 
-## Eyetracking Nov 2023
-
-Try drift correction and try without it
-
-On Alex's Mac, it never connects to the eye tracker, like an ethernet problem.
-
-On Joshua's Win laptop, the sounds crash if I use the old genv way of allowing the Eyelink to draw the calibration targets, but not if I use the             pylink.openGraphics()  
-
-On Joshua's Win laptop, if oldSchoolWayOfEyelinkDrawingToScreen=False, then Eyelink successfully starts drawing the calibration targets, but it never goes back to drawing the experiment stimuli and it seems to be a separate graphics window, as revealed by 
 
 ## Eyetracking
 
-
-To the self-test of eyetrackingCode/EyeLinkCoreGraphicsPsychoPyHolcombeLab.py, I've tried to add a trial. Don't think that version is tested yet.
-
 For fixation report analysis from EDF files, see https://github.com/alexholcombe/MOTcircular/tree/master/dataPreprocess file
+
+Drift correction: will need to be done at the analysis stage because we are not able to re-calibrate the eyetracker.
+
+### Eyetracking problems Nov 2023 - Jan 2024
+
+On Alex's Mac, it never connects to the eye tracker, like an ethernet problem. Eyelink provides some advice on how to configure the IP address to remedy that, which we reprint [here](https://docs.google.com/document/d/1o3IirKJTU_yfOrlNHWl6cmx1fj1j6vFzhXw-UFje_jw/), which I haven't tried.
+
+
+While Eyelink's example program, picture.py in their EyeLink Developers Kit, works on some machines for Eyelink and Psychopy sharing a graphics environment (so both Eyelink can draw its calibration targets and Psychopy can draw things), we never got that to work with MOTcircular.py, even though it was working years ago - since then, Eyelink has updated their Developers Kit. 
+
+So, we instead have the Eyelink quit drawing (pylink. ) after initial calibration, even though it does work on Windows, you just have to tab between windows.
+
+On Joshua's Win laptop, we had some sounds crashing errors.
+	* the sounds crash if I use the old genv way of allowing the Eyelink to draw the calibration targets, but not if I use the             pylink.openGraphics()  
+	* Seemed to be fixed after Josh changed the sound encoding of all sound files to be at the same sampling rate.
+
+On Joshua's Win laptop, if oldSchoolWayOfEyelinkDrawingToScreen=False, then Eyelink successfully starts drawing the calibration targets in a separate graphics window you need to tab betwen.
 
 ## Subsidiary experiments
 
