@@ -1,4 +1,4 @@
-#  __author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be silently removed, single quotes will be left, eg, O'Connor
+__author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be silently removed, single quotes will be left, eg, O'Connor
 ############################################################
 ###For set-up on a new machine, some variables to consider
 ###
@@ -15,7 +15,6 @@ import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, pi, cos, sin, sqrt, ceil
 import time, random, sys, platform, os, gc, io #io is successor to StringIO
-import pylink #to turn off eyetracker graphics environment
 
 try:
     from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder.
@@ -51,16 +50,13 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = False;  antialiasGrating = True
-gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
-
 numRings=3
-radii=[2.19,8.33,13.16] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
+radii=[1,2,3] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=1; scrn=1
+fullscr=0; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
@@ -124,10 +120,10 @@ timeTillReversalMax = 1.5# 1.3 #2.9
 colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (all identical) in a ring. Need as many as max num objects in a ring
 cueColor = np.array([1,1,1])
 #monitor parameters
-widthPixRequested = 800 #1440  #monitor width in pixels
-heightPixRequested = 600  #900 #monitor height in pixels
-monitorwidth = 38; #30  38.5 #monitor width in centimeters
-viewdist = 50.; #57 cm
+widthPixRequested = 3200 #1440  #monitor width in pixels
+heightPixRequested =1800  #900 #monitor height in pixels
+monitorwidth = 30; #38.5 #monitor width in centimeters
+viewdist = 57.; #cm
 bgColor = [-1,-1,-1] #black background
 monitorname = 'testMonitor' # 'mitsubishi' #in psychopy Monitors Center
 if exportImages:
@@ -305,18 +301,7 @@ NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anc
 NextRemindPctDoneText = visual.TextStim(myWin,pos=(-.1, -.4),colorSpace='rgb',color= (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextRemindCountText = visual.TextStim(myWin,pos=(.1, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',text="0.00rps",autoLog=False)
-if useSound: 
-    ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
-    soundDir = 'sounds'
-    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9)
-    respPromptSounds = [-99] * len(ringQuerySoundFileNames)
-    for i in range(len(ringQuerySoundFileNames)):
-        soundFileName = ringQuerySoundFileNames[i]
-        soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
-        respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2)
-    corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile)
-    
+
 stimList = []
 # temporalfrequency limit test
 numTargets =                                [2,                 3]
@@ -400,99 +385,7 @@ print(msg, file=logF);
 logging.info( logF.getvalue() )
 logging.info('task='+'track'+'   respType='+respType)
 logging.info( 'ring radii=' + str(radii)   )
-logging.info(   'drawingAsGrating='+str(drawingAsGrating) +  ' gratingTexPix='+ str(gratingTexPix) + ' antialiasGrating=' + str(antialiasGrating)   )
 logging.flush()
-
-def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
-    myTex=list();cueTex=list();ringRadial=list();cueRing=list()
-    stimColorIdxsOrder= stimColorIdxsOrder[::-1]  #reverse order of indices, because grating texture is rendered in reverse order than is blobs version
-    ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]
-    numUniquePatches= max( len(stimColorIdxsOrder[0]),len(stimColorIdxsOrder[1]),len(stimColorIdxsOrder[2]))
-    numCycles =double(numObjects) / numUniquePatches
-    angleSegment = 360./(numUniquePatches*numCycles)
-    if gratingTexPix % numUniquePatches >0: #gratingTexPix contains numUniquePatches. numCycles will control how many total objects there are around circle
-        print('Warning: could not exactly render a ',numUniquePatches,'-segment pattern radially, will be off by ', (gratingTexPix%numUniquePatches)*1.0 /gratingTexPix, file=logF)
-    if numObjects % numUniquePatches >0:
-        msg= 'Warning: numUniquePatches ('+str(numUniquePatches)+') not go evenly into numObjects'; print(msg, file=logF); logging.warn(msg)
-    #create texture for red-green-blue-red-green-blue etc. radial grating
-    for i in range(numRings):
-        #myTex.append(np.zeros([gratingTexPix,gratingTexPix,3])+[1,-1,1])
-        myTex.append(np.zeros([gratingTexPix,gratingTexPix,3])+bgColor[0])#start with all channels in all locs = bgColor
-        cueTex.append(np.ones([gratingTexPix,gratingTexPix,3])*bgColor[0])
-    if patchAngle > angleSegment:
-        msg='Error: patchAngle requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+') numUniquePatches='+str(numUniquePatches)+' numCycles='+str(numCycles); 
-        print(msg); print(msg, file=logF); logging.error(msg)
-  
-    oneCycleAngle = 360./numCycles
-    segmentSizeTexture = angleSegment/oneCycleAngle *gratingTexPix #I call it segment because includes spaces in between, that I'll write over subsequently
-    patchSizeTexture = patchAngle/oneCycleAngle *gratingTexPix
-    patchSizeTexture = round(patchSizeTexture) #best is odd number, even space on either size
-    patchFlankSize = (segmentSizeTexture-patchSizeTexture)/2.
-    patchAngleActual = patchSizeTexture / gratingTexPix * oneCycleAngle
-    if abs(patchAngleActual - patchAngle) > .04:
-        msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
-        print(msg, file=logF);   logging.warn(msg)
-    
-    for colrI in range(numUniquePatches): #for that portion of texture, set color
-        start = colrI*segmentSizeTexture
-        end = start + segmentSizeTexture
-        start = round(start) #don't round until after do addition, otherwise can fall short
-        end = round(end)
-        nColor = colrI #mimics code in drawoneframe
-        ringColr=list();
-        for i in range(numRings):ringColr.append(colors[ stimColorIdxsOrder[i][nColor] ])
-        for colorChannel in range(3):
-            for i in range(numRings):myTex[i][:, start:end, colorChannel] = ringColr[i][colorChannel]; 
-            for cycle in range(int(round(numCycles))):
-              base = cycle*gratingTexPix/numCycles
-              for i in range(numRings):cueTex[i][:, base+start/numCycles:base+end/numCycles, colorChannel] = ringColr[1][colorChannel]
-        #draw bgColor area (emptySizeEitherSideOfPatch) by overwriting first and last entries of segment 
-        for i in range(numRings):
-            myTex[i][:, start:start+patchFlankSize, :] = bgColor[0]; #one flank
-            myTex[i][:, end-1-patchFlankSize:end, :] = bgColor[0]; #other flank
-        
-        for cycle in range(int(round(numCycles))): 
-              base = cycle*gratingTexPix/numCycles
-              for i in range(numRings):
-                 cueTex[i][:,base+start/numCycles:base+(start+patchFlankSize)/numCycles,:] =bgColor[0]; 
-                 cueTex[i][:,base+(end-1-patchFlankSize)/numCycles:base+end/numCycles,:] =bgColor[0]
-        
-    #color the segment to be cued white
-    segmentLen = gratingTexPix/numCycles*1/numUniquePatches
-    WhiteCueSizeAdj=0 # adust the white cue marker wingAdd 20110923
-    if thisTrial['numObjectsInRing']==3:WhiteCueSizeAdj=110
-    elif thisTrial['numObjectsInRing']==6:WhiteCueSizeAdj=25
-    elif thisTrial['numObjectsInRing']==12:WhiteCueSizeAdj=-15
-    elif thisTrial['numObjectsInRing']==2:WhiteCueSizeAdj=200
-    
-    for i in range(numRings):
-            if blobToCue[i] >=0: #-999 means dont cue anything
-                blobToCueCorrectForRingReversal = numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-                if blobToCueCorrectForRingReversal==0 and thisTrial['numObjectsInRing']==12:   WhiteCueSizeAdj=0
-                cueStartEntry = blobToCueCorrectForRingReversal*segmentLen+WhiteCueSizeAdj
-                cueEndEntry = cueStartEntry + segmentLen-2*WhiteCueSizeAdj
-                cueTex[i][:, cueStartEntry:cueEndEntry, :] = -1*bgColor[0]    
-                blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
-                cueTex[i][:, cueStartEntry:cueStartEntry+blackGrains, :] = bgColor[0];  #this one doesn't seem to do anything?
-                cueTex[i][:, cueEndEntry-1-blackGrains:cueEndEntry, :] = bgColor[0];
-    angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file!
-    
-    for i in range(numRings):
-         ringRadial.append(visual.RadialStim(myWin, tex=myTex[i], color=[1,1,1],size=radii[i],#myTexInner is the actual colored pattern. radial grating used to make it an annulus 
-         mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
-         radialCycles=0, angularCycles=double(thisTrial['numObjectsInRing'])/numUniquePatches,
-         angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging))
-         #the mask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
-    #end preparation of colored rings
-    #draw cueing grating for tracking task. Have entire grating be empty except for one white sector
-         cueRing.append(visual.RadialStim(myWin, tex=cueTex[i], color=[1,1,1],size=radii[i], #cueTexInner is white. Only one sector of it shown by mask
-         mask=ringRadialMask[i], radialCycles=0, angularCycles=1, #only one cycle because no pattern actually repeats- trying to highlight only one sector
-         angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging) )#depth doesn't seem to work, just always makes it invisible?
-    
-    currentlyCuedBlob = blobToCue #this will mean that don't have to redraw 
-    return ringRadial,cueRing,currentlyCuedBlob
-    ######### End constructRingAsGrating ###########################################################
-
 
 RFcontourAmp= 0.0
 RFcontourFreq = 2.0
@@ -605,62 +498,40 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
       else:
         fixationBlank.draw()
       fixationPoint.draw()
-
-      if drawingAsGrating:
-            ringRadialLocal = ringRadial
-            centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-            for noRing in range(numRings):
-                    anglemove=moveDirection[noRing]*thisTrial['direction']*thisTrial['speed']*360*1.0*(n-(n-1))/hz
-                    if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
-                                    reversalValue[noRing]=-1*reversalValue[noRing]
-                                    reversalNo[noRing] +=1
-                    angleMovement[noRing]=angleMovement[noRing]+anglemove*(reversalValue[noRing])
-                    ringRadialLocal[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment) 
-                    ringRadialLocal[noRing].setContrast( contrast )
-                    ringRadialLocal[noRing].draw()
-                    if  (blobToCueEachRing[noRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's a target in that ring
-                        #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
-                            #even though this will result in skipping frames
-                            cueRing[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment)
-                            cueRing[noRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
-                            cueRing[noRing].draw()
-                    #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
-                    #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
-      else:
-          for numRing in range(numRings):
-            angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
-            currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
-            angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
-            for nobject in range(numObjects):
-                if nobject==0:
-                    if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
-                        reversalNum = int(reversalNumEachRing[numRing])
-                        if len( reversalTimesEachRing[numRing] ) <= reversalNum:
-                            msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
-                            msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
-                            msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
-                            logging.error(msg)
-                            print(msg)
-                            nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
-                        else: #allocated enough reversals
-                            nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
-                        if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
-                            isReversed[numRing] = -1*isReversed[numRing]
-                            reversalNumEachRing[numRing] +=1
-                angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
-                x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
-                x += offsetXYeachRing[numRing][0]
-                y += offsetXYeachRing[numRing][1]
-                if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
-                    weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
-                    blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
-                    blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
-                    #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
-                else: blobColor = colors_all[0]*contrast
-                #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw() #debug
-                gaussian.setColor( blobColor, log=autoLogging )
-                gaussian.setPos([x,y])
-                gaussian.draw()
+      for numRing in range(numRings):
+        angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
+        currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
+        angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
+        for nobject in range(numObjects):
+            if nobject==0:
+                if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
+                    reversalNum = int(reversalNumEachRing[numRing])
+                    if len( reversalTimesEachRing[numRing] ) <= reversalNum:
+                        msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
+                        msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
+                        msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
+                        logging.error(msg)
+                        print(msg)
+                        nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
+                    else: #allocated enough reversals
+                        nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
+                    if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
+                        isReversed[numRing] = -1*isReversed[numRing]
+                        reversalNumEachRing[numRing] +=1
+            angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
+            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
+            x += offsetXYeachRing[numRing][0]
+            y += offsetXYeachRing[numRing][1]
+            if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
+                weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
+                blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
+                blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
+                #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
+            else: blobColor = colors_all[0]*contrast
+            #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw() #debug
+            gaussian.setColor( blobColor, log=autoLogging )
+            gaussian.setPos([x,y])
+            gaussian.draw()
       if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
         speedText.setText( str(round(currentSpeed,1)) )
         speedText.draw()
@@ -672,13 +543,13 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 
 showclickableRegions = True
 showClickedRegion = False
-def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop ):
+def collectResponses(thisTrial,n,responses,responsesAutopilot,offsetXYeachRing,respRadius,currAngle,expStop ):
     optionSets=numRings
     #Draw/play response cues
     timesRespPromptSoundPlayed=0
     if timesRespPromptSoundPlayed<1: #2
         if numRings > 1:
-            if useSound: respPromptSounds[respPromptSoundFileNum].play()
+            if useSound: respPromptSound.play()
         timesRespPromptSoundPlayed +=1
     #respText.draw()
 
@@ -892,8 +763,7 @@ while trialNum < trials.nTotal and expStop==False:
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
             #and calibrate. Does this allow it to draw on the screen for the calibration?
-        pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
-        
+
     fixatnPeriodFrames = int(   (np.random.rand(1)/2.+0.8)   *refreshRate)  #random interval between x and x+800ms
     for i in range(fixatnPeriodFrames):
         if i%2:
@@ -994,12 +864,12 @@ while trialNum < trials.nTotal and expStop==False:
     ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
     soundDir = 'sounds'
     if numRings==3:
-        respPromptSoundFileNum = thisTrial['ringToQuery']
+        soundFileNum = thisTrial['ringToQuery']
     else: #eg if numRings==2:
-        respPromptSoundFileNum = thisTrial['ringToQuery']*2 #outer, not middle for ring==1
+        soundFileNum = thisTrial['ringToQuery']*2 #outer, not middle for ring==1
     
     if useSound:
-        respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ respPromptSoundFileNum ])
+        respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ soundFileNum ])
         respPromptSound = sound.Sound(respPromptSoundPathAndFile, secs=.2)
         corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
         corrSound = sound.Sound(corrSoundPathAndFile)
@@ -1008,7 +878,7 @@ while trialNum < trials.nTotal and expStop==False:
 
     responses = list();  responsesAutopilot = list()
     responses,responsesAutopilot,respondedEachToken,expStop = \
-            collectResponses(thisTrial,n,responses,responsesAutopilot,respPromptSoundFileNum,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
+            collectResponses(thisTrial,n,responses,responsesAutopilot,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
     #print("responses=",responses,";respondedEachToken=",respondedEachToken,"expStop=",expStop) 
     core.wait(.1)
     if exportImages:  #maybe catch one frame of response
