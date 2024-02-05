@@ -319,11 +319,23 @@ if useSound:
     
 stimList = []
 # temporalfrequency limit test
-numTargets =                                [2,                 3]
-numObjsInRing =                         [  5,                   10        ]
 
-speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
+#From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
+speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) #Preliminary list of thresholds
+factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
+#these are the factors to multiply by each preliminarily-tested threshold
+speedsEachNumTargetsNumObjects = []
+for i in range(0, len(speedsPrelimiExp), 2):
+    sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
+    sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
+    speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
+
+#Old way of setting all speeds manually
+#numTargets =                                [2,                 3]
+#numObjsInRing =                         [  5,                   10        ]
+#
+#speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
+#                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
 
 #dont go faster than 2 rps because of temporal blur/aliasing
 
