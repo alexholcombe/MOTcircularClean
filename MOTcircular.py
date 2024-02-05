@@ -60,7 +60,7 @@ radii=[2.19,8.33,13.16] #[2.5,9.5,15]   #Need to encode as array for those exper
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=1; scrn=1
+fullscr=0; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
@@ -72,17 +72,17 @@ dlgBoxTitle = 'MOT'
 if has_retina_scrn:
     dlgBoxTitle = 'MOT (and at least one screen is Retina screen)'
 # create a dialog box from dictionary 
-infoFirst = { 'Autopilot':autopilot, 'Check refresh etc':True, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
+infoFirst = { 'Autopilot':autopilot, 'checkRefresh':False, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
     title=dlgBoxTitle, 
-    order=['Autopilot','Check refresh etc', 'Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
+    order=['Autopilot','checkRefresh', 'Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
     tip={'Check refresh etc': 'To confirm refresh rate and that can keep up, at least when drawing a grating',
             'Screen to use': '0 means primary screen, 1 means second screen'},
     )
 if not OK.OK:
     print('User cancelled from dialog box'); core.quit()
 autopilot = infoFirst['Autopilot']
-checkRefreshEtc = infoFirst['Check refresh etc']
+checkRefreshEtc = infoFirst['checkRefresh']
 scrn = infoFirst['Screen to use']
 print('scrn = ',scrn, ' from dialog box')
 fullscr = infoFirst['Fullscreen (timing errors if not)']
@@ -320,6 +320,9 @@ if useSound:
 stimList = []
 # temporalfrequency limit test
 
+numTargets =                                [2,                 3]
+numObjsInRing =                         [  5,                   10        ]
+
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) #Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
@@ -331,8 +334,6 @@ for i in range(0, len(speedsPrelimiExp), 2):
     speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
 
 #Old way of setting all speeds manually
-#numTargets =                                [2,                 3]
-#numObjsInRing =                         [  5,                   10        ]
 #
 #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
 #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
@@ -411,9 +412,11 @@ msg = 'cueRampUpDur=' + str(cueRampUpDur) + ' cueRampDownDur= ' + str(cueRampDow
 print(msg, file=logF);
 logging.info( logF.getvalue() )
 logging.info('task='+'track'+'   respType='+respType)
-logging.info( 'ring radii=' + str(radii)   )
-logging.info(   'drawingAsGrating='+str(drawingAsGrating) +  ' gratingTexPix='+ str(gratingTexPix) + ' antialiasGrating=' + str(antialiasGrating)   )
+logging.info('ring radii=' + str(radii))
+logging.info('drawingAsGrating=' + str(drawingAsGrating) +  ' gratingTexPix='+ str(gratingTexPix) + ' antialiasGrating=' + str(antialiasGrating))
 logging.flush()
+
+stimColorIdxsOrder=[[0,0],[0,0],[0,0]]#this was used for drawing blobs during LinaresVaziriPashkam stimulus, not just vestigial for grating
 
 def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
     myTex=list();cueTex=list();ringRadial=list();cueRing=list()
@@ -423,7 +426,7 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
     numCycles =double(numObjects) / numUniquePatches
     angleSegment = 360./(numUniquePatches*numCycles)
     if gratingTexPix % numUniquePatches >0: #gratingTexPix contains numUniquePatches. numCycles will control how many total objects there are around circle
-        print('Warning: could not exactly render a ',numUniquePatches,'-segment pattern radially, will be off by ', (gratingTexPix%numUniquePatches)*1.0 /gratingTexPix, file=logF)
+        print('Warning: could not exactly render a numUniquePatches=',numUniquePatches,'-segment pattern radially, will be off by ', (gratingTexPix%numUniquePatches)*1.0 /gratingTexPix, file=logF)
     if numObjects % numUniquePatches >0:
         msg= 'Warning: numUniquePatches ('+str(numUniquePatches)+') not go evenly into numObjects'; print(msg, file=logF); logging.warn(msg)
     #create texture for red-green-blue-red-green-blue etc. radial grating
