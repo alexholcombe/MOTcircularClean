@@ -50,7 +50,7 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = True;  antialiasGrating = True
+drawingAsGrating = False;  antialiasGrating = True
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
@@ -320,7 +320,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                                [2,                 3]
-numObjsInRing =                         [  5,                   10        ]
+numObjsInRing =                         [  4,                   8        ]
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) #Preliminary list of thresholds
