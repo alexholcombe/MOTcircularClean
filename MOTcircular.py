@@ -1,4 +1,3 @@
-#  __author__ = """Alex "O." Holcombe, Wei-Ying Chen""" ## double-quotes will be silently removed, single quotes will be left, eg, O'Connor
 ############################################################
 ###For set-up on a new machine, some variables to consider
 ###
@@ -68,7 +67,7 @@ resolutionOfScreens = subprocess.check_output("system_profiler SPDisplaysDataTyp
 print("resolution of screens reported by system_profiler = ",resolutionOfScreens)
 if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shell=True) == 0:
     has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
-dlgBoxTitle = 'MOT'
+dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
     dlgBoxTitle = 'MOT (and at least one screen is Retina screen)'
 # create a dialog box from dictionary 
@@ -121,7 +120,7 @@ mouseChoiceArea = ballStdDev*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 1.5# 1.3 #2.9
-colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (all identical) in a ring. Need as many as max num objects in a ring
+colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (typically all identical) in a ring. Need as many as max num objects in a ring
 cueColor = np.array([1,1,1])
 #monitor parameters
 widthPixRequested = 800 #1440  #monitor width in pixels
@@ -423,7 +422,7 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
     stimColorIdxsOrder= stimColorIdxsOrder[::-1]  #reverse order of indices, because grating texture is rendered in reverse order than is blobs version
     ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]
     numUniquePatches= max( len(stimColorIdxsOrder[0]),len(stimColorIdxsOrder[1]),len(stimColorIdxsOrder[2]))
-    numCycles =double(numObjects) / numUniquePatches
+    numCycles =float(numObjects) / numUniquePatches
     angleSegment = 360./(numUniquePatches*numCycles)
     if gratingTexPix % numUniquePatches >0: #gratingTexPix contains numUniquePatches. numCycles will control how many total objects there are around circle
         print('Warning: could not exactly render a numUniquePatches=',numUniquePatches,'-segment pattern radially, will be off by ', (gratingTexPix%numUniquePatches)*1.0 /gratingTexPix, file=logF)
@@ -600,7 +599,7 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
 
 def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
-      global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes python treat it as a local variable
+      global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
       global angleIniEachRing, correctAnswers
       
       #Determine what frame we are on
@@ -921,11 +920,17 @@ while trialNum < trials.nTotal and expStop==False:
         ts.remove(ts[0]) # clear ts array, to try to avoid memory problems?
     stimClock.reset()
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
-    
+
+    if drawingAsGrating: #construct the gratings
+        patchAngleBase = 20; #This seems to be a kludge, not sure if it's to make the patches line up with something else or what
+        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGrating(numObjects,patchAngleBase,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+        preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
+    core.wait(.1)
+
     speed = thisTrial['speed']
     currentSpeed = speed #In normal experiment, no speed ramp
     
-    if quickMeasurement: #in quick measurement mode
+    if quickMeasurement: #in quick measurement mode, which uses a speed ramp
         speed = maxSpeed
         currentSpeed = 0.01
         speedRampStep = 0.01
