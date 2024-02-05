@@ -1,5 +1,6 @@
 *.pyc
 .DS_Store
+eyetrackingCode/.DS_Store
 .RData
 dataPreprocess/anonymisationKey.txt
 dataRaw/
