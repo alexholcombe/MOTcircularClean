@@ -1,7 +1,6 @@
 *.pyc
 .DS_Store
 .RData
-old/
 dataPreprocess/anonymisationKey.txt
 dataRaw/
 *.Rhistory

@@ -304,13 +304,9 @@ speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,
 
 stimList = []
 # temporalfrequency limit test
-numTargets =                                [2,                 3]
-numObjsInRing =                         [  5,                   10        ]
-
-speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
-
-#dont go faster than 2 rps because of temporal blur/aliasing
+numObjsInRing =         [  5,                   10        ]
+speedsEachNumObjs =   [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ]     #dont want to go faster than 2 because of blur problem
+numTargets = np.array([2,3])
 
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
@@ -325,13 +321,12 @@ if queryEachRingEquallyOften:
     print('leastCommonMultipleSubsets=',leastCommonMultipleSubsets, ' leastCommonMultipleTargetNums= ', leastCommonMultipleTargetNums)
                     
 for numObjs in numObjsInRing: #set up experiment design
-    for nt in numTargets: #for each num targets condition,
-      numObjectsIdx = numObjsInRing.index(numObjs)
-      numTargetsIdx = numTargets.index(nt)
-      speeds= speedsEachNumTargetsNumObjects[  numTargetsIdx ][ numObjectsIdx ]
-      for speed in speeds:
+    idx = numObjsInRing.index(numObjs)
+    speeds= speedsEachNumObjs[  idx   ]
+    for speed in speeds:
         ringNums = np.arange(numRings)
-        if queryEachRingEquallyOften:
+        for nt in numTargets: #for each num targets condition,
+          if queryEachRingEquallyOften:
             #In case of 3 rings and 2 targets, 3 choose 2 = 3 possible ring combinations
             #If 3 concentric rings involved, have to consider 3 choose 2 targets, 3 choose 1 targets, have to have as many conditions as the maximum
             subsetsThis = list(itertools.combinations(ringNums,nt)) #all subsets of length nt from the rings. E.g. if 3 rings and nt=2 targets
@@ -351,7 +346,7 @@ for numObjs in numObjsInRing: #set up experiment design
                         for initialDirRing0 in [-1,1]:
                                 stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                         'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )
-        else: # not queryEachRingEquallyOften, because that requires too many trials for a quick session. Instead
+          else: # not queryEachRingEquallyOften, because that requires too many trials for a quick session. Instead
             #, will randomly at time of trial choose which rings have targets and which one querying.
             whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
             #for t in range( int(nt) ):
