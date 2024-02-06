@@ -453,11 +453,8 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
     segmentSizeTexture = angleSegment/oneCycleAngle *gratingTexPix #I call it segment because includes spaces in between, that I'll write over subsequently
     patchSizeTexture = patchAngle/oneCycleAngle *gratingTexPix
     patchSizeTexture = round(patchSizeTexture) #best is odd number, even space on either size
-    patchFlankSize = (segmentSizeTexture-patchSizeTexture)/2.
-    patchAngleActual = patchSizeTexture / gratingTexPix * oneCycleAngle
-    if decimalPart(patchAngleActual) > .001:
-        print("Error! Above code was meant to guarantee patchAngleActual is an integer.")
-    patchAngleActual = round(patchAngleActual)
+    patchFlankSize = round(    (segmentSizeTexture-patchSizeTexture)/2.     )
+    patchAngleActual = patchSizeTexture / gratingTexPix * oneCycleAngle    
     if abs(patchAngleActual - patchAngle) > .04:
         msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
         print(msg, file=logF);   logging.warn(msg)
@@ -502,8 +499,12 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
         for cycle in range(int(round(numCycles))): 
               base = cycle*gratingTexPix/numCycles
               for i in range(numRings):
-                 cueTexEachRing[i][:,base+start/numCycles:base+(start+patchFlankSize)/numCycles,:] =bgColor[0]; 
-                 cueTexEachRing[i][:,base+(end-1-patchFlankSize)/numCycles:base+end/numCycles,:] =bgColor[0]
+                firstFlankStart = round( base+start/numCycles )
+                firstFlankEnd = round( base+(start+patchFlankSize)/numCycles )
+                cueTexEachRing[i][:, firstFlankStart:firstFlankEnd, :] =bgColor[0]
+                secondFlankStart = round(   base+(end-1-patchFlankSize)/numCycles  )
+                secondFlankEnd = round( base+end/numCycles )
+                cueTexEachRing[i][:, secondFlankStart:secondFlankEnd, :] =bgColor[0]
         
     #color the segment to be cued white
     segmentLen = gratingTexPix/numCycles*1/numUniquePatches
@@ -520,10 +521,10 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
                 #if blobToCueCorrectForRingReversal==0 and thisTrial['numObjectsInRing']==12:   WhiteCueSizeAdj=0
                 cueStartEntry = blobToCueCorrectForRingReversal*segmentLen+WhiteCueSizeAdj
                 cueEndEntry = cueStartEntry + segmentLen-2*WhiteCueSizeAdj
-                cueTexEachRing[i][:, cueStartEntry:cueEndEntry, :] = -1*bgColor[0]    
+                cueTexEachRing[i][:, round(cueStartEntry):round(cueEndEntry), :] = -1*bgColor[0]    
                 blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
-                cueTexEachRing[i][:, cueStartEntry:cueStartEntry+blackGrains, :] = bgColor[0];  #this one doesn't seem to do anything?
-                cueTexEachRing[i][:, cueEndEntry-1-blackGrains:cueEndEntry, :] = bgColor[0];
+                cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
+                cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0];
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file!
 
     ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into annulus (ring)
@@ -533,7 +534,7 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
         thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
                             mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
                             radialCycles=0, #the mask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
-                            rangularCycles=double(thisTrial['numObjectsInRing'])/numUniquePatches,
+                            angularCycles= thisTrial['numObjectsInRing']*1.0/numUniquePatches,
                             angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging)
         ringRadial.append(thisRing)
 
