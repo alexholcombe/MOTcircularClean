@@ -1202,6 +1202,7 @@ if eyetracking:
     eyetrackerFileWaitingText.draw()
     myWin.flip()
     msg = my_tracker.closeConnectionToEyeTracker(EDF_fname_local) #this requests the data back and thus can be very time-consuming, like 20 min or more
+    msg = "Message from closeConnectionToEyeTracker, which tries to get EDF file and close connection:" + msg
     print(msg); print(msg,file=logF) #""Eyelink connection closed successfully" or "Eyelink not available, not closed properly"
   else: 
     print('You will have to get the Eyelink EDF file off the eyetracking machine by hand')

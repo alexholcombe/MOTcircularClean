@@ -53,7 +53,7 @@ class EyeLinkTrack_Holcombe():
         if len(self.edfFileName) > 8:
             print('ERROR: EDF eyetracker machine filename should not exceed 8 characters, shortening it to first eight:',self.edfFileName[0:8])
             self.edfFileName = self.edfFileName[0:8]
-        print("Eyetracker PC filename will be:",self.edfFileName)
+        print("Eyetracker PC filename will be (shortened to 8 characters if you entered more than 8):",self.edfFileName)
         
         print("Connecting to eyetracker.")
         try:
