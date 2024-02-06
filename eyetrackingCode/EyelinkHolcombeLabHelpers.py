@@ -1,8 +1,8 @@
 # EyeLinkHolcombeLabHelpers.py
 #
-# Started 2011 Wing (Wei-Ying Chen), modified from pylink ATI and open source code
+# Started 2011 Wing (Wei-Ying Chen), modified from pylink API
 # Modified by Chris Fajou, pre-April 2015.
-# Modified by Alex, November 2023
+# Modified by Alex, November 2023 onward
 # Provides functions for using an eye tracker that allows experiment code to be simple and For EyeLink1000
 
 import pylink
@@ -232,18 +232,27 @@ class EyeLinkTrack_Holcombe():
         
     def closeConnectionToEyeTracker(self,eyeMoveFile):
         #Clean everything up, save data and close connection to tracker
+        msgs = ""
         if self.tracker != None:
             # File transfer and cleanup!
             self.tracker.setOfflineMode();
             core.wait(0.5)
             #Close the file and transfer it to Display PC
             self.tracker.closeDataFile()
-            self.tracker.receiveDataFile(self.edfFileName,eyeMoveFile) 
+
+            try:
+                # Download the EDF data file from the Host PC to a local data folder
+                # parameters: source_file_on_the_host, destination_file_on_local_drive
+                self.tracker.receiveDataFile(self.edfFileName,eyeMoveFile) 
+            except RuntimeError as error:
+                msgs = msgs + 'ERROR with receiveDataFile: ' + error
+
             self.tracker.close();
             #Close the experiment graphics
             pylink.closeGraphics()
-            return "Eyelink connection closed successfully"
+            msgs = msgs + "Eyelink connection closed successfully"
         else:
-            return "Eyelink not available, not closed properly"
+            msgs = msgs + "Eyelink not available, not closed properly"
+        return (msgs)
 
  
