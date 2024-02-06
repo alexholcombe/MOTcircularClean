@@ -50,7 +50,7 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = True;  antialiasGrating = True
+drawingAsGrating = False;  antialiasGrating = True
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
@@ -71,7 +71,7 @@ dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
     dlgBoxTitle = 'MOT (and at least one screen is Retina screen)'
 # create a dialog box from dictionary 
-infoFirst = { 'Autopilot':autopilot, 'checkRefresh':False, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
+infoFirst = { 'Autopilot':autopilot, 'checkRefresh':True, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
     title=dlgBoxTitle, 
     order=['Autopilot','checkRefresh', 'Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
@@ -664,7 +664,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             ringRadialLocal = ringRadial
             centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
             for noRing in range(numRings):
-                    anglemove=moveDirection[noRing]*thisTrial['direction']*thisTrial['speed']*360*1.0*(n-(n-1))/hz
+                    anglemoveDeg = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1) / 180. * pi
                     if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
                                     reversalValue[noRing]=-1*reversalValue[noRing]
                                     reversalNo[noRing] +=1
@@ -685,22 +685,23 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
             currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
             angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
+            #Handle reversal if time for reversal
+            if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
+                reversalNum = int(reversalNumEachRing[numRing])
+                if len( reversalTimesEachRing[numRing] ) <= reversalNum:
+                    msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
+                    msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
+                    msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
+                    logging.error(msg)
+                    print(msg)
+                    nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
+                else: #allocated enough reversals
+                    nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
+                if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
+                    isReversed[numRing] = -1*isReversed[numRing]
+                    reversalNumEachRing[numRing] +=1
+            #Calculate position of each object for this frame and draw them                
             for nobject in range(numObjects):
-                if nobject==0:
-                    if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
-                        reversalNum = int(reversalNumEachRing[numRing])
-                        if len( reversalTimesEachRing[numRing] ) <= reversalNum:
-                            msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
-                            msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
-                            msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
-                            logging.error(msg)
-                            print(msg)
-                            nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
-                        else: #allocated enough reversals
-                            nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
-                        if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
-                            isReversed[numRing] = -1*isReversed[numRing]
-                            reversalNumEachRing[numRing] +=1
                 angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
                 x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
                 x += offsetXYeachRing[numRing][0]
