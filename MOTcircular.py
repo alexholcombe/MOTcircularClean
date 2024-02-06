@@ -710,11 +710,11 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         ringRadialLocal[numRing].setOri(angleObject0Deg) 
         ringRadialLocal[numRing].setContrast( contrast )
         ringRadialLocal[numRing].draw()
-        if  (blobToCueEachRing[numRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's no? target in that ring
+        if  (blobToCueEachRing[numRing] != -999) and n< cueFrames:  #-999 means there's no? target in that ring
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
                 cueRing[numRing].setOri(angleObject0Deg)
-                cueRing[numRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
+                cueRing[numRing].setOpacity( 1- n*1.0/cueFrames ) #gradually make it transparent
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
