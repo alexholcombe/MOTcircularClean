@@ -273,7 +273,7 @@ optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colo
 #Optionally show zones around objects that will count as a click for that object
 clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
-clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,1,-1),fillColor=(-1,1,-1),autoLog=autoLogging) #to show clickable zones
+clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,.2,-1,fillColor=(-1,.2,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
 
 landmarkDebug = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(1,-1,1),autoLog=autoLogging) #to show clickable zones
@@ -639,94 +639,96 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
 
 def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
-      global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
-      global angleIniEachRing, correctAnswers
-      
-      #Determine what frame we are on
-      if useClock: #Don't count on not missing frames. Use actual time.
-        t = clock.getTime()
-        n = round(t*refreshRate)
-      else:
-        n = currFrame
-      
-      if n<rampUpFrames:
-            contrast = cos( -pi+ pi* n/rampUpFrames  ) /2. +.5 #starting from -pi trough of cos, and scale into 0->1 range
-      elif rampDownFrames>0 and n > rampDownStart:
-            contrast = cos(pi* (n-rampDownStart)/rampDownFrames ) /2.+.5 #starting from peak of cos, and scale into 0->1 range
-      else: contrast = 1
-      if n%2:
-        fixation.draw()#flicker fixation on and off at framerate to see when skip frame
-      else:
-        fixationBlank.draw()
-      fixationPoint.draw()
+  global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
+  global angleIniEachRing, correctAnswers
+  
+  #Determine what frame we are on
+  if useClock: #Don't count on not missing frames. Use actual time.
+    t = clock.getTime()
+    n = round(t*refreshRate)
+  else:
+    n = currFrame
+  
+  if n<rampUpFrames:
+        contrast = cos( -pi+ pi* n/rampUpFrames  ) /2. +.5 #starting from -pi trough of cos, and scale into 0->1 range
+  elif rampDownFrames>0 and n > rampDownStart:
+        contrast = cos(pi* (n-rampDownStart)/rampDownFrames ) /2.+.5 #starting from peak of cos, and scale into 0->1 range
+  else: contrast = 1
+  if n%2:
+    fixation.draw()#flicker fixation on and off at framerate to see when skip frame
+  else:
+    fixationBlank.draw()
+  fixationPoint.draw()
 
-      if drawingAsGrating:
-            ringRadialLocal = ringRadial
-            centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-            for noRing in range(numRings):
-                    anglemoveDeg = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1) / 180. * pi
-                    if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
-                                    reversalValue[noRing]=-1*reversalValue[noRing]
-                                    reversalNo[noRing] +=1
-                    angleMovement[noRing]=angleMovement[noRing]+anglemove*(reversalValue[noRing])
-                    ringRadialLocal[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment) 
-                    ringRadialLocal[noRing].setContrast( contrast )
-                    ringRadialLocal[noRing].draw()
-                    if  (blobToCueEachRing[noRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's a target in that ring
-                        #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
-                            #even though this will result in skipping frames
-                            cueRing[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment)
-                            cueRing[noRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
-                            cueRing[noRing].draw()
-                    #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
-                    #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
-      else:
-          for numRing in range(numRings):
-            angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
-            currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
-            angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
-            #Handle reversal if time for reversal
-            if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
-                reversalNum = int(reversalNumEachRing[numRing])
-                if len( reversalTimesEachRing[numRing] ) <= reversalNum:
-                    msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
-                    msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
-                    msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
-                    logging.error(msg)
-                    print(msg)
-                    nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
-                else: #allocated enough reversals
-                    nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
-                if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
-                    isReversed[numRing] = -1*isReversed[numRing]
-                    reversalNumEachRing[numRing] +=1
-            #Calculate position of each object for this frame and draw them                
-            for nobject in range(numObjects):
-                angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
-                x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
-                x += offsetXYeachRing[numRing][0]
-                y += offsetXYeachRing[numRing][1]
-                if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
-                    weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
-                    blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
-                    blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
-                    #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
-                else: blobColor = colors_all[0]*contrast
-                #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw() #debug
-                gaussian.setColor( blobColor, log=autoLogging )
-                gaussian.setPos([x,y])
-                gaussian.draw()
-      if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
-        speedText.setText( str(round(currentSpeed,1)) )
-        speedText.draw()
-      if blindspotFill:
-          blindspotStim.draw()
-      return angleIniEachRing,currAngle,isReversed,reversalNumEachRing   
+  for numRing in range(numRings):
+    angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
+    currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
+    angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
+    #Handle reversal if time for reversal
+    if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
+        reversalNum = int(reversalNumEachRing[numRing])
+        if len( reversalTimesEachRing[numRing] ) <= reversalNum:
+            msg = 'Not enough reversal times allocated, reached ' +str(reversalNum)+ ' reversals at '+ str( round(reversalTimesEachRing[numRing][reversalNum-1],1) )
+            msg=msg+ 'and still going (only allocated the following:' + str( np.around(reversalTimesEachRing[numRing],1) )+ ' n= ' + str(round(n,1))
+            msg=msg+ ' current time ='+str( round(n/refreshRate,2) )+' asking for time of next one, will assume no more reversals'
+            logging.error(msg)
+            print(msg)
+            nextReversalTime = 9999 #didn't allocate enough, will just not reverse any more
+        else: #allocated enough reversals
+            nextReversalTime = reversalTimesEachRing[numRing][ reversalNum ]
+        if n > refreshRate * nextReversalTime: #have now exceeded time for this next reversal
+            isReversed[numRing] = -1*isReversed[numRing]
+            reversalNumEachRing[numRing] +=1
+
+    if not drawingAsGrating: #drawing objects individually, not as grating. This just means can't keep up with refresh rate if more than 4 objects or so
+        #Calculate position of each object for this frame and draw them                
+        for nobject in range(numObjects):
+            angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
+            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
+            x += offsetXYeachRing[numRing][0]
+            y += offsetXYeachRing[numRing][1]
+            if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
+                weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
+                blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
+                blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
+                #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
+            else: blobColor = colors_all[0]*contrast
+            #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw() #debug
+            gaussian.setColor( blobColor, log=autoLogging )
+            gaussian.setPos([x,y])
+            gaussian.draw()
+    else: #drawingAsGrating
+        ringRadialLocal = ringRadial
+        centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
+        anglemoveDeg = angleMove / 180. * pi
+        #handle reversal
+        #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
+        #                reversalValue[noRing]=-1*reversalValue[noRing]
+        #                reversalNo[noRing] +=1
+        angleMovement[noRing]=angleMovement[noRing]+anglemove*(reversalValue[noRing])
+        ringRadialLocal[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment) 
+        ringRadialLocal[noRing].setContrast( contrast )
+        ringRadialLocal[noRing].draw()
+        if  (blobToCueEachRing[noRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's a target in that ring
+            #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
+                #even though this will result in skipping frames
+                cueRing[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment)
+                cueRing[noRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
+                cueRing[noRing].draw()
+        #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
+        #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
+
+  if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
+    speedText.setText( str(round(currentSpeed,1)) )
+    speedText.draw()
+  if blindspotFill:
+      blindspotStim.draw()
+  return angleIniEachRing,currAngle,isReversed,reversalNumEachRing   
 # #######End of function that displays the stimuli #####################################
 ########################################################################################
 
 showclickableRegions = True
-showClickedRegion = False
+showClickedRegion = True
 def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop ):
     optionSets=numRings
     #Draw/play response cues
