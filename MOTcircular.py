@@ -273,7 +273,7 @@ optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colo
 #Optionally show zones around objects that will count as a click for that object
 clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
-clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,.2,-1,fillColor=(-1,.2,-1),autoLog=autoLogging) #to show clickable zones
+clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,.2,-1),fillColor=(-1,.2,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
 
 landmarkDebug = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(1,-1,1),autoLog=autoLogging) #to show clickable zones
@@ -634,14 +634,15 @@ def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN,
     return x,y
 
 def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, lastFrameN):
-    angleMove = initialDirectionEachRing[numRing] * speed*2*pi*(thisFrameN-lastFrameN) / refreshRate
-    return angleMove
+    angleMoveRad = initialDirectionEachRing[numRing] * speed*2*pi*(thisFrameN-lastFrameN) / refreshRate
+    return angleMoveRad
 
-def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
+def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngleRad,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
   global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
   global angleIniEachRing, correctAnswers
-  
+  angleIniEachRingRad = angleIniEachRing
+
   #Determine what frame we are on
   if useClock: #Don't count on not missing frames. Use actual time.
     t = clock.getTime()
@@ -661,9 +662,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   fixationPoint.draw()
 
   for numRing in range(numRings):
-    angleMove = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
-    currAngle[numRing] = currAngle[numRing]+angleMove*(isReversed[numRing])
-    angleObject0 = angleIniEachRing[numRing] + currAngle[numRing]
+    angleMoveRad = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
+    currAngleRad[numRing] = currAngleRad[numRing]+angleMoveRad*(isReversed[numRing])
+    angleObject0Rad = angleIniEachRingRad[numRing] + currAngleRad[numRing]
     #Handle reversal if time for reversal
     if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
         reversalNum = int(reversalNumEachRing[numRing])
@@ -683,8 +684,8 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     if not drawingAsGrating: #drawing objects individually, not as grating. This just means can't keep up with refresh rate if more than 4 objects or so
         #Calculate position of each object for this frame and draw them                
         for nobject in range(numObjects):
-            angleThisObject = angleObject0 + (2*pi)/numObjects*nobject
-            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObject,n,speed)
+            angleThisObjectRad = angleObject0Rad + (2*pi)/numObjects*nobject
+            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObjectRad,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
             if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
@@ -700,21 +701,21 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     else: #drawingAsGrating
         ringRadialLocal = ringRadial
         centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-        anglemoveDeg = angleMove / 180. * pi
-        #handle reversal
+        #handle reversal REVERSALS NOT BEING HANDLED
         #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
         #                reversalValue[noRing]=-1*reversalValue[noRing]
         #                reversalNo[noRing] +=1
-        angleMovement[noRing]=angleMovement[noRing]+anglemove*(reversalValue[noRing])
-        ringRadialLocal[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment) 
-        ringRadialLocal[noRing].setContrast( contrast )
-        ringRadialLocal[noRing].draw()
-        if  (blobToCueEachRing[noRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's a target in that ring
+        angleObject0Deg = angleObject0Rad/pi*180
+        angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
+        ringRadialLocal[numRing].setOri(angleObject0Deg) 
+        ringRadialLocal[numRing].setContrast( contrast )
+        ringRadialLocal[numRing].draw()
+        if  (blobToCueEachRing[numRing] != -999) and n< ShowTrackCueFrames:  #-999 means there's no? target in that ring
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
-                cueRing[noRing].setOri(angleIni[noRing]+angleMovement[noRing]+centerInMiddleOfSegment)
-                cueRing[noRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
-                cueRing[noRing].draw()
+                cueRing[numRing].setOri(angleObject0Deg)
+                cueRing[numRing].setOpacity( 1- n*1.0/ShowTrackCueFrames ) #gradually make it transparent
+                cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
 
@@ -723,7 +724,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     speedText.draw()
   if blindspotFill:
       blindspotStim.draw()
-  return angleIniEachRing,currAngle,isReversed,reversalNumEachRing   
+  return angleIniEachRingRad,currAngleRad,isReversed,reversalNumEachRing   
 # #######End of function that displays the stimuli #####################################
 ########################################################################################
 
