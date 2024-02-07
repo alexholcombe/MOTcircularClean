@@ -50,7 +50,7 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = False;  antialiasGrating = True
+drawingAsGrating = False;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = False
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
@@ -87,9 +87,9 @@ print('scrn = ',scrn, ' from dialog box')
 fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
-#trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on. Not really part of the trial.
+#trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
 trialDurMin = 1
-trackingExtraTime=1.0; #giving the person time to attend to the cue (secs). This gets added to trialDurMin
+trackingExtraTime=2.0; #1.0 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo:trialDurMin = 5;refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
@@ -97,7 +97,7 @@ cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
 cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
 
 def maxTrialDur():
-    return( trialDurMin+trackingExtraTime+trackVariableIntervMax)
+    return( trialDurMin+trackingExtraTime+trackVariableIntervMax )
 badTimingCushion = 0.1 #Creating 100ms more of reversals than should need. Because if miss frames and using clock time instead of frames, might go longer
 def maxPossibleReversals():  #need answer to know how many blank fields to print to file
     return int( ceil(      (maxTrialDur() - trackingExtraTime)  / timeTillReversalMin          ) )
@@ -217,11 +217,9 @@ fileName = dataDir+'/'+subject+ '_' + expname+timeAndDateStr
 if not demo and not exportImages:
     dataFile = open(fileName+'.txt', 'w')  # sys.stdout
     import shutil
+    #Create a copy of this actual code so we know what exact version of the code was used for each participant
     ok = shutil.copy2(sys.argv[0], fileName+'.py') # complete target filename given
-    print("Result of attempt to copy = ", ok)
-    #saveCodeCmd = 'cp \'' + sys.argv[0] + '\' '+ fileName + '.py'
-    #os.system(saveCodeCmd)
-    
+    #print("Result of attempt to copy = ", ok)    
     logF = logging.LogFile(fileName+'.log', 
         filemode='w',#if you set this to 'a' it will append instead of overwriting
         level=logging.INFO)#errors, data and warnings will be sent to this logfile
@@ -235,7 +233,7 @@ else: logging.info(refreshMsg1+refreshMsg2)
 longerThanRefreshTolerance = 0.27
 longFrameLimit = round(1000./refreshRate*(1.0+longerThanRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
 msg = 'longFrameLimit=' + str(longFrameLimit) + ' Recording trials where one or more interframe interval exceeded this figure '
-print(msg, file=logF)
+logging.info(msg)
 print(msg)
 if msgWrongResolution != '':
     logging.error(msgWrongResolution)
@@ -261,7 +259,7 @@ runInfo = psychopy.info.RunTimeInfo(
         verbose=True, ## True means report on everything 
         userProcsDetailed=True  ## if verbose and userProcsDetailed, return (command, process-ID) of the user's processes
         )
-print('second window opening runInfo mean ms=',runInfo["windowRefreshTimeAvg_ms"],file=logF)
+logging.info('second window opening runInfo mean ms='+str(runInfo["windowRefreshTimeAvg_ms"]))
 logging.info(runInfo)
 logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
@@ -307,23 +305,23 @@ speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,
 if useSound: 
     ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
     soundDir = 'sounds'
-    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9)
+    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9, autoLog=autoLogging)
     respPromptSounds = [-99] * len(ringQuerySoundFileNames)
     for i in range(len(ringQuerySoundFileNames)):
         soundFileName = ringQuerySoundFileNames[i]
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
-        respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2)
+        respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile)
+    corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
     
 stimList = []
 # temporalfrequency limit test
 
-numTargets =                                [2,                 3]
-numObjsInRing =                         [  4,                   8        ]
+numTargets =                                [3,                 3] #AHtemp  #2,3
+numObjsInRing =                         [  2,                   2       ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) #Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.2,0.2,0.2,0.2]) #  [0.96, 0.7, 0.72, 0.5] Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -403,13 +401,11 @@ trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
-logF = io.StringIO()  #kludge so I dont have to change all the print >>logF statements
 msg = 'numtrials='+ str(trials.nTotal)+', trialDurMin= '+str(trialDurMin)+ ' trackVariableIntervMax= '+ str(trackVariableIntervMax) + 'refreshRate=' +str(refreshRate)     
 logging.info( msg )
 print(msg)
 msg = 'cueRampUpDur=' + str(cueRampUpDur) + ' cueRampDownDur= ' + str(cueRampDownDur) + ' secs'
-print(msg, file=logF);
-logging.info( logF.getvalue() )
+logging.info(msg);
 logging.info('task='+'track'+'   respType='+respType)
 logging.info('ring radii=' + str(radii))
 
@@ -423,6 +419,7 @@ stimColorIdxsOrder=[[0,0],[0,0],[0,0]]#this was used for drawing blobs during Li
 
 def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
     #Will create the ring of objects (ringRadial) grating and also a ring grating for the cue, for each ring
+    #patchAngle is the angle an individual object subtends, of the circle
     ringRadial=list(); cueRing=list(); 
     #The textures specifying the color at each portion of the ring. The ringRadial will have multiple cycles but only one for the cueRing
     myTexEachRing=list();cueTexEachRing=list();
@@ -515,15 +512,15 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
     # elif thisTrial['numObjectsInRing']==2:WhiteCueSizeAdj=200
 
     for i in range(numRings):
-            if blobToCue[i] >=0: #-999 means dont cue anything
-                blobToCueCorrectForRingReversal = numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-                #if blobToCueCorrectForRingReversal==0 and thisTrial['numObjectsInRing']==12:   WhiteCueSizeAdj=0
-                cueStartEntry = blobToCueCorrectForRingReversal*segmentLen+WhiteCueSizeAdj
-                cueEndEntry = cueStartEntry + segmentLen-2*WhiteCueSizeAdj
-                cueTexEachRing[i][:, round(cueStartEntry):round(cueEndEntry), :] = -1*bgColor[0]    
-                blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
-                cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
-                cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0];
+        if blobToCue[i] >=0: #-999 means dont cue anything
+            blobToCueCorrectForRingReversal = numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
+            #if blobToCueCorrectForRingReversal==0 and thisTrial['numObjectsInRing']==12:   WhiteCueSizeAdj=0
+            cueStartEntry = blobToCueCorrectForRingReversal*segmentLen+WhiteCueSizeAdj
+            cueEndEntry = cueStartEntry + segmentLen-2*WhiteCueSizeAdj
+            cueTexEachRing[i][:, round(cueStartEntry):round(cueEndEntry), :] = -1*bgColor[0]    
+            blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
+            cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
+            cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0];
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
 
     ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into annulus (ring)
@@ -680,7 +677,28 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             isReversed[numRing] = -1*isReversed[numRing]
             reversalNumEachRing[numRing] +=1
 
-    if not drawingAsGrating: #drawing objects individually, not as grating. This just means can't keep up with refresh rate if more than 4 objects or so
+    if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs:
+        #ringRadialLocal = ringRadial
+        centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
+        #handle reversal REVERSALS NOT BEING HANDLED
+        #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
+        #                reversalValue[noRing]=-1*reversalValue[noRing]
+        #                reversalNo[noRing] +=1
+        angleObject0Deg = angleObject0Rad/pi*180
+        angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
+        angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
+        ringRadial[numRing].setOri(angleObject0Deg)   
+        ringRadial[numRing].setContrast( contrast )
+        ringRadial[numRing].draw()
+        if  (blobToCueEachRing[numRing] != -999) and n< cueFrames:  #-999 means there's no? target in that ring
+            #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
+                #even though this will result in skipping frames
+                cueRing[numRing].setOri(angleObject0Deg)
+                cueRing[numRing].setOpacity( 1- n*1.0/cueFrames ) #gradually make it transparent
+                cueRing[numRing].draw()
+        #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
+        #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
+    if (not drawingAsGrating) or debugDrawBothAsGratingAndAsBlobs: #drawing objects individually, not as grating. This just means can't keep up with refresh rate if more than 4 objects or so
         #Calculate position of each object for this frame and draw them                
         for nobject in range(numObjects):
             angleThisObjectRad = angleObject0Rad + (2*pi)/numObjects*nobject
@@ -697,26 +715,6 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             gaussian.setColor( blobColor, log=autoLogging )
             gaussian.setPos([x,y])
             gaussian.draw()
-    else: #drawingAsGrating
-        #ringRadialLocal = ringRadial
-        centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-        #handle reversal REVERSALS NOT BEING HANDLED
-        #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
-        #                reversalValue[noRing]=-1*reversalValue[noRing]
-        #                reversalNo[noRing] +=1
-        angleObject0Deg = angleObject0Rad/pi*180
-        angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
-        ringRadial[numRing].setOri(angleObject0Deg) 
-        ringRadial[numRing].setContrast( contrast )
-        ringRadial[numRing].draw()
-        if  (blobToCueEachRing[numRing] != -999) and n< cueFrames:  #-999 means there's no? target in that ring
-            #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
-                #even though this will result in skipping frames
-                cueRing[numRing].setOri(angleObject0Deg)
-                cueRing[numRing].setOpacity( 1- n*1.0/cueFrames ) #gradually make it transparent
-                cueRing[numRing].draw()
-        #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
-        #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
 
   if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
     speedText.setText( str(round(currentSpeed,1)) )
@@ -964,11 +962,11 @@ while trialNum < trials.nTotal and expStop==False:
     stimClock.reset()
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
-    if drawingAsGrating: #construct the gratings
-        patchAngleBase = 20; #This seems to be a kludge, not sure if it's to make the patches line up with something else or what
-        increaseRadiusFactorToEquateWithBlobs = 3 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
+    if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
+        gratingPatchAngle = 20; #the angle an individual object subtends, of the circle
+        increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
-        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGrating(radiiGratings,numObjects,patchAngleBase,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGrating(radiiGratings,numObjects,gratingPatchAngle,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
@@ -1197,7 +1195,7 @@ else:
     print('Num correct each speed: ',end=' ')
     print( np.around( numRightWrongEachSpeedOrder[:,1] , 2) )
 print('\t\t\t\tNum trials each speed =', numTrialsEachSpeed)
-logging.flush(); dataFile.close(); logF.close()
+logging.flush(); dataFile.close(); 
 
 if eyetracking:
   if eyetrackFileGetFromEyelinkMachine:
@@ -1207,12 +1205,14 @@ if eyetracking:
     myWin.flip()
     msg = my_tracker.closeConnectionToEyeTracker(EDF_fname_local) #this requests the data back and thus can be very time-consuming, like 20 min or more
     msg = "Message from closeConnectionToEyeTracker, which tries to get EDF file and close connection:" + msg
-    print(msg); print(msg,file=logF) #""Eyelink connection closed successfully" or "Eyelink not available, not closed properly"
-  else: 
-    print('You will have to get the Eyelink EDF file off the eyetracking machine by hand')
+    print(msg); logging.info(msg) #""Eyelink connection closed successfully" or "Eyelink not available, not closed properly" also prints any error assocaited with getting the EDF file
+  else:
+    msg = 'You will have to get the Eyelink EDF file off the eyetracking machine by hand'
+    print(msg); logging.info(msg)
     
 if quitFinder: #turn Finder back on
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
         os.system(shellCmd)
+logging.flush(); logF.close()
 core.quit()
