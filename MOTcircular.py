@@ -50,11 +50,11 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = False;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = False
+drawingAsGrating = True;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = False
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
-radii=np.array([2.19,8.33,13.16]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
+radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
@@ -443,7 +443,7 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
         myTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+bgColor[0])#start with all channels in all locs = bgColor
         cueTexEachRing.append(np.ones([gratingTexPix,gratingTexPix,3])*bgColor[0])
     if patchAngle > angleSegment:
-        msg='Error: patchAngle requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+') numUniquePatches='+str(numUniquePatches)+' numCycles='+str(numCycles); 
+        msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+') numUniquePatches='+str(numUniquePatches)+' numCycles='+str(numCycles); 
         print(msg); print(msg, file=logF); logging.error(msg)
   
     oneCycleAngle = 360./numCycles
@@ -518,7 +518,7 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
             cueStartEntry = blobToCueCorrectForRingReversal*segmentLen+WhiteCueSizeAdj
             cueEndEntry = cueStartEntry + segmentLen-2*WhiteCueSizeAdj
             cueTexEachRing[i][:, round(cueStartEntry):round(cueEndEntry), :] = -1*bgColor[0]    
-            blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
+            blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
             cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
             cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0];
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
@@ -687,6 +687,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
         angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
+        angleObject0Deg = angleObject0Deg - 90 #Because to align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
         ringRadial[numRing].setOri(angleObject0Deg)   
         ringRadial[numRing].setContrast( contrast )
         ringRadial[numRing].draw()
@@ -694,7 +695,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
                 cueRing[numRing].setOri(angleObject0Deg)
-                cueRing[numRing].setOpacity( 1- n*1.0/cueFrames ) #gradually make it transparent
+                cueRing[numRing].setOpacity( 1 ) #- n*1.0/cueFrames ) #gradually make it transparent
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
@@ -1214,5 +1215,5 @@ if quitFinder: #turn Finder back on
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
         os.system(shellCmd)
-logging.flush(); logF.close()
+logging.flush();
 core.quit()
