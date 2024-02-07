@@ -54,7 +54,7 @@ drawingAsGrating = False;  antialiasGrating = True
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
-radii=[2.19,8.33,13.16] #[2.5,9.5,15]   #Need to encode as array for those experiments wherein more than one ring presented 
+radii=np.array([2.19,8.33,13.16]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
@@ -421,7 +421,7 @@ logging.flush()
 
 stimColorIdxsOrder=[[0,0],[0,0],[0,0]]#this was used for drawing blobs during LinaresVaziriPashkam stimulus, not just vestigial for grating
 
-def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
+def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
     #Will create the ring of objects (ringRadial) grating and also a ring grating for the cue, for each ring
     ringRadial=list(); cueRing=list(); 
     #The textures specifying the color at each portion of the ring. The ringRadial will have multiple cycles but only one for the cueRing
@@ -514,7 +514,6 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
     # elif thisTrial['numObjectsInRing']==12:WhiteCueSizeAdj=-15
     # elif thisTrial['numObjectsInRing']==2:WhiteCueSizeAdj=200
 
-    
     for i in range(numRings):
             if blobToCue[i] >=0: #-999 means dont cue anything
                 blobToCueCorrectForRingReversal = numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
@@ -525,7 +524,7 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
                 blackGrains = round( .25*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
                 cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
                 cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0];
-    angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file!
+    angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
 
     ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into annulus (ring)
 
@@ -533,7 +532,7 @@ def constructRingAsGrating(numObjects,patchAngle,colors,stimColorIdxsOrder,grati
         #Draw annular stimulus (ring) using radialGrating function, colors specified by myTexEachRing.
         thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
                             mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
-                            radialCycles=0, #the mask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
+                            radialCycles=0, #the ringRadialMask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
                             angularCycles= thisTrial['numObjectsInRing']*1.0/numUniquePatches,
                             angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging)
         ringRadial.append(thisRing)
@@ -639,7 +638,7 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
 
 def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngleRad,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
-  global cueRing,ringRadial,ringRadialR, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
+  global cueRing,ringRadial, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
   global angleIniEachRing, correctAnswers
   angleIniEachRingRad = angleIniEachRing
 
@@ -699,7 +698,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             gaussian.setPos([x,y])
             gaussian.draw()
     else: #drawingAsGrating
-        ringRadialLocal = ringRadial
+        #ringRadialLocal = ringRadial
         centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
         #handle reversal REVERSALS NOT BEING HANDLED
         #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
@@ -707,9 +706,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         #                reversalNo[noRing] +=1
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
-        ringRadialLocal[numRing].setOri(angleObject0Deg) 
-        ringRadialLocal[numRing].setContrast( contrast )
-        ringRadialLocal[numRing].draw()
+        ringRadial[numRing].setOri(angleObject0Deg) 
+        ringRadial[numRing].setContrast( contrast )
+        ringRadial[numRing].draw()
         if  (blobToCueEachRing[numRing] != -999) and n< cueFrames:  #-999 means there's no? target in that ring
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
@@ -967,7 +966,9 @@ while trialNum < trials.nTotal and expStop==False:
 
     if drawingAsGrating: #construct the gratings
         patchAngleBase = 20; #This seems to be a kludge, not sure if it's to make the patches line up with something else or what
-        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGrating(numObjects,patchAngleBase,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+        increaseRadiusFactorToEquateWithBlobs = 3 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
+        radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
+        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGrating(radiiGratings,numObjects,patchAngleBase,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
