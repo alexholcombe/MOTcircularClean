@@ -69,7 +69,7 @@ if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shel
     has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
 dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
-    dlgBoxTitle = 'MOT (and at least one screen is Retina screen)'
+    dlgBoxTitle = 'MOT. At least one screen is detected as Retina screen)'
 # create a dialog box from dictionary 
 infoFirst = { 'Autopilot':autopilot, 'checkRefresh':True, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
@@ -321,7 +321,7 @@ numTargets =                                [3,                 3] #AHtemp  #2,3
 numObjsInRing =                         [  2,                   2       ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.2,0.2,0.2,0.2]) #  [0.96, 0.7, 0.72, 0.5] Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.1,0.1,0.1,0.1]) #  [0.96, 0.7, 0.72, 0.5] Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -426,7 +426,6 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
 
     stimColorIdxsOrder= stimColorIdxsOrder[::-1]  #reverse order of indices, because grating texture is rendered in reverse order than is blobs version
     numUniquePatches= max( len(stimColorIdxsOrder[0]),len(stimColorIdxsOrder[1]),len(stimColorIdxsOrder[2]))
-
     #I think ordinarily numUniquePatches is 2, maybe 1 for the object and one for the blank space in between? not sure
     numCycles =float(numObjects) / numUniquePatches #The sequence of different colors is one cycle.
     print('numObjects=',numObjects, ' numUniquePatches =', numUniquePatches, ' numCycles=',numCycles)
@@ -478,11 +477,10 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
                     print('cycleStart is not very close to being an integer')  
                 if decimalPart(cycleEnd) > .001:
                     print('cycleEnd is not very close to being an integer')  
-                # 0:102.4 which results from odd number of objects (5)  isn't gonna work
-                #Fill in the location of the cue initially with red,  I think so that it can be constantly shown on top of the objects ring
-                #It's only one cycle for the entire ring, unlike the objects ring . Not sure why it's color1 in particular
-                debugCue = True
-                cueObjectColor = ringColor[1]
+                #Fill in the cueTex object locations initially with red, so that it can be constantly shown on top of the objects ring
+                #It's only one cycle for the entire ring, unlike the objects ring, so that can highlight just a part of it as the white cue.
+                debugCue = False
+                cueObjectColor = ringColor[0] #conventionally, red
                 if debugCue:
                     cueObjectColor = [1,1,0]
                 cueTexEachRing[i][:, floor(cycleStart):floor(cycleEnd), colorChannel] = cueObjectColor[colorChannel]
@@ -530,13 +528,14 @@ def constructRingAsGrating(radii,numObjects,patchAngle,colors,stimColorIdxsOrder
         thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
                             mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
                             radialCycles=0, #the ringRadialMask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
-                            angularCycles= thisTrial['numObjectsInRing']*1.0/numUniquePatches,
+                            angularCycles= numObjects*1.0/numUniquePatches,
                             angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging)
         ringRadial.append(thisRing)
 
         #draw cue grating for tracking task. Entire grating will be empty except for one white sector
         cueRing.append(visual.RadialStim(myWin, tex=cueTexEachRing[i], color=[1,1,1],size=radii[i], #cueTexInner is white. Only one sector of it shown by mask
-                        mask=ringRadialMask[i], radialCycles=0, angularCycles=1, #only one cycle because no pattern actually repeats- trying to highlight only one sector
+                        mask=ringRadialMask[i], radialCycles=0, 
+                        angularCycles=1, #only one cycle because no pattern actually repeats- trying to highlight only one sector
                         angularRes=angRes, interpolate=antialiasGrating, autoLog=autoLogging) )#depth doesn't work, I think was abandoned by Psychopy
     
     currentlyCuedBlob = blobToCue #this will mean that don't have to redraw 
@@ -680,10 +679,6 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs:
         #ringRadialLocal = ringRadial
         centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-        #handle reversal REVERSALS NOT BEING HANDLED
-        #if Reversal and reversalNo[noRing] <= len(RAI[noRing]) and n>RAI[noRing][int(reversalNo[noRing])]*hz:
-        #                reversalValue[noRing]=-1*reversalValue[noRing]
-        #                reversalNo[noRing] +=1
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
         angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
@@ -695,7 +690,11 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
                 cueRing[numRing].setOri(angleObject0Deg)
-                cueRing[numRing].setOpacity( 1 ) #- n*1.0/cueFrames ) #gradually make it transparent
+                #gradually make the cue become transparent until it disappears completely (opacity=0), revealing the object
+                opacity = 1 - n*1.0/cueFrames  #linear ramp from 1 to 0
+                #The above makes it transparent too quickly, so make a nonlinearity that saturates at 1
+                opacity = cos( (opacity-1)*pi/2 ) 
+                cueRing[numRing].setOpacity( 1 ) #opacity 
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
