@@ -1131,7 +1131,7 @@ while trialNum < trials.nTotal and expStop==False:
     numRightWrongEachSpeedOrder[ speedIdx, (orderCorrect >0) ] +=1  #if right, add to 1th column, otherwise add to 0th column count
     numRightWrongEachSpeedIdent[ speedIdx, (numColorsCorrectlyIdentified==3) ] +=1
     blueMistakes+=blueMistake
-    dataFile.flush(); logF.flush(); 
+    dataFile.flush(); logging.flush(); 
     
     if feedback and not expStop:
         if orderCorrect==3  :correct=1
