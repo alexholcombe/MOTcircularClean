@@ -116,13 +116,13 @@ trialDurFrames=int(trialDurMin*refreshRate)+int( trackingExtraTime*refreshRate )
 rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampDownDur;
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
-ballStdDev = 1.8
+ballStdDev = 4 #debug #1.8
 mouseChoiceArea = ballStdDev*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 1.5# 1.3 #2.9
 colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (typically all identical) in a ring. Need as many as max num objects in a ring
-cueColor = np.array([1,1,1])
+cueColor =  np.array([1,1,1])
 #monitor parameters
 widthPixRequested = 800 #1440  #monitor width in pixels
 heightPixRequested = 600  #900 #monitor height in pixels
@@ -322,7 +322,7 @@ numTargets =                                [3,                 3] #AHtemp  #3
 numObjsInRing =                         [  4,                   4  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -507,17 +507,18 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         
     #Color the cueTex segment to be cued white
     #only a portion of that segment should be colored, the amount corresponding to angular patch
-    for i in range(0): #DEBUG range(numRings):
+    for i in range(numRings):
         if blobToCue[i] >=0: #-999 means dont cue anything
-            blobToCue_CorrectForRingReversal = numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            #if blobToCueCorrectForRingReversal==0 and thisTrial['numObjectsInRing']==12:   WhiteCueSizeAdj=0
+            #Have to 
+            blobToCue_CorrectForRingReversal = blobToCue[i] #numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
             cueStartEntry = blobToCue_CorrectForRingReversal*(segmentTexPix)
-            cueEndEntry = cueStartEntry + segmentTexPix
+            cueEndEntry = cueStartEntry + segmentTexPix/2.0
+            print("blobToCue =",blobToCue_CorrectForRingReversal, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
             #the critical line that colors the actual cue
-            cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] = -1*bgColor[0]  #opposite of bgColor (usually black), thus usually white 
-            blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
-            cueTexEachRing[i][round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
-            cueTexEachRing[i][round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0]
+            cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] = [.8,-1,.5] #debug -1*bgColor[0]  #opposite of bgColor (usually black), thus usually white 
+            #blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
+            #cueTexEachRing[i][round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
+            #cueTexEachRing[i][round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0]
 
     #print("myTexEachRing[2]=", myTexEachRing[2])
     #print('cueTexEachRing[2]=', cueTexEachRing[2])
@@ -720,7 +721,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
                 opacity = 1 - n*1.0/cueFrames  #linear ramp from 1 to 0
                 #The above makes it transparent too quickly, so make a nonlinearity that saturates at 1
                 opacity = cos( (opacity-1)*pi/2 ) 
-                cueRing[numRing].setOpacity( 1 ) #opacity 
+                cueRing[numRing].setOpacity( 1 ) #debug #opacity 
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
@@ -731,8 +732,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObjectRad,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
-            if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white  
+            if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white
                 weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
+                weightToTrueColor = 0 #debug
                 blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
                 blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
                 #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
