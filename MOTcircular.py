@@ -88,8 +88,8 @@ fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
-trialDurMin = 1 #1
-trackingExtraTime= 8.0; #1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
+trialDurMin = 4 #1
+trackingExtraTime= 0.8; #1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo: 
     trialDurMin = 5; refreshRate = 60.; 
@@ -319,7 +319,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                                [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  2,                   4  ]  #AH temp #4,8
+numObjsInRing =                         [  6,                   6  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -434,9 +434,11 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+') numUniquePatches='+str(numUniquePatches)+' numCycles='+str(numCycles); 
         print(msg); logging.error(msg)
 
-    #create texture for objects grating. Initialize with bgColor
+    #create list of textures for objects grating, one for each ring. Initialize with bgColor
     for i in range(numRings):
-        myTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+ [-1,-1,1] )#debug bgColor[0])#start with all channels in all locs = bgColor
+        myTexThis = np.zeros([gratingTexPix,3]) + bgColor[0]
+        myTexEachRing.append( myTexThis )
+        #myTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3]) + [-1,-1,1] )#debug bgColor[0])#start with all channels in all locs = bgColor
         cueTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+bgColor[0])
 
     #Entire cycle of grating is just one object and one blank space
@@ -462,7 +464,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     print("ringColor=",ringColor)
 
     for i in range(numRings):
-        myTexEachRing[i][:, start:end, :] = [.9,-1,0.4] #debug grating objects purple # ringColor[i]; 
+        myTexEachRing[i][start:end, :] = [.9,-1,-0.2] #debug grating objects reddish-purple # ringColor[i]; 
 
     print('start=',start,' end=',end)
     #Enter flanks (bgColor), object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
@@ -528,9 +530,20 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #Need to shift texture by halfCyclePixTexture/2 to center it on how Gabor blobs are drawn. Because Gabor blobs are centered on angle=0, whereas
         # grating starts drawing at angle=0 rather than being centered on it, and extends from there
         shiftToAlignWithGaussianBlobs = -1 * round(halfCyclePixTexture/2.)
-        myTexEachRing[i] = np.roll( myTexEachRing[i], shiftToAlignWithGaussianBlobs)
+        myTexEachRing[i] = np.roll( myTexEachRing[i], shiftToAlignWithGaussianBlobs, axis=0 )
 
-        thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
+        #Make myTexEachRing into a two-dimensional texture. Presently it's only one dimension. Actually it's possible psychopy automatically cycles it
+        arr_ex = np.expand_dims(myTexEachRing[i], axis=0)
+
+        # Duplicate the array along the first dimension
+        repeatsWanted = len(myTexEachRing[i])
+        myTex2dThisRing = np.repeat(arr_ex, repeatsWanted, axis=0)
+
+        # Print the duplicated array
+        print(myTex2dThisRing.shape)
+        print(myTex2dThisRing)
+
+        thisRing = visual.RadialStim(myWin, tex=myTex2dThisRing, color=[1,1,1],size=radii[i],
                             mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
                             radialCycles=0, #the ringRadialMask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
                             angularCycles= numObjects,
