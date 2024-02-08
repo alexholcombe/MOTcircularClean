@@ -442,7 +442,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     #initialize cueTex list with bgColor like myTexThis
     cueTexEachRing = deepcopy(myTexEachRing)
     if True: #debugCue
-        for i in range(numRings): cueTexEachRing[i][:] = [1,1,0] 
+        for i in range(numRings): cueTexEachRing[i][:] = [-1,-1,0.5] #initialized with dark blue
 
     #Entire cycle of grating is just one object and one blank space
     halfCyclePixTexture = gratingTexPix/2 
@@ -491,8 +491,8 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             objectColor = ringColor[0] #conventionally, red
             if debugCue:
                 objectColor = [1,1,0] #make cuing ring obvious by having its objects be yellow
-            print('cueTex ringI=', ringI, ' objectI=',objectI,' start=',start,'end=',end)
             cueTexEachRing[ringI][start:end, :] = objectColor
+            print('cueTex ringI=', ringI, ' objectI=',objectI,' start=',start,'end=',end, '[start,:] = ', cueTexEachRing[ringI][start, :])
 
             #Erase flanks (color with bgColor)
             # base = objectI/numObjects * gratingTexPix
