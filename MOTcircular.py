@@ -39,7 +39,7 @@ subject='test'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False
+autopilot= True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -88,8 +88,8 @@ fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
-trialDurMin = 1
-trackingExtraTime=1.0 #8.0; #giving the person time to attend to the cue (secs). This gets added to trialDurMin
+trialDurMin = 1 #1
+trackingExtraTime= 1.2 #8.0; #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo:trialDurMin = 5;refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
@@ -318,10 +318,10 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                                [2,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                   8     ]  #AH temp #4,8
+numObjsInRing =                         [  4,                   8   ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) #np.array([0.002,0.002,0.002,0.002]) #   Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -435,8 +435,8 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
 
     #create texture for objects grating. Initialize with bgColor
     for i in range(numRings):
-        myTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+bgColor[0])#start with all channels in all locs = bgColor
-        cueTexEachRing.append(np.ones([gratingTexPix,gratingTexPix,3])*bgColor[0])
+        myTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+ [-1,-1,1] )#debug bgColor[0])#start with all channels in all locs = bgColor
+        cueTexEachRing.append(np.zeros([gratingTexPix,gratingTexPix,3])+bgColor[0])
 
     #Entire cycle of grating is just one object and one blank space
     halfCyclePixTexture = gratingTexPix/2 
@@ -449,25 +449,27 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
         print(msg, file=logF);   logging.warn(msg)
     print('halfCyclePixTexture=',halfCyclePixTexture,' patchPixTexture=',patchPixTexture, ' patchFlankPix=',patchFlankPix)
+    #patchFlankPix at 199 is way too big, because patchPixTexture = 114
 
     #set half of texture to color of objects
     start = 0
-    end = start + patchPixTexture
+    end = start + halfCyclePixTexture #patchPixTexture  
     start = round(start); end = round(end) #don't round until now after did addition, otherwise can fall short if multiplication involved
     ringColor=list();
     for i in range(numRings):
-        ringColor.append(colors[ stimColorIdxsOrder[i][0] ]) #assuming only one object color
+        ringColor.append(colors[ stimColorIdxsOrder[i][0] ]) #assuming only one object color for each ring (or all the same)
     print("ringColor=",ringColor)
-    for colorChannel in range(3):
-        for i in range(numRings):
-            myTexEachRing[i][:, start:end, colorChannel] = ringColor[i][colorChannel]; 
 
-    #Enter flanks (bgColor), object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
     for i in range(numRings):
-        myTexEachRing[i][:, start:start+patchFlankPix, :] = bgColor[0]; #one flank
-        myTexEachRing[i][:, end-1-patchFlankPix:end, :] = bgColor[0]; #other flank
+        myTexEachRing[i][:, start:end, :] = [.9,-1,0.7] #debug grating objects purple # ringColor[i]; 
 
-    #Do cueTex
+    print('start=',start,' end=',end)
+    #Enter flanks (bgColor), object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
+    #for i in range(numRings):
+    #    myTexEachRing[i][:, start:start+patchFlankPix, :] = bgColor[0]; #one flank
+    #    myTexEachRing[i][:, end-1-patchFlankPix:end, :] = bgColor[0]; #other flank
+
+    #Do cueTex ####################################################################################
     #Assign cueTex with object color (or yellow if debug)
     objectTexPix = gratingTexPix / (numObjects*2.)  #number of texture pix of one object (not counting spaces in between)
     for ringI in range(numRings):
@@ -485,8 +487,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             objectColor = ringColor[0] #conventionally, red
             if debugCue:
                 objectColor = [1,1,0] #make cuing ring obvious by having its objects be yellow
-            for colorChannel in range(3):
-                cueTexEachRing[ringI][:, start:end, colorChannel] = objectColor[colorChannel]
+            cueTexEachRing[ringI][:, start:end, :] = objectColor
 
             #Erase flanks (color with bgColor)
             base = objectI/numObjects * gratingTexPix
@@ -515,11 +516,19 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             cueTexEachRing[i][:, round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
             cueTexEachRing[i][:, round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0]
 
+    #print("myTexEachRing[2]=", myTexEachRing[2])
+    #print('cueTexEachRing[2]=', cueTexEachRing[2])
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
     ringRadialMask=[[0,0,0,1,1,] ,[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into an annulus (a ring)
 
     for i in range(numRings): #Actually create the rings, both the objects ring and the cue rings
         #Draw annular stimulus (ring) using radialGrating function, colors specified by myTexEachRing.
+
+        #Need to shift texture by halfCyclePixTexture/2 to center it on how Gabor blobs are drawn. Because Gabor blobs are centered on angle=0, whereas
+        # grating starts drawing at angle=0 rather than being centered on it, and extends from there
+        shiftToAlignWithGaussianBlobs = 0# -1 * round(halfCyclePixTexture/4.)
+        myTexEachRing[i] = np.roll( myTexEachRing[i], shiftToAlignWithGaussianBlobs)
+
         thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
                             mask=ringRadialMask[i], # this is a 1-D mask dictating the behaviour from the centre of the stimulus to the surround.
                             radialCycles=0, #the ringRadialMask is radial and indicates that should show only .3-.4 as one moves radially, creating an annulus
@@ -801,7 +810,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs:
         #ringRadialLocal = ringRadial
-        centerInMiddleOfSegment =360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
+        centerInMiddleOfSegment = 0 #360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
         angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
@@ -1307,26 +1316,33 @@ while trialNum < trials.nTotal and expStop==False:
 if expStop == True:
     logging.info('User aborted experiment by keypress with trialNum=' + str(trialNum))
     print('User aborted experiment by keypress with trialNum=', trialNum)
-    
-print('finishing at ',timeAndDateStr, file=logF)
+
+msg = 'Finishing now, at ' + timeAndDateStr
+logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')
 numTrialsEachSpeed = numRightWrongEachSpeedOrder[:,0] + numRightWrongEachSpeedOrder[:,1]
 allNonZeros = np.all( numTrialsEachSpeed )
 if allNonZeros: #Has to be all nonzeros otherwise will get divide by zero error
-    print('%correct each speed: ', end=' ')
-    print( np.around( numRightWrongEachSpeedOrder[:,1] / numTrialsEachSpeed, 2) )
+    msg = '%correct each speed: '
+    msg = msg + str(  np.around( numRightWrongEachSpeedOrder[:,1] / numTrialsEachSpeed, 2)  )    
 else:
-    print('Num correct each speed: ',end=' ')
-    print( np.around( numRightWrongEachSpeedOrder[:,1] , 2) )
-print('\t\t\t\tNum trials each speed =', numTrialsEachSpeed)
+    msg = 'Num correct each speed: '
+    msg = msg + str(  np.around( numRightWrongEachSpeedOrder[:,1] , 2) )
+
+msg = msg + '\t\tNum trials each speed =' + str( numTrialsEachSpeed )
+
+logging.info(msg); print(msg)
 logging.flush(); dataFile.close(); 
 
 if eyetracking:
   if eyetrackFileGetFromEyelinkMachine:
     eyetrackerFileWaitingText = visual.TextStim(myWin,pos=(-.1,0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
-    eyetrackerFileWaitingText.setText('Waiting for eyetracking file from Eyelink computer. Do not abort eyetracking machine or file will not be saved?')
+    msg = 'Waiting for eyetracking file from Eyelink computer. Do not abort eyetracking machine or file will not be saved on this machine.'
+    logging.info(msg)
+    eyetrackerFileWaitingText.setText(msg)
     eyetrackerFileWaitingText.draw()
     myWin.flip()
+
     msg = my_tracker.closeConnectionToEyeTracker(EDF_fname_local) #this requests the data back and thus can be very time-consuming, like 20 min or more
     msg = "Message from closeConnectionToEyeTracker, which tries to get EDF file and close connection:" + msg
     print(msg); logging.info(msg) #""Eyelink connection closed successfully" or "Eyelink not available, not closed properly" also prints any error assocaited with getting the EDF file
