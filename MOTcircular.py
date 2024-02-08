@@ -89,9 +89,10 @@ refreshRate = infoFirst['Screen refresh rate']
 
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
 trialDurMin = 1 #1
-trackingExtraTime= 1.2 #8.0; #giving the person time to attend to the cue (secs). This gets added to trialDurMin
+trackingExtraTime= 8.0; #1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
-if demo:trialDurMin = 5;refreshRate = 60.; 
+if demo: 
+    trialDurMin = 5; refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
 cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
 cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
@@ -317,8 +318,8 @@ if useSound:
 stimList = []
 # temporalfrequency limit test
 
-numTargets =                                [2,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                   8   ]  #AH temp #4,8
+numTargets =                                [3,                 3] #AHtemp  #3
+numObjsInRing =                         [  2,                   4  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -461,7 +462,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     print("ringColor=",ringColor)
 
     for i in range(numRings):
-        myTexEachRing[i][:, start:end, :] = [.9,-1,0.7] #debug grating objects purple # ringColor[i]; 
+        myTexEachRing[i][:, start:end, :] = [.9,-1,0.4] #debug grating objects purple # ringColor[i]; 
 
     print('start=',start,' end=',end)
     #Enter flanks (bgColor), object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
@@ -526,7 +527,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
 
         #Need to shift texture by halfCyclePixTexture/2 to center it on how Gabor blobs are drawn. Because Gabor blobs are centered on angle=0, whereas
         # grating starts drawing at angle=0 rather than being centered on it, and extends from there
-        shiftToAlignWithGaussianBlobs = 0# -1 * round(halfCyclePixTexture/4.)
+        shiftToAlignWithGaussianBlobs = -1 * round(halfCyclePixTexture/2.)
         myTexEachRing[i] = np.roll( myTexEachRing[i], shiftToAlignWithGaussianBlobs)
 
         thisRing = visual.RadialStim(myWin, tex=myTexEachRing[i], color=[1,1,1],size=radii[i],
