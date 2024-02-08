@@ -319,7 +319,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                                [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                   4  ]  #AH temp #4,8
+numObjsInRing =                         [  6,                   6  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -510,10 +510,11 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     for i in range(numRings):
         if blobToCue[i] >=0: #-999 means dont cue anything
             #Have to 
-            blobToCue_CorrectForRingReversal = blobToCue[i] #numObjects-1 - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            cueStartEntry = blobToCue_CorrectForRingReversal*(segmentTexPix)
+            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
+            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 2) % numObjects
+            cueStartEntry = blobToCue_relativeToGaussianBlobsCorrect*(segmentTexPix)
             cueEndEntry = cueStartEntry + segmentTexPix/2.0
-            print("blobToCue =",blobToCue_CorrectForRingReversal, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
+            print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
             #the critical line that colors the actual cue
             cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] = [.8,-1,.5] #debug -1*bgColor[0]  #opposite of bgColor (usually black), thus usually white 
             #blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
