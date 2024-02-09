@@ -326,7 +326,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  8,                 8 ]  #AH temp #4,8
+numObjsInRing =                         [  4,                 4]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
