@@ -521,7 +521,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #only a portion of that segment should be colored, the amount corresponding to angular patch
         if blobToCue[ringI] >=0: #-999 means dont cue anything
             #blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI]
+            blobToCue_ringReversalCorrect = blobToCue[ringI]
             blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.0
