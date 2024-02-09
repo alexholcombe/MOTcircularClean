@@ -7,7 +7,7 @@
 ##############
 import psychopy.info
 from psychopy import sound, monitors, logging, visual, data, core
-useSound=False
+useSound=True
 import psychopy.gui, psychopy.event
 import numpy as np
 import itertools #to calculate all subsets
@@ -50,7 +50,7 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = True;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = True
+drawingAsGrating = True;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = False
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
@@ -97,7 +97,7 @@ tokenChosenEachRing= [-999]*numRings
 cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
 cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
 
-labelBlobs = True #debug
+labelBlobs = False #debug
 
 def maxTrialDur():
     return( trialDurMin+trackingExtraTime+trackVariableIntervMax )
@@ -118,7 +118,7 @@ trialDurFrames=int(trialDurMin*refreshRate)+int( trackingExtraTime*refreshRate )
 rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampDownDur;
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
-ballStdDev = 4 #debug #1.8
+ballStdDev = 1.8
 mouseChoiceArea = ballStdDev*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
@@ -285,7 +285,7 @@ clickedRegion.setColor((0,1,-1)) #show in yellow
 landmarkDebug = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(1,-1,1),autoLog=autoLogging) #to show clickable zones
 
 circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.8,.8,-.6),lineWidth=2,fillColor=None,autoLog=autoLogging) #visual postcue
-#referenceCircle allows visualisation of trajectory, mostly for debugging
+#referenceCircle allows optional visualisation of trajectory
 referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rgb',lineColor=(-1,-1,1),autoLog=autoLogging) #visual postcue
 
 blindspotFill = 0 #a way for people to know if they move their eyes
@@ -293,7 +293,7 @@ if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 fixatnNoise = True
-fixSizePix = 10 #make fixation big so flicker more conspicuous
+fixSizePix = 20 #make fixation big so flicker more conspicuous
 if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
@@ -329,7 +329,7 @@ numTargets =                              [3,                 3] #AHtemp  #3
 numObjsInRing =                         [  4,                 4]  #AH temp #4,8   #Gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -448,8 +448,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
 
     #initialize cueTex list with bgColor like myTexThis
     cueTexEachRing = deepcopy(myTexEachRing)
-    if False: #debugCue
-        for i in range(numRings): cueTexEachRing[i][:] = [-1,-1,0.5] #initialized with dark blue
+    #for i in range(numRings): cueTexEachRing[i][:] = [-1,-1,0.5] #initialized with dark blue for visualization
 
     #Entire cycle of grating is just one object and one blank space
     halfCyclePixTexture = gratingTexPix/2 
@@ -692,11 +691,6 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   elif rampDownFrames>0 and n > rampDownStart:
         contrast = cos(pi* (n-rampDownStart)/rampDownFrames ) /2.+.5 #starting from peak of cos, and scale into 0->1 range
   else: contrast = 1
-  if n%2:
-    fixation.draw()#flicker fixation on and off at framerate to see when skip frame
-  else:
-    fixationBlank.draw()
-  fixationPoint.draw()
 
   for numRing in range(numRings):
     angleMoveRad = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
@@ -762,6 +756,13 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             if labelBlobs: #for debugging purposes such as to check alignment with grating version
                 blobLabels[nobject].setPos([x,y])
                 blobLabels[nobject].draw()
+
+  #Drawing fixation after stimuli rather than before because gratings don't seem to mask properly, leaving them showing at center 
+  if n%2:
+    fixation.draw()#flicker fixation on and off at framerate to see when skip frame
+  else:
+    fixationBlank.draw()
+  fixationPoint.draw()
 
   if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
     speedText.setText( str(round(currentSpeed,1)) )
@@ -1010,7 +1011,7 @@ while trialNum < trials.nTotal and expStop==False:
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
-        gratingObjAngle = 10; #the angle an individual object subtends, of the circle
+        gratingObjAngle = 20; #the angle an individual object subtends, of the circle
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
         ringRadial,cueRing,currentlyCuedBlob = \
