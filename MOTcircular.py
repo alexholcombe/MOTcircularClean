@@ -97,6 +97,8 @@ tokenChosenEachRing= [-999]*numRings
 cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
 cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
 
+labelBlobs = True #debug
+
 def maxTrialDur():
     return( trialDurMin+trackingExtraTime+trackVariableIntervMax )
 badTimingCushion = 0.1 #Creating 100ms more of reversals than should need. Because if miss frames and using clock time instead of frames, might go longer
@@ -266,9 +268,14 @@ logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
     
 gaussian = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
-gaussian2 = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
-optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colorSpace='rgb',fillColor = (1,0,1),autoLog=autoLogging) #to outline chosen options
+if labelBlobs:
+    blobLabels = list()
+    for i in range(20): #assume no more than 20 objects
+        label = str(i)
+        blobText = visual.TextStim(myWin,text=label,colorSpace='rgb',color = (-1,-.2,-1),autoLog=False)
+        blobLabels.append(blobText)
 
+optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colorSpace='rgb',fillColor = (1,0,1),autoLog=autoLogging) #to outline chosen options
 #Optionally show zones around objects that will count as a click for that object
 clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
@@ -513,8 +520,9 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #Color the cueTex segment to be cued white
         #only a portion of that segment should be colored, the amount corresponding to angular patch
         if blobToCue[ringI] >=0: #-999 means dont cue anything
-            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 3) % numObjects
+            #blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
+            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI]
+            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.0
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
@@ -735,7 +743,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         #Calculate position of each object for this frame and draw them                
         for nobject in range(numObjects):
             angleThisObjectRad = angleObject0Rad + (2*pi)/numObjects*nobject
-            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii, numRing,angleThisObjectRad,n,speed)
+            x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,numRing,angleThisObjectRad,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
             if n< cueFrames and nobject==blobToCueEachRing[numRing]: #cue in white
@@ -749,6 +757,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             gaussian.setColor( blobColor, log=autoLogging )
             gaussian.setPos([x,y])
             gaussian.draw()
+            if labelBlobs: #for debugging purposes such as to check alignment with grating version
+                blobLabels[nobject].setPos([x,y])
+                blobLabels[nobject].draw()
 
   if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
     speedText.setText( str(round(currentSpeed,1)) )
@@ -975,7 +986,7 @@ while trialNum < trials.nTotal and expStop==False:
     reversalTimesEachRing = getReversalTimes()
     numObjects = thisTrial['numObjectsInRing']
     centerInMiddleOfSegment =360./numObjects/2.0
-    blobsToPreCue=thisTrial['whichIsTargetEachRing']
+    blobsToPreCue=[0,0,0]   #debug # thisTrial['whichIsTargetEachRing']
     core.wait(.1)
     myMouse.setVisible(False)      
     if eyetracking: 
