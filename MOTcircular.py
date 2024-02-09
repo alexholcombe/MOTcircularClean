@@ -318,8 +318,8 @@ if useSound:
 stimList = []
 # temporalfrequency limit test
 
-numTargets =                                [2,                 3] #AHtemp  #3
-numObjsInRing =                         [  2,                   2  ]  #AH temp #4,8
+numTargets =                              [3,                 3] #AHtemp  #3
+numObjsInRing =                         [  4,                 4 ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -514,7 +514,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #only a portion of that segment should be colored, the amount corresponding to angular patch
         if blobToCue[ringI] >=0: #-999 means dont cue anything
             blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 2) % numObjects
+            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 3) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.0
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
@@ -997,7 +997,7 @@ while trialNum < trials.nTotal and expStop==False:
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
-        gratingObjAngle = 5; #the angle an individual object subtends, of the circle
+        gratingObjAngle = 20; #the angle an individual object subtends, of the circle
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
         ringRadial,cueRing,currentlyCuedBlob = \
