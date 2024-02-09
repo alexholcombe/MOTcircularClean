@@ -88,7 +88,7 @@ fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
-trialDurMin = 4 #1
+trialDurMin = 2 #1
 trackingExtraTime= 5; #1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo: 
@@ -319,7 +319,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                                [2,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                   4  ]  #AH temp #4,8
+numObjsInRing =                         [  2,                   2  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -480,11 +480,11 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         for objectI in range(numObjects):
             #Fill in the cueTex object locations initially with red, so that it can be constantly shown on top of the objects ring
             #It's only one cycle for the entire ring, unlike the objects ring, so that can highlight just a part of it as the white cue.
+
+            #First color in the entire segment
             start = objectI * (segmentTexCuePix)
             end = start + segmentTexCuePix/2.0
             start = round(start); end = round(end) #don't round until now after did addition, otherwise can fall short
-            
-            #Color in this object
             debugCue = False
             objectColor = ringColor[0] #conventionally, red
             if debugCue:
@@ -501,32 +501,33 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             #Calculate number of texture elements taken up by the flankers.  That's the area available - those taken up by the object,
             # divide by 2 because there's a flank on either side.
             patchFlankCuePix = round( (objectAreaPixCueTex - patchPixCueTex) / 2.    )
-
+            print('patchAngle=',patchAngle,'patchPixCueTex=',patchPixCueTex, 'patchFlankCuePix=',patchFlankCuePix, 'segmentTexCuePix=',segmentTexCuePix)
             firstFlankStart = start
             firstFlankEnd = start+patchFlankCuePix
+            print('firstFlankStart=',firstFlankStart, ' firstFlankEnd=',firstFlankEnd)
             cueTexEachRing[ringI][ firstFlankStart:firstFlankEnd, :] = bgColor[0]
             secondFlankStart = end-1-patchFlankCuePix
             secondFlankEnd = end
             cueTexEachRing[ringI][ secondFlankStart:secondFlankEnd, :] = bgColor[0]
         
-    #Color the cueTex segment to be cued white
-    #only a portion of that segment should be colored, the amount corresponding to angular patch
-    for i in range(numRings):
-        if blobToCue[i] >=0: #-999 means dont cue anything
-            #Have to 
-            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
+        #Color the cueTex segment to be cued white
+        #only a portion of that segment should be colored, the amount corresponding to angular patch
+        if blobToCue[ringI] >=0: #-999 means dont cue anything
+            blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
             blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 2) % numObjects
-            cueStartEntry = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
-            cueEndEntry = cueStartEntry + (gratingTexPix/numObjects)/2.0
-            print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
+            cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
+            cueEnd = cueStart + (gratingTexPix/numObjects)/2.0
+            print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
             #the critical line that colors the actual cue
-            cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] =  -1 * bgColor[0]  # [.8,-1,.5] #opposite of bgColor (usually black), thus usually white 
-            #blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
-            #cueTexEachRing[i][round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
-            #cueTexEachRing[i][round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0]
+            cueTexEachRing[ringI][round(cueStart):round(cueEnd), :] =  -1 * bgColor[0]  
+            #fill flankers with bgColor
+            firstFlankStart = cueStart
+            firstFlankEnd = cueStart + patchFlankCuePix
+            cueTexEachRing[ringI][round(firstFlankStart):round(firstFlankEnd), :] =  bgColor[0]  # [.8,-1,.5] #opposite of bgColor (usually black), thus usually white 
+            secondFlankStart = cueEnd-1-patchFlankCuePix
+            secondFlankEnd = cueEnd
+            cueTexEachRing[ringI][round(secondFlankStart):round(secondFlankEnd), :] =  bgColor[0]  # [.8,-1,.5] #opposite of bgColor (usually black), thus usually white 
 
-    #print("myTexEachRing[2]=", myTexEachRing[2])
-    #print('cueTexEachRing[2]=', cueTexEachRing[2])
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
     ringRadialMask=[[0,0,0,1,1,],[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into an annulus (a ring)
 
@@ -996,11 +997,11 @@ while trialNum < trials.nTotal and expStop==False:
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
-        gratingPatchAngle = 90; #the angle an individual object subtends, of the circle
+        gratingObjAngle = 5; #the angle an individual object subtends, of the circle
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
         ringRadial,cueRing,currentlyCuedBlob = \
-                constructRingAsGratingSimplified(radiiGratings,numObjects,gratingPatchAngle,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+                constructRingAsGratingSimplified(radiiGratings,numObjects,gratingObjAngle,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
