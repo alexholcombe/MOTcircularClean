@@ -321,12 +321,12 @@ if useSound:
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
     corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
-    
+
 stimList = []
 # temporalfrequency limit test
 
 numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  12,                 12]  #AH temp #4,8
+numObjsInRing =                         [  4,                 4]  #AH temp #4,8   #Gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -520,9 +520,10 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #Color the cueTex segment to be cued white
         #only a portion of that segment should be colored, the amount corresponding to angular patch
         if blobToCue[ringI] >=0: #-999 means dont cue anything
-            #blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[ringI] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
-            blobToCue_ringReversalCorrect = blobToCue[ringI]
-            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect) % numObjects
+            #I finally figured out that it starts on the opposite side of the ring somehow than does the Gaussian blobs
+            #blobToCue_180degCorrect = (blobToCue[ringI] + numObjects/2) % numObjects
+            blobToCue_180degCorrect = blobToCue[ringI]
+            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_180degCorrect) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.0
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
@@ -723,7 +724,8 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
         angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
-        angleObject0Deg = angleObject0Deg - 90 #Because to align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
+#        angleObject0Deg = angleObject0Deg - 90 #Because to align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
+        angleObject0Deg = angleObject0Deg +90 #To align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
         ringRadial[numRing].setOri(angleObject0Deg)   
         ringRadial[numRing].setContrast( contrast )
         ringRadial[numRing].draw()
