@@ -467,24 +467,22 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     print("ringColor=",ringColor)
 
     for i in range(numRings):
-        myTexEachRing[i][start:end, :] = ringColor[i]; 
-
-    print('start=',start,' end=',end)
-    #Enter flanks (bgColor), object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
-    for i in range(numRings):
+        myTexEachRing[i][start:end, :] = ringColor[i];
+        #Color flanks (bgColor)
+        # so object to subtend less than half-cycle, as indicated by patchAngle) by overwriting first and last entries of segment 
         myTexEachRing[i][start:start+patchFlankPix, :] = bgColor[0]; #one flank
-        myTexEachRing[i][end-1-patchFlankPix:end, :] = bgColor[0]; #other flank
+        myTexEachRing[i][end-1-patchFlankPix:end, :]   = bgColor[0]; #other flank
 
     #[.9,-1,-0.2] #debug grating objects reddish-purple #
     #Do cueTex ####################################################################################
     #Assign cueTex with object color (or yellow if debug)
-    segmentTexPix = gratingTexPix* 1.0/numObjects  #number of texture pix of one object (not counting spaces in between)
+    segmentTexCuePix = gratingTexPix* 1.0/numObjects  #number of texture pix of one object (not counting spaces in between)
     for ringI in range(numRings):
         for objectI in range(numObjects):
             #Fill in the cueTex object locations initially with red, so that it can be constantly shown on top of the objects ring
             #It's only one cycle for the entire ring, unlike the objects ring, so that can highlight just a part of it as the white cue.
-            start = objectI * (segmentTexPix)
-            end = start + segmentTexPix/2.0
+            start = objectI * (segmentTexCuePix)
+            end = start + segmentTexCuePix/2.0
             start = round(start); end = round(end) #don't round until now after did addition, otherwise can fall short
             
             #Color in this object
@@ -496,14 +494,21 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             print('cueTex ringI=', ringI, ' objectI=',objectI,' start=',start,'end=',end, '[start,:] = ', cueTexEachRing[ringI][start, :])
 
             #Erase flanks (color with bgColor)
-            # base = objectI/numObjects * gratingTexPix
-            # for i in range(numRings):
-            #     firstFlankStart = start
-            #     firstFlankEnd = start+patchFlankPix
-            #     cueTexEachRing[i][ firstFlankStart:firstFlankEnd, :] = bgColor[0]
-            #     secondFlankStart = end-1-patchFlankPix
-            #     secondFlankEnd = end
-            #     cueTexEachRing[i][ secondFlankStart:secondFlankEnd, :] = bgColor[0]
+            patchCueProportnOfCircle = patchAngle / 360
+            #Calculate number of texture elements taken up by the object
+            patchPixCueTex = patchCueProportnOfCircle * gratingTexPix
+            #Calculate number of texture elements taken up by the entire area available to an object and its flanks
+            objectAreaPixCueTex = (gratingTexPix / numObjects) / 2.0
+            #Calculate number of texture elements taken up by the flankers.  That's the area available - those taken up by the object,
+            # divide by 2 because there's a flank on either side.
+            patchFlankCuePix = round( (objectAreaPixCueTex - patchPixCueTex) / 2.    )
+
+            firstFlankStart = start
+            firstFlankEnd = start+patchFlankCuePix
+            cueTexEachRing[ringI][ firstFlankStart:firstFlankEnd, :] = bgColor[0]
+            secondFlankStart = end-1-patchFlankCuePix
+            secondFlankEnd = end
+            cueTexEachRing[ringI][ secondFlankStart:secondFlankEnd, :] = bgColor[0]
         
     #Color the cueTex segment to be cued white
     #only a portion of that segment should be colored, the amount corresponding to angular patch
@@ -512,8 +517,8 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             #Have to 
             blobToCue_ringReversalCorrect = (numObjects-1) - blobToCue[i] #grating seems to be laid out in opposite direction than blobs, this fixes postCueNumBlobsAway so positive is in direction of motion
             blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_ringReversalCorrect - 2) % numObjects
-            cueStartEntry = blobToCue_relativeToGaussianBlobsCorrect*(segmentTexPix)
-            cueEndEntry = cueStartEntry + segmentTexPix/2.0
+            cueStartEntry = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
+            cueEndEntry = cueStartEntry + (gratingTexPix/numObjects)/2.0
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
             #the critical line that colors the actual cue
             cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] = [.8,-1,.5] #debug -1*bgColor[0]  #opposite of bgColor (usually black), thus usually white 
@@ -551,7 +556,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #Create cueRing
         #Need to shift texture by object/2 to center it on how Gabor blobs are drawn. Because Gabor blobs are centered on angle=0, whereas
         # grating starts drawing at angle=0 rather than being centered on it, and extends from there
-        shiftToAlignWithGaussBlobs = -1 * round(segmentTexPix/4)
+        shiftToAlignWithGaussBlobs = -1 * round( (gratingTexPix/numObjects) / 4 )
         cueTexThisRing = np.roll( cueTexEachRing[i], shiftToAlignWithGaussBlobs, axis=0 )
         #print("Did np.roll successfully change cueTex, before vs after EQUALS = ", np.array_equal(cueTexThisRing,cueTexEachRing[i]))  # test if same shape, same elements values
         #Make cueTexEachRing into a two-dimensional texture. Presently it's only one dimension. Actually it's possible psychopy automatically cycles it
