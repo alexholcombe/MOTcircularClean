@@ -318,8 +318,8 @@ if useSound:
 stimList = []
 # temporalfrequency limit test
 
-numTargets =                                [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  6,                   6  ]  #AH temp #4,8
+numTargets =                                [2,                 3] #AHtemp  #3
+numObjsInRing =                         [  4,                   4  ]  #AH temp #4,8
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.01,0.01,0.01,0.01]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
@@ -431,7 +431,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #numCycles will control how many total objects there are around circle
         logging.warn('Culd not exactly render a numObjects*2='+str(numObjects*2)+'-segment pattern radially, will be off by '+str( (gratingTexPix%(numObjects*2))*1.0 /gratingTexPix ) )
     if patchAngle > angleSegment:
-        msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+') numUniquePatches='+str(numUniquePatches)+' numCycles='+str(numCycles); 
+        msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible ('+str(angleSegment)+' numCycles='+str(numCycles); 
         print(msg); logging.error(msg)
 
     #initialize list of textures for objects grating, one for each ring. Initialize with bgColor
@@ -996,7 +996,7 @@ while trialNum < trials.nTotal and expStop==False:
     print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
-        gratingPatchAngle = 20; #the angle an individual object subtends, of the circle
+        gratingPatchAngle = 90; #the angle an individual object subtends, of the circle
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
         ringRadial,cueRing,currentlyCuedBlob = \
