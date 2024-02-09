@@ -441,7 +441,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
 
     #initialize cueTex list with bgColor like myTexThis
     cueTexEachRing = deepcopy(myTexEachRing)
-    if True: #debugCue
+    if False: #debugCue
         for i in range(numRings): cueTexEachRing[i][:] = [-1,-1,0.5] #initialized with dark blue
 
     #Entire cycle of grating is just one object and one blank space
@@ -473,7 +473,6 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         myTexEachRing[i][start:start+patchFlankPix, :] = bgColor[0]; #one flank
         myTexEachRing[i][end-1-patchFlankPix:end, :]   = bgColor[0]; #other flank
 
-    #[.9,-1,-0.2] #debug grating objects reddish-purple #
     #Do cueTex ####################################################################################
     #Assign cueTex with object color (or yellow if debug)
     segmentTexCuePix = gratingTexPix* 1.0/numObjects  #number of texture pix of one object (not counting spaces in between)
@@ -486,7 +485,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             start = round(start); end = round(end) #don't round until now after did addition, otherwise can fall short
             
             #Color in this object
-            debugCue = True
+            debugCue = False
             objectColor = ringColor[0] #conventionally, red
             if debugCue:
                 objectColor = [1,1,0] #make cuing ring obvious by having all its objects be yellow
@@ -521,7 +520,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             cueEndEntry = cueStartEntry + (gratingTexPix/numObjects)/2.0
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStartEntry=",cueStartEntry, " cueEndEntry=",cueEndEntry)
             #the critical line that colors the actual cue
-            cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] = [.8,-1,.5] #debug -1*bgColor[0]  #opposite of bgColor (usually black), thus usually white 
+            cueTexEachRing[i][round(cueStartEntry):round(cueEndEntry), :] =  -1 * bgColor[0]  # [.8,-1,.5] #opposite of bgColor (usually black), thus usually white 
             #blackGrains = round( .5*(cueEndEntry-cueStartEntry) )#number of "pixels" of texture at either end of cue sector to make black. Need to update this to reflect patchAngle
             #cueTexEachRing[i][round(cueStartEntry):round(cueStartEntry+blackGrains), :] = bgColor[0];  #this one doesn't seem to do anything?
             #cueTexEachRing[i][round(cueEndEntry-1-blackGrains):round(cueEndEntry), :] = bgColor[0]
