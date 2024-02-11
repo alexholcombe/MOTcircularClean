@@ -39,7 +39,7 @@ subject='test'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False
+autopilot= True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -50,14 +50,15 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = True;  antialiasGrating = True; debugDrawBothAsGratingAndAsBlobs = False
+drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
+antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
-refreshRate= 110 *1.0;  #160 #set to the framerate of the monitor
+refreshRate= 110.0   #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
 fullscr=1; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
@@ -71,17 +72,17 @@ dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
     dlgBoxTitle = 'MOT. At least one screen is detected as Retina screen)'
 # create a dialog box from dictionary 
-infoFirst = { 'Autopilot':autopilot, 'checkRefresh':True, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
+infoFirst = { 'Autopilot':autopilot, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
     title=dlgBoxTitle, 
-    order=['Autopilot','checkRefresh', 'Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
+    order=['Autopilot','Screen to use', 'Screen refresh rate', 'Fullscreen (timing errors if not)'], 
     tip={'Check refresh etc': 'To confirm refresh rate and that can keep up, at least when drawing a grating',
             'Screen to use': '0 means primary screen, 1 means second screen'},
     )
 if not OK.OK:
     print('User cancelled from dialog box'); core.quit()
 autopilot = infoFirst['Autopilot']
-checkRefreshEtc = infoFirst['checkRefresh']
+checkRefreshEtc = True
 scrn = infoFirst['Screen to use']
 print('scrn = ',scrn, ' from dialog box')
 fullscr = infoFirst['Fullscreen (timing errors if not)']
@@ -89,15 +90,13 @@ refreshRate = infoFirst['Screen refresh rate']
 
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
 trialDurMin = 2 #1
-trackingExtraTime= 5; #1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
+trackingExtraTime= 1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
 trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo: 
     trialDurMin = 5; refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
 cueRampUpDur=0; #duration of contrast ramp from stationary, during cue
 cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
-
-labelBlobs = False #debug
 
 def maxTrialDur():
     return( trialDurMin+trackingExtraTime+trackVariableIntervMax )
@@ -193,7 +192,7 @@ if refreshRateWrong:
 msgWrongResolution = ''
 if checkRefreshEtc and (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
     msgWrongResolution = 'Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested)+ ' pixels, screen apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1])
-    myDlg.addText(msgWrongResolution, color='Red')
+    myDlg.addText(msgWrongResolution, color='GoldenRod')
     print(msgWrongResolution)
 myDlg.addText('Note: to abort, press ESC at a trials response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
 myDlg.show()
@@ -251,8 +250,14 @@ logging.info('trialsPerCondition =',trialsPerCondition)
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank)
 
 #Just roll with whatever wrong resolution the screen is set to
+if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
+    msgWrongResolutionFinal = ('Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested) 
+        +' pixels, screen is apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1]) + ' will base calculations off that.')
+    logging.warn(msgWrongResolutionFinal)
 widthPix = myWin.size[0]
 heightPix = myWin.size[1]
+logging.info( 'Screen resolution, which is also being used for calculations, is ' + str(widthPix) + ' by ' + str(heightPix) )
+
 pixelperdegree = widthPix / (atan(monitorwidth/viewdist) /np.pi*180)
 
 myMouse = psychopy.event.Mouse(visible = 'true',win=myWin)
@@ -268,6 +273,7 @@ logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
     
 gaussian = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
     blobLabels = list()
     for i in range(20): #assume no more than 20 objects
@@ -326,10 +332,10 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                 4]  #AH temp #4,8   #Gratings don't align with blobs with odd number of objects
+numObjsInRing =                         [  8,                 8  ]  #AH temp #4,8   #Gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5]) #  Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.96, 0.7, 0.72, 0.5]) # np.array([0.02,0.02,0.02,0.02])  #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -537,7 +543,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             cueTexEachRing[ringI][round(secondFlankStart):round(secondFlankEnd), :] =  bgColor[0]  # [.8,-1,.5] #opposite of bgColor (usually black), thus usually white 
 
     angRes = 100 #100 is default. I have not seen any effect. This is currently not printed to log file.
-    ringRadialMask=[[0,0,0,1,1,],[0,0,0,0,0,0,1,1,],[0,0,0,0,0,0,0,0,0,0,1,1,]]  #Masks to turn each grating into an annulus (a ring)
+    ringRadialMask=[[0,0,0,1,1],[0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,1,1]]  #Masks to turn each grating into an annulus (a ring)
 
     for i in range(numRings): #Create the actual ring graphics objects, both the objects ring and the cue rings
 
@@ -685,7 +691,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     n = round(t*refreshRate)
   else:
     n = currFrame
-  
+
   if n<rampUpFrames:
         contrast = cos( -pi+ pi* n/rampUpFrames  ) /2. +.5 #starting from -pi trough of cos, and scale into 0->1 range
   elif rampDownFrames>0 and n > rampDownStart:
@@ -713,12 +719,10 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             reversalNumEachRing[numRing] +=1
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs:
-        #ringRadialLocal = ringRadial
         centerInMiddleOfSegment = 0 #360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
         angleObject0Deg = angleObject0Rad/pi*180
         angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
         angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
-#        angleObject0Deg = angleObject0Deg - 90 #Because to align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
         angleObject0Deg = angleObject0Deg +90 #To align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
         ringRadial[numRing].setOri(angleObject0Deg)   
         ringRadial[numRing].setContrast( contrast )
@@ -729,9 +733,10 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
                 cueRing[numRing].setOri(angleObject0Deg)
                 #gradually make the cue become transparent until it disappears completely (opacity=0), revealing the object
                 opacity = 1 - n*1.0/cueFrames  #linear ramp from 1 to 0
-                #The above makes it transparent too quickly, so make a nonlinearity that saturates at 1
-                opacity = cos( (opacity-1)*pi/2 ) 
-                cueRing[numRing].setOpacity( 1 ) #debug #opacity 
+                #The above makes it transparent too quickly, so pass through a nonlinearity
+                # curve that decelerates towards 1,1, so will stay white for longer
+                opacity = sqrt( cos( (opacity-1)*pi/2 ) ) # https://www.desmos.com/calculator/jsk2ppb1yu
+                cueRing[numRing].setOpacity(opacity)  
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
@@ -763,7 +768,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   else:
     fixationBlank.draw()
   fixationPoint.draw()
-
+  
   if quickMeasurement:  #be careful - drawing text in Psychopy is time-consuming, so don't do this in real testing / high frame rate
     speedText.setText( str(round(currentSpeed,1)) )
     speedText.draw()

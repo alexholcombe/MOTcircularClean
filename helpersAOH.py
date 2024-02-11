@@ -65,7 +65,9 @@ def accelerateComputer(slowFast, process_priority, disable_gc):
         core.rush(False)
 
 def openMyStimWindow(monitorSpec,widthPix,heightPix,bgColor,allowGUI,units,fullscr,scrn,waitBlank): #make it a function because have to do it several times, want to be sure is identical each time
-    myWin = visual.Window(monitor=monitorSpec,size=(widthPix,heightPix),allowGUI=allowGUI,units=units,color=bgColor,colorSpace='rgb',fullscr=fullscr,screen=scrn,waitBlanking=waitBlank) #Holcombe lab monitor
+    #useRetina = False. You get an error if you attempt to set useRetina to False , at least on Retina screen, because Apple doesn't allow it anymore https://www.psychopy.org/api/visual/window.html
+    myWin = visual.Window(monitor=monitorSpec,size=(widthPix,heightPix),allowGUI=allowGUI,units=units,color=bgColor,
+                    colorSpace='rgb',fullscr=fullscr,screen=scrn,waitBlanking=waitBlank) #Holcombe lab monitor
     if myWin is None:
         print('ERROR: Failed to open window in openMyStimWindow!')
         core.quit()
