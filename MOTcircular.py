@@ -332,7 +332,7 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  8,                 8]  #AHtemp #4,8   #Limitation: gratings don't align with blobs with odd number of objects
+numObjsInRing =                         [  4,                 4]  #AHtemp #4,8   #Limitation: gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.002,0.002,0.002,0.002]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
@@ -525,10 +525,8 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
         #Color the cueTex segment to be cued white
         #only a portion of that segment should be colored, the amount corresponding to angular patch
         if blobToCue[ringI] >=0: #-999 means dont cue anything
-            #I finally figured out that it starts on the opposite side of the ring somehow than does the Gaussian blobs
-            #blobToCue_180degCorrect = (blobToCue[ringI] + numObjects/2) % numObjects
-            blobToCue_180degCorrect = -1 * blobToCue[ringI]
-            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_180degCorrect) % numObjects
+            blobToCue_alignWithBlobs = -1 * blobToCue[ringI] #orientation for gratings is opposite direction than Descartes 
+            blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_alignWithBlobs) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.
             print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
@@ -857,7 +855,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
                     mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
-                    landmarkDebug.setPos([8,6]); landmarkDebug.draw()
+                    #landmarkDebug.setPos([8,6]); landmarkDebug.draw()
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
                         clickedRegion.setRadius(mouseToler) 
@@ -997,7 +995,7 @@ while trialNum < trials.nTotal and expStop==False:
     reversalTimesEachRing = getReversalTimes()
     numObjects = thisTrial['numObjectsInRing']
     centerInMiddleOfSegment =360./numObjects/2.0
-    blobsToPreCue= [0,1,2] #debug thisTrial['whichIsTargetEachRing']
+    blobsToPreCue= thisTrial['whichIsTargetEachRing'] # [0,1,2] #debug 
     core.wait(.1)
     myMouse.setVisible(False)      
     if eyetracking: 
