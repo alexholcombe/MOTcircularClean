@@ -50,7 +50,7 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 respTypes=['order']; respType=respTypes[0]
 bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
-drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = True
+drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
@@ -273,7 +273,7 @@ logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
     
 gaussian = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
-labelBlobs = True #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
+labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
     blobLabels = list()
     for i in range(20): #assume no more than 20 objects
@@ -287,8 +287,6 @@ clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fi
 #Optionally show location of most recent click
 clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,.2,-1),fillColor=(-1,.2,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
-
-landmarkDebug = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(1,-1,1),autoLog=autoLogging) #to show clickable zones
 
 circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.8,.8,-.6),lineWidth=2,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
@@ -332,10 +330,10 @@ stimList = []
 # temporalfrequency limit test
 
 numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                 4]  #AHtemp #4,8   #Limitation: gratings don't align with blobs with odd number of objects
+numObjsInRing =                         [  4,                 8]  #AHtemp #4,8   #Limitation: gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.002,0.002,0.002,0.002]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -725,7 +723,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         ringRadial[numRing].setOri(angleObject0Deg)   
         ringRadial[numRing].setContrast( contrast )
         ringRadial[numRing].draw()
-        if  (blobToCueEachRing[numRing] != -999): #debug and n< cueFrames:  #-999 means there's no? target in that ring
+        if  (blobToCueEachRing[numRing] != -999) and n< cueFrames:  #-999 means there's no? target in that ring
             #if blobToCue!=currentlyCuedBlob: #if blobToCue now is different from what was cued the first time the rings were constructed, have to make new rings
                 #even though this will result in skipping frames
                 cueRing[numRing].setOri(angleObject0Deg)
@@ -733,10 +731,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
                 opacity = 1 - n*1.0/cueFrames  #linear ramp from 1 to 0
                 #The above makes it transparent too quickly, so pass through a nonlinearity
                 # curve that decelerates towards 1,1, so will stay white for longer
-
-                #opacity = sqrt( cos( (opacity-1)*pi/2 ) ) # https://www.desmos.com/calculator/jsk2ppb1yu
-                opacity = 1 #debug
-
+                opacity = sqrt( cos( (opacity-1)*pi/2 ) ) # https://www.desmos.com/calculator/jsk2ppb1yu
                 cueRing[numRing].setOpacity(opacity)  
                 cueRing[numRing].draw()
         #draw tracking cue on top with separate object? Because might take longer than frame to draw the entire texture
@@ -748,14 +743,13 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,numRing,angleThisObjectRad,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
-            if nobject==blobToCueEachRing[numRing]: #debug and n< cueFrames: #cue in white
+            if nobject==blobToCueEachRing[numRing] and n< cueFrames: #cue in white
                 weightToTrueColor = n*1.0/cueFrames #compute weighted average to ramp from white to correct color
-                weightToTrueColor = 0 #debug
                 blobColor = (1.0-weightToTrueColor)*cueColor +  weightToTrueColor*colors_all[nobject]
                 blobColor *= contrast #also might want to change contrast, if everybody's contrast changing in contrast ramp
                 #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
             else: blobColor = colors_all[0]*contrast
-            #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw() #debug
+            #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw()
             gaussian.setColor( blobColor, log=autoLogging )
             gaussian.setPos([x,y])
             gaussian.draw()
@@ -855,7 +849,6 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
                     mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
-                    #landmarkDebug.setPos([8,6]); landmarkDebug.draw()
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
                         clickedRegion.setRadius(mouseToler) 
@@ -875,7 +868,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                                 #print('removed number ',ncheck, ' from clicked list')
                         else:         #clicked on new one, need to add to response    
                             numRespsAlready = len(  np.where(respondedEachToken[optionSet])[0]  )
-                            #print('numRespsAlready=',numRespsAlready,' numRespsNeeded= ',numRespsNeeded,'  responses=',responses)   #debugOFF
+                            #print('numRespsAlready=',numRespsAlready,' numRespsNeeded= ',numRespsNeeded,'  responses=',responses)   
                             if numRespsAlready >= numRespsNeeded[optionSet]:
                                 pass #not allowed to select this one until de-select other
                             else:
