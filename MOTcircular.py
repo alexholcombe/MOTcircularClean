@@ -84,7 +84,7 @@ if not OK.OK:
 autopilot = infoFirst['Autopilot']
 checkRefreshEtc = True
 scrn = infoFirst['Screen to use']
-print('scrn = ',scrn, ' from dialog box')
+#print('scrn = ',scrn, ' from dialog box')
 fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
@@ -202,8 +202,8 @@ if myDlg.OK: #unpack information from dialogue box
        name=thisInfo[dlgLabelsOrdered.index('subject')]
        if len(name) > 0: #if entered something
          subject = name #change subject default name to what user entered
-       trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
-       print('trialsPerCondition=',trialsPerCondition)
+   trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
+   #print('trialsPerCondition from dialog box=',trialsPerCondition)
 else: 
    print('User cancelled from dialog box.')
    logging.flush()
@@ -244,7 +244,7 @@ logging.info("computer platform="+sys.platform)
 #save a copy of the code as it was when that subject was run
 logging.info('File that generated this = sys.argv[0]= '+sys.argv[0])
 logging.info("has_retina_scrn="+str(has_retina_scrn))
-logging.info('trialsPerCondition =',trialsPerCondition)
+logging.info('trialsPerCondition =' + str(trialsPerCondition))
 
 #Not a test - the final window opening
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank)
@@ -463,8 +463,8 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     patchAngleActual = patchPixTexture / gratingTexPix * (360./numObjects)
     if abs(patchAngleActual - patchAngle) > .04:
         msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
-        print(msg, file=logF);   logging.warn(msg)
-    print('halfCyclePixTexture=',halfCyclePixTexture,' patchPixTexture=',patchPixTexture, ' patchFlankPix=',patchFlankPix)
+        logging.warn(msg)
+    #print('halfCyclePixTexture=',halfCyclePixTexture,' patchPixTexture=',patchPixTexture, ' patchFlankPix=',patchFlankPix)
     #patchFlankPix at 199 is way too big, because patchPixTexture = 114
 
     #set half of texture to color of objects
@@ -474,7 +474,6 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     ringColor=list();
     for i in range(numRings):
         ringColor.append(colors[ stimColorIdxsOrder[i][0] ]) #assuming only one object color for each ring (or all the same)
-    print("ringColor=",ringColor)
 
     for i in range(numRings):
         myTexEachRing[i][start:end, :] = ringColor[i];
@@ -511,7 +510,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             #Calculate number of texture elements taken up by the flankers.  That's the area available - those taken up by the object,
             # divide by 2 because there's a flank on either side.
             patchFlankCuePix = round( (objectAreaPixCueTex - patchPixCueTex) / 2.    )
-            print('patchAngle=',patchAngle,'patchPixCueTex=',patchPixCueTex, 'patchFlankCuePix=',patchFlankCuePix, 'segmentTexCuePix=',segmentTexCuePix)
+            #print('patchAngle=',patchAngle,'patchPixCueTex=',patchPixCueTex, 'patchFlankCuePix=',patchFlankCuePix, 'segmentTexCuePix=',segmentTexCuePix)
             firstFlankStart = start
             firstFlankEnd = start+patchFlankCuePix
             #print('firstFlankStart=',firstFlankStart, ' firstFlankEnd=',firstFlankEnd)
@@ -527,7 +526,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
             blobToCue_relativeToGaussianBlobsCorrect = (blobToCue_alignWithBlobs) % numObjects
             cueStart = blobToCue_relativeToGaussianBlobsCorrect * (gratingTexPix/numObjects)
             cueEnd = cueStart + (gratingTexPix/numObjects)/2.
-            print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
+            #print("blobToCue =",blobToCue_relativeToGaussianBlobsCorrect, " cueStart=",cueStart, " cueEnd=",cueEnd)
             #the critical line that colors the actual cue
             cueTexEachRing[ringI][round(cueStart):round(cueEnd), :] =  -1 * bgColor[0]  
             #fill flankers with bgColor
@@ -953,14 +952,14 @@ while trialNum < trials.nTotal and expStop==False:
         rings = list(range(numRings) )
         random.shuffle(rings)
         whichRingsHaveTargets = rings[ 0:thisTrial['numTargets'] ]
-        print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
+        #print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
         #Randomly assign a target object for each ring that is meant to have a target
         for r in whichRingsHaveTargets:
             thisTrial['whichIsTargetEachRing'][r] = np.random.randint(0,thisTrial['numObjectsInRing'])
         #Randomly pick ring to query. 
         random.shuffle(whichRingsHaveTargets)
         thisTrial['ringToQuery'] = whichRingsHaveTargets[0]
-        print("thisTrial['numTargets']=",thisTrial['numTargets'], " thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'], " thisTrial['ringToQuery']",thisTrial['ringToQuery'])
+        #print("thisTrial['numTargets']=",thisTrial['numTargets'], " thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'], " thisTrial['ringToQuery']",thisTrial['ringToQuery'])
         
     colorRings=list();preDrawStimToGreasePipeline = list()
     isReversed= list([1]) * numRings #always takes values of -1 or 1
