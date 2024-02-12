@@ -52,7 +52,7 @@ bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
 drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
-gratingTexPix=1024#1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
+gratingTexPix=1024 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
