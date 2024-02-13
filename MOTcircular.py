@@ -287,12 +287,12 @@ if labelBlobs:
 
 optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colorSpace='rgb',fillColor = (1,0,1),autoLog=autoLogging) #to outline chosen options
 #Optionally show zones around objects that will count as a click for that object
-clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
+clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
-clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
+clickedRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
 
-circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.8,.8,-.6),lineWidth=2,fillColor=None,autoLog=autoLogging) #visual postcue
+circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=4,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
 referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rgb',lineColor=(-1,-1,1),autoLog=autoLogging) #visual postcue
 
@@ -835,12 +835,6 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
           #end loop for individual blobs 
           if drawingAsGrating: #then blobs are actually rectangles, to mimic grating wedges
             ringRadial[optionSet].draw()
-            #oriRadial = atan2(y,x) #make wedge point toward fixation
-            #oriRadial = oriRadial/pi*180 #convert from radians to degrees
-            #blob.ori = -oriRadial + 90
-            ##scale height and width with radius
-            #blob.height = radii[optionSet] * responseBarHeight
-            #blob.width = radii[optionSet] * responseBarWidth
         #end loop through rings
 
         #Draw visual response cue, usually ring to indicate which ring to query
@@ -848,6 +842,8 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
             circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
             circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
             circlePostCue.draw()
+            if drawingAsGrating:
+                circlePostCue.opacity = 0.3
 
         mouse1, mouse2, mouse3 = myMouse.getPressed()
         if mouse1 and lastClickState==0:  #only count this event if is a new click. Problem is that mouse clicks continue to be pressed for along time
@@ -870,7 +866,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                     mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
-                        clickedRegion.setRadius(mouseToler) 
+                        clickedRegion.setRadius(mouseToler/4.) #Dividing by 4 simply for visual aesthetic reasons
                         clickedRegion.draw()
                     if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
