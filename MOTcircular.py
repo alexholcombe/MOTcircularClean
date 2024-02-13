@@ -12,7 +12,7 @@ import psychopy.gui, psychopy.event
 import numpy as np
 import itertools #to calculate all subsets
 from copy import deepcopy
-from math import atan, pi, cos, sin, sqrt, ceil, floor
+from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
 import time, random, sys, platform, os, gc, io #io is successor to StringIO
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 
@@ -272,8 +272,15 @@ logging.info('second window opening runInfo mean ms='+str(runInfo["windowRefresh
 logging.info(runInfo)
 logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
-    
-gaussian = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+
+if drawingAsGrating: #draw response screen stimuli as oriented bars. Haven't set up drawing of actual gratings for that, just aligned individually-drawn stimuli.
+    blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+    #responseBarWidth = ballStdDev
+    #responseBarHeight = 2.5*ballStdDev
+    #blob = visual.Rect(myWin, width=responseBarWidth, height=responseBarHeight, colorSpace='rgb', autoLog=autoLogging)
+else:   #draw as Gaussian blob
+    blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+
 labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
     blobLabels = list()
@@ -286,7 +293,7 @@ optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colo
 #Optionally show zones around objects that will count as a click for that object
 clickableRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
-clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=(-1,.2,-1),fillColor=(-1,.2,-1),autoLog=autoLogging) #to show clickable zones
+clickedRegion = visual.Circle(myWin, radius=2.2, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
 
 circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.8,.8,-.6),lineWidth=2,fillColor=None,autoLog=autoLogging) #visual postcue
@@ -675,6 +682,14 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
     angleMoveRad = initialDirectionEachRing[numRing] * speed*2*pi*(thisFrameN-lastFrameN) / refreshRate
     return angleMoveRad
 
+def alignAngleWithBlobs(angleOrigRad):
+    centerInMiddleOfSegment = 0 #360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
+    angleDeg = angleOrigRad/pi*180
+    angleCentered = angleDeg + centerInMiddleOfSegment
+    angleCentered = -1*angleCentered #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
+    angleCentered = angleCentered + 90 #To align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
+    return angleCentered
+
 def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngleRad,blobToCueEachRing,isReversed,reversalNumEachRing,cueFrames): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
   global cueRing,ringRadial, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
@@ -715,11 +730,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
             reversalNumEachRing[numRing] +=1
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs:
-        centerInMiddleOfSegment = 0 #360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
-        angleObject0Deg = angleObject0Rad/pi*180
-        angleObject0Deg = angleObject0Deg + centerInMiddleOfSegment
-        angleObject0Deg = -1*angleObject0Deg #multiply by -1 because with gratings, orientations is clockwise from east, contrary to Cartesian coordinates
-        angleObject0Deg = angleObject0Deg +90 #To align with individual blob drawing method, and hence response screen, as revealed by  debugDrawBothAsGratingAndAsBlobs = True
+        angleObject0Deg = alignAngleWithBlobs(angleObject0Rad)
         ringRadial[numRing].setOri(angleObject0Deg)   
         ringRadial[numRing].setContrast( contrast )
         ringRadial[numRing].draw()
@@ -750,9 +761,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
                 #print('weightToTrueColor=',weightToTrueColor,' n=',n, '  blobColor=',blobColor)
             else: blobColor = colors_all[0]*contrast
             #referenceCircle.setPos(offsetXYeachRing[numRing]);  referenceCircle.draw()
-            gaussian.setColor( blobColor, log=autoLogging )
-            gaussian.setPos([x,y])
-            gaussian.draw()
+            blob.setColor( blobColor, log=autoLogging )
+            blob.setPos([x,y])
+            blob.draw()
             if labelBlobs: #for debugging purposes such as to check alignment with grating version
                 blobLabels[nobject].setPos([x,y])
                 blobLabels[nobject].draw()
@@ -819,16 +830,26 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                 stretchOutwardRingsFactor = 1
                 x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,thisTrial['speed'])
                 x = x+ offsetXYeachRing[optionSet][0]
-                y = y+ offsetXYeachRing[optionSet][1]
-                #draw colors, and circles around selected items. Colors are drawn in order they're in in optionsIdxs
+                y = y+ offsetXYeachRing[optionSet][1]            
+                blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
+                blob.setPos([x,y])
+
+                #draw circles around selected items. Colors are drawn in order they're in in optionsIdxs
                 opts=optionIdexs;
                 if respondedEachToken[optionSet][ncheck]:  #draw circle around this one to indicate this option has been chosen
                        optionChosenCircle.setColor(array([1,-1,1]), log=autoLogging)
                        optionChosenCircle.setPos([x,y])
                        optionChosenCircle.draw()                
-                gaussian.setColor(  colors_all[0], log=autoLogging )  #draw blob
-                gaussian.setPos([x,y]);  
-                gaussian.draw()
+
+                if drawingAsGrating: #then blobs are actually rectangles, to mimic grating wedges
+                    ringRadial[optionSet].draw()
+                    #oriRadial = atan2(y,x) #make wedge point toward fixation
+                    #oriRadial = oriRadial/pi*180 #convert from radians to degrees
+                    #blob.ori = -oriRadial + 90
+                    ##scale height and width with radius
+                    #blob.height = radii[optionSet] * responseBarHeight
+                    #blob.width = radii[optionSet] * responseBarWidth
+                blob.draw()
             
        mouse1, mouse2, mouse3 = myMouse.getPressed()
        if mouse1 and lastClickState==0:  #only count this event if is a new click. Problem is that mouse clicks continue to be pressed for along time
@@ -853,7 +874,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                         clickedRegion.setPos([mouseX,mouseY])
                         clickedRegion.setRadius(mouseToler) 
                         clickedRegion.draw()
-                    if showclickableRegions: #revealed in green every time you click
+                    if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
                         clickableRegion.setRadius(mouseToler) 
                         clickableRegion.draw()
