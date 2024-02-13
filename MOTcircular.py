@@ -273,13 +273,9 @@ logging.info(runInfo)
 logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
 
-if drawingAsGrating: #draw response screen stimuli as oriented bars. Haven't set up drawing of actual gratings for that, just aligned individually-drawn stimuli.
-    blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
-    #responseBarWidth = ballStdDev
-    #responseBarHeight = 2.5*ballStdDev
-    #blob = visual.Rect(myWin, width=responseBarWidth, height=responseBarHeight, colorSpace='rgb', autoLog=autoLogging)
-else:   #draw as Gaussian blob
-    blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+
+#Create Gaussian blob
+blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
 
 labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
@@ -831,8 +827,9 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                 x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,thisTrial['speed'])
                 x = x+ offsetXYeachRing[optionSet][0]
                 y = y+ offsetXYeachRing[optionSet][1]            
-                blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
-                blob.setPos([x,y])
+                if not drawingAsGrating and not debugDrawBothAsGratingAndAsBlobs:
+                    blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
+                    blob.setPos([x,y])
 
                 #draw circles around selected items. Colors are drawn in order they're in in optionsIdxs
                 opts=optionIdexs;
