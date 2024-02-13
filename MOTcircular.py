@@ -813,14 +813,8 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
             responsesAutopilot.append( zeros )  #autopilot response is 0
     passThisTrial = False; 
     numTimesRespSoundPlayed=0
-    while respcount < sum(numRespsNeeded): #collecting response
-       #Draw visual response cue
-       if visuallyPostCue:
-            circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
-            circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
-            circlePostCue.draw()
-            
-       for optionSet in range(optionSets):  #draw this group (ring) of options
+    while respcount < sum(numRespsNeeded): #collecting response  
+        for optionSet in range(optionSets):  #draw this group (ring) of options
           for ncheck in range( numOptionsEachSet[optionSet] ):  #draw each available to click on in this ring
                 angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi
                 stretchOutwardRingsFactor = 1
@@ -830,6 +824,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                 if not drawingAsGrating and not debugDrawBothAsGratingAndAsBlobs:
                     blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
                     blob.setPos([x,y])
+                    blob.draw()
 
                 #draw circles around selected items. Colors are drawn in order they're in in optionsIdxs
                 opts=optionIdexs;
@@ -837,19 +832,25 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                        optionChosenCircle.setColor(array([1,-1,1]), log=autoLogging)
                        optionChosenCircle.setPos([x,y])
                        optionChosenCircle.draw()                
+          #end loop for individual blobs 
+          if drawingAsGrating: #then blobs are actually rectangles, to mimic grating wedges
+            ringRadial[optionSet].draw()
+            #oriRadial = atan2(y,x) #make wedge point toward fixation
+            #oriRadial = oriRadial/pi*180 #convert from radians to degrees
+            #blob.ori = -oriRadial + 90
+            ##scale height and width with radius
+            #blob.height = radii[optionSet] * responseBarHeight
+            #blob.width = radii[optionSet] * responseBarWidth
+        #end loop through rings
 
-                if drawingAsGrating: #then blobs are actually rectangles, to mimic grating wedges
-                    ringRadial[optionSet].draw()
-                    #oriRadial = atan2(y,x) #make wedge point toward fixation
-                    #oriRadial = oriRadial/pi*180 #convert from radians to degrees
-                    #blob.ori = -oriRadial + 90
-                    ##scale height and width with radius
-                    #blob.height = radii[optionSet] * responseBarHeight
-                    #blob.width = radii[optionSet] * responseBarWidth
-                blob.draw()
-            
-       mouse1, mouse2, mouse3 = myMouse.getPressed()
-       if mouse1 and lastClickState==0:  #only count this event if is a new click. Problem is that mouse clicks continue to be pressed for along time
+        #Draw visual response cue, usually ring to indicate which ring to query
+        if visuallyPostCue:
+            circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
+            circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
+            circlePostCue.draw()
+
+        mouse1, mouse2, mouse3 = myMouse.getPressed()
+        if mouse1 and lastClickState==0:  #only count this event if is a new click. Problem is that mouse clicks continue to be pressed for along time
             mouseX,mouseY = myMouse.getPos() 
             #supposedly in units of myWin, which is degrees, BUT
             mouseFactor = 1
@@ -897,22 +898,22 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
                 #print 'response=', response, '  respcount=',respcount, ' lastClickState=',lastClickState, '  after affected by click'
            #end if mouse clicked
            
-       for key in psychopy.event.getKeys():       #check if pressed abort-type key
+        for key in psychopy.event.getKeys():       #check if pressed abort-type key
               if key in ['escape']: # ['escape','q']:
                   expStop = True
                   respcount = 1
               
-       lastClickState = mouse1
-       if autopilot: 
+        lastClickState = mouse1
+        if autopilot: 
             respcount = 1
             for i in range(numRings):
                 for j in range(numObjects):
                     respondedEachToken[i][j] = 1 #must set to True for tracking task with click responses, because it uses to determine which one was clicked on
-       if blindspotFill:
+        if blindspotFill:
             blindspotStim.draw()
 
-       myWin.flip(clearBuffer=True)  
-       if screenshot and ~screenshotDone:
+        myWin.flip(clearBuffer=True)  
+        if screenshot and ~screenshotDone:
            myWin.getMovieFrame()       
            screenshotDone = True
            myWin.saveMovieFrames('respScreen.jpg')
