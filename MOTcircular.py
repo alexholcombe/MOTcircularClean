@@ -64,10 +64,11 @@ fullscr=1; scrn=1
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
-resolutionOfScreens = subprocess.check_output("system_profiler SPDisplaysDataType | grep -i 'Resolution'",shell=True)
-print("resolution of screens reported by system_profiler = ",resolutionOfScreens)
-if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shell=True) == 0:
-    has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
+if 'Darwin' in platform.system(): #Because want to run Unix commands, which won't work on Windows - only do it if Mac
+    resolutionOfScreens = subprocess.check_output("system_profiler SPDisplaysDataType | grep -i 'Resolution'",shell=True)
+    print("resolution of screens reported by system_profiler = ",resolutionOfScreens)
+    if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shell=True) == 0:
+        has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
 dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
     dlgBoxTitle = 'MOT. At least one screen is detected as Retina screen)'
