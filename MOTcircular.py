@@ -52,7 +52,7 @@ bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
 
 drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
-gratingTexPix=128 #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
+gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=3
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
@@ -60,7 +60,7 @@ radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those ex
 respRadius=radii[0] #deg
 refreshRate= 110.0   #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=1; scrn=1
+fullscr=1; scrn=0
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
@@ -291,7 +291,7 @@ clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,
 clickedRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((0,1,-1)) #show in yellow
 
-circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=4,fillColor=None,autoLog=autoLogging) #visual postcue
+circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=6,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
 referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rgb',lineColor=(-1,-1,1),autoLog=autoLogging) #visual postcue
 
@@ -506,14 +506,16 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
 
             #Erase flanks (color with bgColor)
             patchCueProportnOfCircle = patchAngle / 360
+            patchCueProportnOfCircle = patchCueProportnOfCircle*.98 #I can't explain why, but it's too big otherwise so spills into bg area
             #Calculate number of texture elements taken up by the object
             patchPixCueTex = patchCueProportnOfCircle * gratingTexPix
             #Calculate number of texture elements taken up by the entire area available to an object and its flanks
             objectAreaPixCueTex = (gratingTexPix / numObjects) / 2.0
             #Calculate number of texture elements taken up by the flankers.  That's the area available - those taken up by the object,
             # divide by 2 because there's a flank on either side.
-            patchFlankCuePix = round( (objectAreaPixCueTex - patchPixCueTex) / 2.    )
-            #print('patchAngle=',patchAngle,'patchPixCueTex=',patchPixCueTex, 'patchFlankCuePix=',patchFlankCuePix, 'segmentTexCuePix=',segmentTexCuePix)
+            patchFlankCuePix = (objectAreaPixCueTex - patchPixCueTex) / 2   
+            patchFlankCuePix = round(patchFlankCuePix) 
+            #print('patchAngle=',patchAngle,'patchPixCueTex=',patchPixCueTex, 'patchFlankCuePix=',patchFlankCuePix, 'segmentTexCuePix=',segmentTexCuePix) #debugAH
             firstFlankStart = start
             firstFlankEnd = start+patchFlankCuePix
             #print('firstFlankStart=',firstFlankStart, ' firstFlankEnd=',firstFlankEnd)
