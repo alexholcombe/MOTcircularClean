@@ -35,7 +35,7 @@ if quitFinder:
 process_priority = 'realtime' # 'normal' 'high' or 'realtime', but don't know if this works
 disable_gc = True
 
-subject='test'#'test'
+subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
