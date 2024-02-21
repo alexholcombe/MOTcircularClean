@@ -245,7 +245,8 @@ class EyeLinkTrack_Holcombe():
                 # parameters: source_file_on_the_host, destination_file_on_local_drive
                 self.tracker.receiveDataFile(self.edfFileName,eyeMoveFile) 
             except RuntimeError as error:
-                msgs = msgs + 'ERROR with receiveDataFile: ' + error
+                msgs = msgs + " Tried to get EDF file and save it locally as " + eyeMoveFile
+                msgs = msgs + 'but received this ERROR with receiveDataFile: ' + error
 
             self.tracker.close();
             #Close the experiment graphics
