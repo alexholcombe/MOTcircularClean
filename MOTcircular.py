@@ -27,8 +27,8 @@ from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTarg
 eyetracking = False; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 
-quitFinder = False #This doesn't work anymore
-if quitFinder:
+quitFinder = True 
+if quitFinder and ('Darwin' in platform.system()): #turn Finder off. Only know the command for MacOS (Darwin)
     applescript="\'tell application \"Finder\" to quit\'" #quit Finder.
     shellCmd = 'osascript -e '+applescript
     os.system(shellCmd)
@@ -39,7 +39,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False
+autopilot= True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -71,7 +71,7 @@ if 'Darwin' in platform.system(): #Because want to run Unix commands, which won'
         has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
 dlgBoxTitle = 'MOT, and no Mac Retina screen detected'
 if has_retina_scrn:
-    dlgBoxTitle = 'MOT. At least one screen is detected as Retina screen)'
+    dlgBoxTitle = 'MOT. At least one screen is apparently a Retina screen'
 # create a dialog box from dictionary 
 infoFirst = { 'Autopilot':autopilot, 'Screen to use':scrn, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = psychopy.gui.DlgFromDict(dictionary=infoFirst, 
@@ -145,7 +145,7 @@ if demo:
 
 mon = monitors.Monitor(monitorname,width=monitorwidth, distance=viewdist)#fetch the most recent calib for this monitor
 mon.setSizePix( (widthPixRequested,heightPixRequested) )
-myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank)
+myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 myWin.setRecordFrameIntervals(False)
 
 trialsPerCondition = 1 #default value
@@ -159,7 +159,7 @@ else: #checkRefreshEtc
             # if you specify author and version here, it overrides the automatic detection of __author__ and __version__ in your script
             #author='<your name goes here, plus whatever you like, e.g., your lab or contact info>',
             #version="<your experiment version info>",
-            win=myWin,    ## a psychopy.visual.Window() instance; None = default temp window used; False = no win, no win.flips()
+            win=myWin,    ## a psychopy window instance; None = default temp window used; False = no win, no win.flips()
             refreshTest='grating', ## None, True, or 'grating' (eye-candy to avoid a blank screen)
             verbose=True, ## True means report on everything 
             userProcsDetailed=True  ## if verbose and userProcsDetailed, return (command, process-ID) of the user's processes
@@ -248,7 +248,7 @@ logging.info("has_retina_scrn="+str(has_retina_scrn))
 logging.info('trialsPerCondition =' + str(trialsPerCondition))
 
 #Not a test - the final window opening
-myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank)
+myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 
 #Just roll with whatever wrong resolution the screen is set to
 if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
@@ -263,7 +263,7 @@ pixelperdegree = widthPix / (atan(monitorwidth/viewdist) /np.pi*180)
 
 myMouse = psychopy.event.Mouse(visible = 'true',win=myWin)
 runInfo = psychopy.info.RunTimeInfo(
-        win=myWin,    ## a psychopy.visual.Window() instance; None = default temp window used; False = no win, no win.flips()
+        win=myWin,    ## a psychopy window instance; None = default temp window used; False = no win, no win.flips()
         refreshTest='grating', ## None, True, or 'grating' (eye-candy to avoid a blank screen)
         verbose=True, ## True means report on everything 
         userProcsDetailed=True  ## if verbose and userProcsDetailed, return (command, process-ID) of the user's processes
@@ -1263,14 +1263,14 @@ else:
 msg = msg + '\t\tNum trials each speed =' + str( numTrialsEachSpeed )
 
 logging.info(msg); print(msg)
-logging.flush(); dataFile.close(); 
-logging.info( 'eyetracking was set to ' + str(eyetracking) )
+logging.flush(); dataFile.close();
 
 if eyetracking:
+  logging.info('eyetracking = ' + str(eyetracking))
   if eyetrackFileGetFromEyelinkMachine:
     eyetrackerFileWaitingText = visual.TextStim(myWin,pos=(-.1,0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
     msg = 'Waiting for eyetracking file from Eyelink computer. Do not abort eyetracking machine or file will not be saved on this machine.'
-    logging.info(msg)
+    logging.info(msg); logging.flush();
     eyetrackerFileWaitingText.setText(msg)
     eyetrackerFileWaitingText.draw()
     myWin.flip()
@@ -1281,10 +1281,12 @@ if eyetracking:
   else:
     msg = 'You will have to get the Eyelink EDF file off the eyetracking machine by hand'
     print(msg); logging.info(msg)
-    
-if quitFinder: #turn Finder back on
+else:
+  logging.info('Didnt try to eyetrack because eyetracking was set to ' + str(eyetracking))
+logging.flush();
+
+if quitFinder and ('Darwin' in platform.system()): #turn Finder back on. Only tried this with MacOS and probably doesn't work anymore.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
         os.system(shellCmd)
-logging.flush();
 core.quit()
