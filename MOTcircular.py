@@ -1264,6 +1264,7 @@ msg = msg + '\t\tNum trials each speed =' + str( numTrialsEachSpeed )
 
 logging.info(msg); print(msg)
 logging.flush(); dataFile.close(); 
+logging.info( 'eyetracking was set to ' + str(eyetracking) )
 
 if eyetracking:
   if eyetrackFileGetFromEyelinkMachine:
