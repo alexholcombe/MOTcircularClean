@@ -159,33 +159,45 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         ysForCurve = fit.eval(intensitiesForFit)
         print('intensitiesForCurve=',intensitiesForCurve)
         #print('ysForCurve=',ysForCurve) #debug
-    else: #post-staircase function fitting failed, but can fall back on what staircase returned
-        if isinstance(staircase, psychopy.data.staircase.QuestHandler): #Quest staircase
-            thresh = staircase.quantile()
-        else:
-            numRevsToUse = int( staircase.thisTrialN / 8 )
-            meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
-            thresh = meanOfFinalReversals
 
-        if descendingPsycho:
-            thresh = 100-thresh
     #plot staircase over time in left hand panel
     pylab.subplot(121)
-    pylab.plot(intensLinear)
+    pylab.plot(intensLinear,'b-')
     pylab.xlabel("staircase trial")
     pylab.ylabel("intensity")
     
     #plot pCorr and psychometric function on the right.
     ax1 = pylab.subplot(122)
     if fit is not None:
-        pylab.plot(intensitiesForFit, ysForCurve, 'k-') #fitted curve
-    pylab.plot([thresh, thresh],[0,threshVal],'k--') #vertical dashed line
-    pylab.plot([0, thresh],[threshVal,threshVal],'k--') #horizontal dashed line
-    figure_title = 'threshold (%.2f) = %0.2f' %(threshVal, thresh)
+        pylab.plot(intensitiesForFit, ysForCurve, 'r-') #fitted curve
+    pylab.plot([thresh, thresh],[0,threshVal],'r:') #vertical dashed line
+    pylab.plot([0, thresh],[threshVal,threshVal],'r:') #horizontal dashed line
+    
+    #Find mean of last reversals and plot that, too
+    meanOfFinalReversals = None
+    if type(staircase) is psychopy.data.StairHandler: #as opposed to QUEST
+        numReversals = len(staircase.reversalIntensities)
+        if numReversals>2:
+            numReversalsToAvg = numReversals-2
+            meanOfFinalReversals = np.average(  
+                                    outOfStaircase(staircase.reversalIntensities[-numReversalsToAvg:],staircase,descendingPsycho),   
+                                    ) 
+            #might need to subtract above from 100 if descending
+    elif isinstance(staircase, psychopy.data.staircase.QuestHandler): #Quest staircase
+            meanOfFinalReversals = staircase.quantile()
+    
+    #Plot mean of last reversals
+    if meanOfFinalReversals is not None:
+        pylab.plot([meanOfFinalReversals, meanOfFinalReversals],[0,threshVal],'b--') #vertical dashed line
+        pylab.plot([0, meanOfFinalReversals],[threshVal,threshVal],'b--') #horizontal dashed line
+
     #print thresh proportion top of plot
+    figure_title = 'mean of reversals= %0.2f' %(meanOfFinalReversals)
+    if fit is not None:
+        figure_title += ', fitted threshold (%.2f) = %0.2f' %(threshVal, thresh)
+
+    #pylab.title(figure_title,  loc='left') #not enough space because only applies to this subfigure
     pylab.text(0, 1.11, figure_title, horizontalalignment='center', fontsize=12)
-    if fit is None:
-        pylab.title('Fit failed')
 
     print('Aggregation of trials:'); 
     tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho)
