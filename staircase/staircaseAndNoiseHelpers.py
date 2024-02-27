@@ -58,13 +58,15 @@ def printStaircase(s, descendingPsycho=False, briefTrialUpdate=False, printInter
     if type(s) is psychopy.data.StairHandler:
         numReversals = len(s.reversalIntensities)
         msg= 'staircase number of reversals=' + str(numReversals) + '] '
-        msg+= 'reversal noiseProportions=' + str( 1- np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) )
+        msg+= 'reversal intensities=' +  str( np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) ) # str( 1- np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) )
+        #might need to subtract above from 1 if descending
         print(msg)
         if alsoLog:     logging.info(msg)
         if numReversals>0:
-            numReversalsToAvg = numReversals-1
-            msg= ('mean of final' + str(numReversalsToAvg) + 
-                      ' reversals =' + str( 1-np.average(  outOfStaircase(s.reversalIntensities[-numReversalsToAvg:],s,descendingPsycho),   ) ) )
+            numReversalsToAvg = numReversals-2
+            msg= ('mean of final ' + str(numReversalsToAvg) + 
+                      ' reversals =' + str( np.average(  outOfStaircase(s.reversalIntensities[-numReversalsToAvg:],s,descendingPsycho),   ) ) )
+            #might need to subtract above from 1 if descending
             print(msg)
             if alsoLog:     logging.info(msg)
     elif type(s) is psychopy.data.QuestHandler:
@@ -167,15 +169,16 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
 
         if descendingPsycho:
             thresh = 100-thresh
-    #plot staircase in left hand panel
+    #plot staircase over time in left hand panel
     pylab.subplot(121)
     pylab.plot(intensLinear)
     pylab.xlabel("staircase trial")
     pylab.ylabel("intensity")
-    #plot psychometric function on the right.
+    
+    #plot pCorr and psychometric function on the right.
     ax1 = pylab.subplot(122)
     if fit is not None:
-        pylab.plot(intensitiesForCurve, ysForCurve, 'k-') #fitted curve
+        pylab.plot(intensitiesForFit, ysForCurve, 'k-') #fitted curve
     pylab.plot([thresh, thresh],[0,threshVal],'k--') #vertical dashed line
     pylab.plot([0, thresh],[threshVal,threshVal],'k--') #horizontal dashed line
     figure_title = 'threshold (%.2f) = %0.2f' %(threshVal, thresh)
@@ -223,21 +226,21 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
 from questplus.psychometric_function import weibull 
 
 # create an idealized participant (weibull function)
-def calc_pCorrect(intensity,descendingPsychometricCurve):
+def calc_pCorrect(intensity,guessRate, descendingPsychometricCurve):
     #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
 
     if descendingPsychometricCurve:
         intensity = 100-intensity
         
     pCorr = weibull(intensity=intensity, threshold=45,
-                        slope=6.35, lower_asymptote=0.5, lapse_rate=0.00,
+                        slope=6.35, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
                         
     return pCorr
 
 # Use idealized participant to get correct/incorrect on an individual trial
-def simulateResponse(intensity,descendingPsychometricCurve):
-    pCorr = calc_pCorrect(intensity,descendingPsychometricCurve)
+def simulateResponse(intensity,guessRate,descendingPsychometricCurve):
+    pCorr = calc_pCorrect(intensity,guessRate,descendingPsychometricCurve)
     dice_roll = np.random.random()
     return int(dice_roll <= pCorr)
     
@@ -245,14 +248,15 @@ def simulateResponse(intensity,descendingPsychometricCurve):
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
     descendingPsychometricCurve = False
+    guessRate = 0.0
     threshCriterion = 0.794
-    staircaseTrials = 100
+    staircaseTrials = 200
     useQuest = False
     
     if useQuest:
         staircase = psychopy.data.QuestHandler(startVal = 95,
-                        minVal=1, maxVal = 100,
-                        startValSd = 80,
+                        minVal=0, maxVal = 100,
+                        startValSd = 30,
                         stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
                         nTrials = staircaseTrials,
                         #extraInfo = thisInfo,
@@ -265,7 +269,7 @@ if __name__ == "__main__":  #executable example of using these functions
         print('Created QUEST staircase.')
     else:
         staircase = psychopy.data.StairHandler(startVal=20.0,
-            minVal=1, maxVal=100,
+            minVal=0, maxVal=100,
             stepType='lin',
             stepSizes=[8, 4, 4, 2, 2, 1, 1],  # reduce step size every two reversals
             nUp=1, nDown=3,  # will home in on the 79.4% threshold; threshTryingToEstimate
@@ -280,7 +284,7 @@ if __name__ == "__main__":  #executable example of using these functions
         intensityThisTrial = outOfStaircase(intensityThisTrial, staircase, descendingPsychometricCurve)
         
         #Simulate observer for this trial's intensity
-        correct = simulateResponse(intensityThisTrial,descendingPsychometricCurve)
+        correct = simulateResponse(intensityThisTrial,guessRate,descendingPsychometricCurve)
         staircase.addResponse( correct )
         trialnum = trialnum + 1
     
@@ -317,8 +321,10 @@ if __name__ == "__main__":  #executable example of using these functions
         #Best to send it an estimate of the standard error of each observation, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
         #sems: A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
         fit = psychopy.data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems=stderrs)
+        #fit = psychopy.data.FitLogistic(combinedInten, combinedResp, expectedMin=guessRate, sems=stderrs)
         print('fit=',fit)
-    except:
+    except Exception as e:
+        print("An exception occurred when curvefitting:",str(e))
         print("Fit failed.")
     plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=threshCriterion)
     pylab.show() #must call this to actually show plot

@@ -9,14 +9,14 @@ from questplus.psychometric_function import weibull
 
 from psychopy import core, visual, gui, data, event
 from psychopy.tools.filetools import fromFile, toFile
-import time, os
+import psychopy, time, os, pylab
 import numpy as np
 
 try: #This only works if the code executing is in this folder
-    import noiseStaircaseHelpers
+    import staircaseAndNoiseHelpers
 except Exception as e:
     print("An exception occurred in staircase_tester_.py:",str(e))
-    print('Could not import noiseStaircaseHelpers.py (you need that file to be in the staircase subdirectory, which needs an __init__.py file in it too)')
+    print('Could not import staircaseAndNoiseHelpers.py (you need that file to be in the staircase subdirectory, which needs an __init__.py file in it too)')
 
 autopilot = True; showStimuli = False
 descendingPsychometricCurve = False
@@ -72,18 +72,19 @@ win.flip()
 # check for a keypress
 event.waitKeys()
 
+guessRate=0.5
 # create an idealized participant (weibull function)
-def calc_pCorrect(intensity):
+def calc_pCorrect(intensity, guessRate):
     if descendingPsychometricCurve:
         intensity = 100-intensity
     pCorr = weibull(intensity=intensity, threshold=45,
-                        slope=6.35, lower_asymptote=0.5, lapse_rate=0.00,
+                        slope=6.35, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
     return pCorr
 
 # Use idealized participant to get correct/incorrect on an individual trial
-def get_response(intensity):
-    pCorr = calc_pCorrect(intensity)
+def get_response(intensity,guessRate):
+    pCorr = calc_pCorrect(intensity,guessRate)
     dice_roll = np.random.random()
     return int(dice_roll <= pCorr)
 
@@ -92,7 +93,7 @@ for thisIncrement in staircase:  # will step through the staircase
     
     #Psychopy staircase can only handle increasing psychometric function.
     #So we use outOfStaircase if descending psychometric function to flip it (100-x)
-    thisIncrement = noiseStaircaseHelpers.outOfStaircase(thisIncrement, staircase, descendingPsychometricCurve)
+    thisIncrement = staircaseAndNoiseHelpers.outOfStaircase(thisIncrement, staircase, descendingPsychometricCurve)
     
     # set location of stimuli
     targetSide = round(np.random.random()) * 2 - 1  # +1 = right, -1 = left
@@ -117,7 +118,7 @@ for thisIncrement in staircase:  # will step through the staircase
     # get response
     thisResp = None
     if autopilot:
-        correct = get_response(thisIncrement)
+        correct = get_response(thisIncrement,guessRate)
         thisResp = correct
     else:
         while thisResp is None:
@@ -143,30 +144,37 @@ staircase.saveAsPickle(output_file)  # special python data file to save all the 
 
 # give some output to user
 #print('printStaircase output:')
-#noiseStaircaseHelpers.printStaircase(staircase, briefTrialUpdate=False, printInternalVal=True, alsoLog=False) #Is this what's showing the range error?
+#staircaseAndNoiseHelpers.printStaircase(staircase, briefTrialUpdate=False, printInternalVal=True, alsoLog=False) #Is this what's showing the range error?
 
 print('Staircase was trying to find the', str(100*threshTryingToEstimate), '% threshold')
 print('Reversals occurred at:')
 print(staircase.reversalIntensities)
 
 #Print all the reversals after the first few.
-                    #12 trials to let start converging, conservatively go with average 8 trials before each reversal
-numRevsToUse = int( (nTrials - 12) / 8 )
+numReversals = len(staircase.reversalIntensities)
+numRevsToUse = max( 1, numReversals-2 )
+
 meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
 print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
 
 if autopilot:
-    pCorrect = calc_pCorrect(meanOfFinalReversals)
+    pCorrect = calc_pCorrect(meanOfFinalReversals,guessRate)
     print('Psychometric function pCorrect at meanOfFinalReversals= %.3f' % pCorrect)
 
+#from list of trials, tally up each intensity and calculate proportions correct
+intensityForCurveFitting = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
+combinedInten, combinedResp, combinedN = \
+     psychopy.data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
+         
 try:
     fit = data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems = 1.0/len(staircase.intensities))
     print('Fitting a Weibull to the data=',fit)
-except:
-    print("Fitting a Weibull to the data failed.")
+except Exception as e:
+    print("An exception occurred when curvefitting:",str(e))
+    print("Fit failed.")
     fit = None
     
-noiseStaircaseHelpers.plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=0.79)
+staircaseAndNoiseHelpers.plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=0.79)
 pylab.show() #must call this to actually show plot
 
 win.close()
