@@ -352,6 +352,28 @@ for i in range(0, len(speedsPrelimiExp), 2):
 
 #dont go faster than 2 rps because of temporal blur/aliasing
 
+doStaircase = False
+#Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
+if doStaircase:
+    #create the staircase handler
+    stepSizesLinear = [.5,.5,.5,.4,.3,.3,.1,.1,.1,.1,.05]
+    minSpeedForStaircase = 0.2
+    maxSpeedForStaircase = 1.8
+    staircase = data.StairHandler(
+        startVal=ltrColor,
+        stepType='lin',
+        stepSizes=stepSizesLinear,  # reduce step size every two reversals
+        minVal=minSpeedForStaircase, 
+        maxVal=maxSpeedForStaircase, 
+        nUp=1, nDown=3,  # 1-up 3-down homes in on the 79.4% threshold.
+        nTrials=200)
+    print('Created staircase')
+        
+    phasesMsg = ('Doing '+str(prefaceStaircaseTrialsN)+'trials with noisePercent= '+str(prefaceStaircaseNoise)+' then doing a max '+str(staircaseTrials)+'-trial staircase')
+
+    printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
+    #print('staircase.quantile=',round(staircase.quantile(),2),' sd=',round(staircase.sd(),2))
+
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
 if queryEachRingEquallyOften:
