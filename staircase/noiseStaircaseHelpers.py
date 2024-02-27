@@ -124,7 +124,7 @@ def createNoise(proportnNoise,win,fieldWidthPix,noiseColor):
         sizes=1)
     return (noise,allFieldCoords,numDots) #Can just use noise, but if want to generate new noise of same coherence level quickly, can just shuffle coords
 
-def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho):
+def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho): #this is redundant with psychopy.data.functionFromStaircase()
     
     intensLinear= outOfStaircase(staircase.intensities, staircase, descendingPsycho)
     #Use pandas to calculate proportion correct at each level
@@ -299,21 +299,20 @@ if __name__ == "__main__":  #executable example of using these functions
     
     #Calculate standard error of each percent correct observed, because that helps the curvefitting
     # which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
-    tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsychometricCurve)
+    tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsychometricCurve)  #this is redundant with psychopy.data.functionFromStaircase
     ns = tallied.loc[:,"n"]
     Pcorr = tallied.loc[:,"Pcorr"]
-    intensitiesTested = tallied.loc[:,"intensity"]
-    print('Pcorr=',Pcorr)
+#    intensitiesTested = tallied.loc[:,"intensity"]
     variances = Pcorr*(1-Pcorr)
     #Problem with these variances is that if there's only one trial at an intensity, then the variance is calculated as zero.
     #Which is an artifact of having only one trial, which is why calculating CIs of proportions is notorious.
     #Deal with this by just imposing a floor and ceiling on the SEM, although there are sophisticated ways of doing it which I should do.
     #Because really the max and min should depend on how many trials there are.
-    variances = variances.clip(.2*.8,.8*.2)
-    print('variances=',variances)
+    variances = variances.clip(.2*.8,.8*.2)  #truncate at reasonable values rather than letting extend to 0 and to 1
+    #print('variances=',variances)
     sds = np.sqrt(variances)
     stderrs = sds / np.sqrt(ns)
-    print('stderrs=',stderrs)
+    #print('stderrs=',stderrs)
     try:
         #Best to send it an estimate of the standard error of each observation, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
         #sems: A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
