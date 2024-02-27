@@ -1,5 +1,6 @@
 import numpy as np
-from psychopy import visual, data, logging
+import psychopy
+from psychopy import visual, logging
 import itertools
 from math import log
 from copy import deepcopy
@@ -54,7 +55,7 @@ def printStaircase(s, descendingPsycho=False, briefTrialUpdate=False, printInter
     print(msg)
     if alsoLog:     logging.info(msg)
 
-    if type(s) is data.StairHandler:
+    if type(s) is psychopy.data.StairHandler:
         numReversals = len(s.reversalIntensities)
         msg= 'staircase number of reversals=' + str(numReversals) + '] '
         msg+= 'reversal noiseProportions=' + str( 1- np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) )
@@ -66,7 +67,7 @@ def printStaircase(s, descendingPsycho=False, briefTrialUpdate=False, printInter
                       ' reversals =' + str( 1-np.average(  outOfStaircase(s.reversalIntensities[-numReversalsToAvg:],s,descendingPsycho),   ) ) )
             print(msg)
             if alsoLog:     logging.info(msg)
-    elif type(s) is data.QuestHandler:
+    elif type(s) is psychopy.data.QuestHandler:
             #some of below are private initialization variables I'm not really supposed to access
             if not briefTrialUpdate:
                 msg= ('\tpThreshold (proportion correct for which trying to zero in on the corresponding parameter value) =' +
@@ -123,6 +124,21 @@ def createNoise(proportnNoise,win,fieldWidthPix,noiseColor):
         sizes=1)
     return (noise,allFieldCoords,numDots) #Can just use noise, but if want to generate new noise of same coherence level quickly, can just shuffle coords
 
+def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho):
+    
+    intensLinear= outOfStaircase(staircase.intensities, staircase, descendingPsycho)
+    #Use pandas to calculate proportion correct at each level
+    df= DataFrame({'intensity': intensLinear, 'response': staircase.data})
+    #print('df='); print(df) #debug
+    grouped = df.groupby('intensity')
+    groupMeans= grouped.mean() #a groupBy object, kind of like a DataFrame but without column names, only an index?
+    intensitiesTested = list(groupMeans.index)
+    pCorrect = list(groupMeans['response'])  #x.iloc[:]
+    ns = grouped.count() #want n per trial to scale data point size
+    ns = list(ns['response'])
+    dfResults = DataFrame({'intensity': intensitiesTested, 'Pcorr': pCorrect, 'n': ns })
+    return (dfResults)
+    
 def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     #Expects staircase, which has intensities and responses in it
     #May or may not be log steps staircase internals
@@ -142,47 +158,50 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         print('intensitiesForCurve=',intensitiesForCurve)
         #print('ysForCurve=',ysForCurve) #debug
     else: #post-staircase function fitting failed, but can fall back on what staircase returned
-        thresh = staircase.quantile()
+        if isinstance(staircase, psychopy.data.staircase.QuestHandler): #Quest staircase
+            thresh = staircase.quantile()
+        else:
+            numRevsToUse = int( staircase.thisTrialN / 8 )
+            meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
+            thresh = meanOfFinalReversals
+
         if descendingPsycho:
             thresh = 100-thresh
     #plot staircase in left hand panel
     pylab.subplot(121)
     pylab.plot(intensLinear)
     pylab.xlabel("staircase trial")
-    pylab.ylabel("% noise")
+    pylab.ylabel("intensity")
     #plot psychometric function on the right.
     ax1 = pylab.subplot(122)
     if fit is not None:
         pylab.plot(intensitiesForCurve, ysForCurve, 'k-') #fitted curve
     pylab.plot([thresh, thresh],[0,threshVal],'k--') #vertical dashed line
     pylab.plot([0, thresh],[threshVal,threshVal],'k--') #horizontal dashed line
-    figure_title = 'threshold (%.2f) = %0.2f' %(threshVal, thresh) + '%'
+    figure_title = 'threshold (%.2f) = %0.2f' %(threshVal, thresh)
     #print thresh proportion top of plot
     pylab.text(0, 1.11, figure_title, horizontalalignment='center', fontsize=12)
     if fit is None:
         pylab.title('Fit failed')
-    
-    #Use pandas to calculate proportion correct at each level
-    df= DataFrame({'intensity': intensLinear, 'response': staircase.data})
-    #print('df='); print(df) #debug
-    grouped = df.groupby('intensity')
-    groupMeans= grouped.mean() #a groupBy object, kind of like a DataFrame but without column names, only an index?
-    intensitiesTested = list(groupMeans.index)
-    pCorrect = list(groupMeans['response'])  #x.iloc[:]
-    ns = grouped.count() #want n per trial to scale data point size
-    ns = list(ns['response'])
-    print('df mean at each intensity\n'); print(  DataFrame({'intensity': intensitiesTested, 'pCorr': pCorrect, 'n': ns })   )
-    #data point sizes. One entry in array for each datapoint
 
+    print('Aggregation of trials:'); 
+    tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho)
+    print(tallied)
+    
+    #data point sizes. One entry in array for each datapoint
+    ns = tallied.loc[:,"n"]
+    Pcorr = tallied.loc[:,"Pcorr"]
+    intensitiesTested = tallied.loc[:,"intensity"]
+    
     pointSizes = 5+ 40 * np.array(ns) / max(ns) #the more trials, the bigger the datapoint size for maximum of 6
     #print('pointSizes = ',pointSizes)
-    points = pylab.scatter(intensitiesTested, pCorrect, s=pointSizes, 
+    points = pylab.scatter(intensitiesTested, Pcorr, s=pointSizes, 
         edgecolors=(0,0,0), facecolors= 'none', linewidths=1,
         zorder=10, #make sure the points plot on top of the line
         )
     pylab.ylim([-0.01,1.01])
     pylab.xlim([-2,102])
-    pylab.xlabel("%noise")
+    pylab.xlabel("intensity")
     pylab.ylabel("proportion correct")
     #save a vector-graphics format for future
     #outputFile = os.path.join(dataFolder, 'last.pdf')
@@ -199,18 +218,39 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         ax2.set_xscale('log')
         ax2.tick_params(axis='x',which='minor',bottom='off')
         
-#    #save figure to file
-#    outputFile = os.path.join(dataDir, 'test.pdf')
-#    pylab.savefig(outputFile)
 
-if __name__ == "__main__":
+#questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
+from questplus.psychometric_function import weibull 
+
+# create an idealized participant (weibull function)
+def calc_pCorrect(intensity,descendingPsychometricCurve):
+    #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
+
+    if descendingPsychometricCurve:
+        intensity = 100-intensity
+        
+    pCorr = weibull(intensity=intensity, threshold=45,
+                        slope=6.35, lower_asymptote=0.5, lapse_rate=0.00,
+                        scale='linear').item()
+                        
+    return pCorr
+
+# Use idealized participant to get correct/incorrect on an individual trial
+def simulateResponse(intensity,descendingPsychometricCurve):
+    pCorr = calc_pCorrect(intensity,descendingPsychometricCurve)
+    dice_roll = np.random.random()
+    return int(dice_roll <= pCorr)
+    
+    
+if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
-    threshCriterion = 0.25
-    staircaseTrials = 5
+    descendingPsychometricCurve = False
+    threshCriterion = 0.794
+    staircaseTrials = 200
     useQuest = False
     
     if useQuest:
-        staircase = data.QuestHandler(startVal = 95,
+        staircase = psychopy.data.QuestHandler(startVal = 95,
                         minVal=1, maxVal = 100,
                         startValSd = 80,
                         stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
@@ -224,50 +264,48 @@ if __name__ == "__main__":
                         )
         print('Created QUEST staircase.')
     else:
-        staircase = data.StairHandler(startVal=20.0,
+        staircase = psychopy.data.StairHandler(startVal=20.0,
             minVal=1, maxVal=100,
             stepType='lin',
             stepSizes=[8, 4, 4, 2, 2, 1, 1],  # reduce step size every two reversals
             nUp=1, nDown=3,  # will home in on the 79.4% threshold; threshTryingToEstimate
             nTrials=staircaseTrials)
         print('Created conventional Levitt staircase.')
-    descendingPsycho = False
-    noiseEachTrial = np.array([5,5,5,5,5,5,5,5,5,10,10,10,10,10,10,10,10,10,10,10,20,20,20,20,20,20,20,20,20,20,20,20,50,50,50,50,50,50,50,60,60,60,60,60,60,60,60,60,60,70,70,70,70,70,70,70,80,80,80,80,80,80,80,80,95,95,95,95,95,95,95]) 
-    centeredOnZero = noiseEachTrial/100. -0.5
-    guessRate = .1  #doesnt work with guessRate=0, fitWeibull doesnt like that
-    pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
-
-    print('pCorrEachTrial=',np.around(pCorrEachTrial,2))
-    corrEachTrial = np.zeros( len(noiseEachTrial) )
-    for i in range( len(noiseEachTrial) ):
-        corrEachTrial[i] = np.random.binomial( 1, pCorrEachTrial[i] )
-    corrEachTrial = corrEachTrial.astype(int)
-    print('corrEachTrial=',corrEachTrial)
     
-    #Just manually add a bunch of data to the staircase, for testing purposes
-    print('Importing responses ',np.array(corrEachTrial),' and intensities ',noiseEachTrial)
-    #Act of importing will cause staircase intensities to log transform because that's how intensities are represented in the staircase
-    #staircase internal will be i = log(100-x)
-    #-(10**i)-100
-    staircase.importData( toStaircase(noiseEachTrial,descendingPsycho), np.array(corrEachTrial) )
+    trialnum = 0
+    while trialnum < staircaseTrials:
+        #Psychopy staircase can only handle increasing psychometric function.
+        #So we use outOfStaircase, in case descending psychometric function, flips it (100-x)
+        intensityThisTrial = staircase.next()
+        intensityThisTrial = outOfStaircase(intensityThisTrial, staircase, descendingPsychometricCurve)
+        
+        #Simulate observer for this trial's intensity
+        correct = simulateResponse(intensityThisTrial,descendingPsychometricCurve)
+        staircase.addResponse( correct )
+        trialnum = trialnum + 1
+    
     printStaircase(staircase, briefTrialUpdate=False, printInternalVal=True, alsoLog=False)
 
     #Fit and plot data
-    descendingPsycho = False
     fit = None
-    intensityForCurveFitting = outOfStaircase(staircase.intensities,staircase,descendingPsycho)
+    intensityForCurveFitting = outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
     #print('intensityForCurveFitting=',intensityForCurveFitting)
-    if descendingPsycho: 
+    if descendingPsychometricCurve: 
          intensityForCurveFitting = 100-staircase.intensities #because fitWeibull assumes curve is ascending
     #from list of trials, tally up each intensity and calculate proportions correct
     combinedInten, combinedResp, combinedN = \
-         data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
+         psychopy.data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
     print('combinedInten=',combinedInten,'combinedResp=',combinedResp)
     try:
-        fit = data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems = 1.0/len(staircase.intensities))
+        #Best to send it an estimate of the standard error of each observation, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
+        # which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
+        #A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
+        sems = 1 #My reading of the scipy function used to fit the curves is that it assumes the same number of trials for every intensity,
+        # 
+        fit = psychopy.data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems=None)
         print('fit=',fit)
     except:
         print("Fit failed.")
-    plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal=0.75)
+    plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=threshCriterion)
     pylab.show() #must call this to actually show plot
 
