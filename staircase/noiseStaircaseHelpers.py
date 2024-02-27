@@ -2,7 +2,7 @@ import numpy as np
 import psychopy
 from psychopy import visual, logging
 import itertools
-from math import log
+from math import log, sqrt
 from copy import deepcopy
 from pandas import DataFrame
 import pylab, os
@@ -188,11 +188,11 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho)
     print(tallied)
     
-    #data point sizes. One entry in array for each datapoint
     ns = tallied.loc[:,"n"]
     Pcorr = tallied.loc[:,"Pcorr"]
     intensitiesTested = tallied.loc[:,"intensity"]
     
+    #data point sizes. One entry in array for each datapoint
     pointSizes = 5+ 40 * np.array(ns) / max(ns) #the more trials, the bigger the datapoint size for maximum of 6
     #print('pointSizes = ',pointSizes)
     points = pylab.scatter(intensitiesTested, Pcorr, s=pointSizes, 
@@ -246,7 +246,7 @@ if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
     descendingPsychometricCurve = False
     threshCriterion = 0.794
-    staircaseTrials = 200
+    staircaseTrials = 100
     useQuest = False
     
     if useQuest:
@@ -296,13 +296,28 @@ if __name__ == "__main__":  #executable example of using these functions
     combinedInten, combinedResp, combinedN = \
          psychopy.data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
     print('combinedInten=',combinedInten,'combinedResp=',combinedResp)
+    
+    #Calculate standard error of each percent correct observed, because that helps the curvefitting
+    # which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
+    tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsychometricCurve)
+    ns = tallied.loc[:,"n"]
+    Pcorr = tallied.loc[:,"Pcorr"]
+    intensitiesTested = tallied.loc[:,"intensity"]
+    print('Pcorr=',Pcorr)
+    variances = Pcorr*(1-Pcorr)
+    #Problem with these variances is that if there's only one trial at an intensity, then the variance is calculated as zero.
+    #Which is an artifact of having only one trial, which is why calculating CIs of proportions is notorious.
+    #Deal with this by just imposing a floor and ceiling on the SEM, although there are sophisticated ways of doing it which I should do.
+    #Because really the max and min should depend on how many trials there are.
+    variances = variances.clip(.2*.8,.8*.2)
+    print('variances=',variances)
+    sds = np.sqrt(variances)
+    stderrs = sds / np.sqrt(ns)
+    print('stderrs=',stderrs)
     try:
         #Best to send it an estimate of the standard error of each observation, https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
-        # which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
-        #A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
-        sems = 1 #My reading of the scipy function used to fit the curves is that it assumes the same number of trials for every intensity,
-        # 
-        fit = psychopy.data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems=None)
+        #sems: A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
+        fit = psychopy.data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems=stderrs)
         print('fit=',fit)
     except:
         print("Fit failed.")
