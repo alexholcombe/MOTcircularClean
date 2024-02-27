@@ -207,20 +207,30 @@ if __name__ == "__main__":
     #Test staircase functions
     threshCriterion = 0.25
     staircaseTrials = 5
-    staircase = data.QuestHandler(startVal = 95, 
-                          startValSd = 80,
-                          stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
-                          nTrials = staircaseTrials,
-                          #extraInfo = thisInfo,
-                          pThreshold = threshCriterion, #0.25,    
-                          gamma = 1./26,
-                          delta=0.02, #lapse rate, I suppose for Weibull function fit
-                          method = 'quantile', #uses the median of the posterior as the final answer
-                          stepType = 'log',  #will home in on the 80% threshold. But stepType = 'log' doesn't usually work
-                          minVal=1, maxVal = 100
-                          )
-    print('created QUEST staircase')
+    useQuest = False
     
+    if useQuest:
+        staircase = data.QuestHandler(startVal = 95,
+                        minVal=1, maxVal = 100,
+                        startValSd = 80,
+                        stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
+                        nTrials = staircaseTrials,
+                        #extraInfo = thisInfo,
+                        pThreshold = threshCriterion, #0.25,    
+                        gamma = 1./26,
+                        delta=0.02, #lapse rate, I suppose for Weibull function fit
+                        method = 'quantile', #uses the median of the posterior as the final answer
+                        stepType = 'log'  #will home in on the 80% threshold. But stepType = 'log' doesn't usually work
+                        )
+        print('Created QUEST staircase.')
+    else:
+        staircase = data.StairHandler(startVal=20.0,
+            minVal=1, maxVal=100,
+            stepType='lin',
+            stepSizes=[8, 4, 4, 2, 2, 1, 1],  # reduce step size every two reversals
+            nUp=1, nDown=3,  # will home in on the 79.4% threshold; threshTryingToEstimate
+            nTrials=staircaseTrials)
+        print('Created conventional Levitt staircase.')
     descendingPsycho = False
     noiseEachTrial = np.array([5,5,5,5,5,5,5,5,5,10,10,10,10,10,10,10,10,10,10,10,20,20,20,20,20,20,20,20,20,20,20,20,50,50,50,50,50,50,50,60,60,60,60,60,60,60,60,60,60,70,70,70,70,70,70,70,80,80,80,80,80,80,80,80,95,95,95,95,95,95,95]) 
     centeredOnZero = noiseEachTrial/100. -0.5
@@ -249,7 +259,7 @@ if __name__ == "__main__":
     #print('intensityForCurveFitting=',intensityForCurveFitting)
     if descendingPsycho: 
          intensityForCurveFitting = 100-staircase.intensities #because fitWeibull assumes curve is ascending
-    #convert from list of trials to probabilities
+    #from list of trials, tally up each intensity and calculate proportions correct
     combinedInten, combinedResp, combinedN = \
          data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
     print('combinedInten=',combinedInten,'combinedResp=',combinedResp)
