@@ -23,6 +23,9 @@ def outOfStaircase(y,staircase,descendingPsycho):
     #10**y = 100 - x
     #-x = 10**y - 100
     # x = 100 - 10**y
+    if isinstance(y,list):
+        y = np.array(y) #because can't do math with lists
+    
     if staircase.stepType == 'log': #HOW DO I KNOW IT IS BASE 10? and why doesnt psychopy protect me from log values. I guess actual intensities not meant for user
         x = 10**np.array(y)
     else:
@@ -153,7 +156,7 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         thresh = fit.inverse(threshVal)
         if descendingPsycho:
             intensitiesForFit = 100-intensitiesForCurve
-            thresh = 100 - thresh
+            #thresh = 100 - thresh
         else:
             intensitiesForFit = intensitiesForCurve
         ysForCurve = fit.eval(intensitiesForFit)
@@ -241,11 +244,14 @@ from questplus.psychometric_function import weibull
 def calc_pCorrect(intensity,guessRate, descendingPsychometricCurve):
     #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
 
+    thresh = 25
+    slope = 6
     if descendingPsychometricCurve:
-        intensity = 100-intensity
-        
-    pCorr = weibull(intensity=intensity, threshold=45,
-                        slope=6.35, lower_asymptote=guessRate, lapse_rate=0.00,
+        slope = -1*slope
+        #intensity = 100-intensity
+    
+    pCorr = weibull(intensity=intensity, threshold=thresh,
+                        slope=slope, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
                         
     return pCorr
@@ -259,11 +265,13 @@ def simulateResponse(intensity,guessRate,descendingPsychometricCurve):
     
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
-    descendingPsychometricCurve = False
+    descendingPsychometricCurve = True
     guessRate = 0.0
-    threshCriterion = 0.794
+    threshCriterion = 0.794 #same as what 1 up, 3 down staircase converges on
     staircaseTrials = 200
     useQuest = False
+
+    np.random.seed(seed=233423) #so that simulated observer is reproducible. For this value, the curvefit works
     
     if useQuest:
         staircase = psychopy.data.QuestHandler(startVal = 95,
@@ -304,10 +312,11 @@ if __name__ == "__main__":  #executable example of using these functions
 
     #Fit and plot data
     fit = None
-    intensityForCurveFitting = outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
-    #print('intensityForCurveFitting=',intensityForCurveFitting)
+    intensityForCurveFitting = outOfStaircase(np.array(staircase.intensities),staircase,descendingPsychometricCurve)
+    print('intensityForCurveFitting=',intensityForCurveFitting) #debug
     if descendingPsychometricCurve: 
-         intensityForCurveFitting = 100-staircase.intensities #because fitWeibull assumes curve is ascending
+         intensityForCurveFitting = 100-np.array(staircase.intensities) #because fitWeibull assumes curve is ascending
+         
     #from list of trials, tally up each intensity and calculate proportions correct
     combinedInten, combinedResp, combinedN = \
          psychopy.data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
