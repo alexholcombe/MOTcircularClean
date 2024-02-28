@@ -173,8 +173,8 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     ax1 = pylab.subplot(122)
     if fit is not None:
         pylab.plot(intensitiesForFit, ysForCurve, 'r-') #fitted curve
-    pylab.plot([thresh, thresh],[0,threshVal],'r:') #vertical dashed line
-    pylab.plot([0, thresh],[threshVal,threshVal],'r:') #horizontal dashed line
+        pylab.plot([thresh, thresh],[0,threshVal],'r:') #vertical dashed line
+        pylab.plot([0, thresh],[threshVal,threshVal],'r:') #horizontal dashed line
     
     #Find mean of last reversals and plot that, too
     meanOfFinalReversals = None

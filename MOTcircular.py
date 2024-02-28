@@ -92,7 +92,7 @@ refreshRate = infoFirst['Screen refresh rate']
 #trialDurMin does not include trackVariableIntervMax or trackingExtraTime, during which the cue is on.
 trialDurMin = 2 #1
 trackingExtraTime= 1.2 #giving the person time to attend to the cue (secs). This gets added to trialDurMin
-trackVariableIntervMax = 0.8 #Random interval that gets added to trackingExtraTime and trialDurMin
+trackVariableIntervMax = 2.5 #Random interval that gets added to trackingExtraTime and trialDurMin
 if demo: 
     trialDurMin = 5; refreshRate = 60.; 
 tokenChosenEachRing= [-999]*numRings
@@ -122,7 +122,7 @@ ballStdDev = 1.8
 mouseChoiceArea = ballStdDev*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
-timeTillReversalMax = 1.5# 1.3 #2.9
+timeTillReversalMax = 2.0# 1.3 #2.9
 colors_all = np.array([[1,-1,-1]] * 20)  #colors of the blobs (typically all identical) in a ring. Need as many as max num objects in a ring
 cueColor =  np.array([1,1,1])
 #monitor parameters

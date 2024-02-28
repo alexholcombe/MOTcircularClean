@@ -36,15 +36,17 @@ dataFile.write('targetSide	oriIncrement	correct\n')
 # create window and stimuli
 globalClock = core.Clock()  # to keep track of time
 trialClock = core.Clock()  # to keep track of time
-win = visual.Window([800, 600], allowGUI=False, monitor='testMonitor', units='deg',autoLog=False)
-foil = visual.GratingStim(win, sf=1, size=4, mask='gauss', ori=expInfo['refOrientation'])
-target = visual.GratingStim(win, sf=1,  size=4, mask='gauss', ori=expInfo['refOrientation'])
-fixation = visual.GratingStim(win, color='black', tex=None, mask='circle', size=0.2)
-message1 = visual.TextStim(win, pos=[0, + 3],
-    text='Hit a key when ready.')
-message2 = visual.TextStim(win, pos=[0, -3],
-    text="Then press left or right to identify the %.1fdegree probe." % expInfo['refOrientation'])
+if showStimuli:
+    win = visual.Window([800, 600], allowGUI=False, monitor='testMonitor', units='deg',autoLog=False)
+    foil = visual.GratingStim(win, sf=1, size=4, mask='gauss', ori=expInfo['refOrientation'])
+    target = visual.GratingStim(win, sf=1,  size=4, mask='gauss', ori=expInfo['refOrientation'])
+    fixation = visual.GratingStim(win, color='black', tex=None, mask='circle', size=0.2)
+    message1 = visual.TextStim(win, pos=[0, + 3],
+        text='Hit a key when ready.')
+    message2 = visual.TextStim(win, pos=[0, -3],
+        text="Then press left or right to identify the %.1fdegree probe." % expInfo['refOrientation'])
 
+np.random.seed(seed=233423) #so that simulated observer is reproducible. For this value, the curvefit works
 nTrials = 100
 quest = False
 threshTryingToEstimate = 0.79
@@ -64,20 +66,20 @@ else:
         nUp=1, nDown=3,  # will home in on the 79.4% threshold; threshTryingToEstimate
         nTrials=nTrials)
 
-# display instructions and wait
-message1.draw()
-message2.draw()
-fixation.draw()
-win.flip()
-# check for a keypress
-event.waitKeys()
+if showStimuli:# display instructions and wait
+    message1.draw()
+    message2.draw()
+    fixation.draw()
+    win.flip()
+    # check for a keypress
+    event.waitKeys()
 
 guessRate=0.5
 # create an idealized participant (weibull function)
 def calc_pCorrect(intensity, guessRate):
     if descendingPsychometricCurve:
         intensity = 100-intensity
-    pCorr = weibull(intensity=intensity, threshold=45,
+    pCorr = weibull(intensity=intensity, threshold=30,
                         slope=6.35, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
     return pCorr
@@ -94,16 +96,16 @@ for thisIncrement in staircase:  # will step through the staircase
     #Psychopy staircase can only handle increasing psychometric function.
     #So we use outOfStaircase if descending psychometric function to flip it (100-x)
     thisIncrement = staircaseAndNoiseHelpers.outOfStaircase(thisIncrement, staircase, descendingPsychometricCurve)
-    
-    # set location of stimuli
+
     targetSide = round(np.random.random()) * 2 - 1  # +1 = right, -1 = left
-    foil.setPos([-5 * targetSide, 0])
-    target.setPos([5 * targetSide, 0])  # in other location
+    if showStimuli: # set location of stimuli
+        foil.setPos([-5 * targetSide, 0])
+        target.setPos([5 * targetSide, 0])  # in other location
+    
+        # set orientation of probe
+        foil.setOri(expInfo['refOrientation'] + thisIncrement)
 
-    # set orientation of probe
-    foil.setOri(expInfo['refOrientation'] + thisIncrement)
-
-    if showStimuli: # draw all stimuli
+        # draw all stimuli
         foil.draw()
         target.draw()
         fixation.draw()
@@ -165,9 +167,26 @@ if autopilot:
 intensityForCurveFitting = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
 combinedInten, combinedResp, combinedN = \
      psychopy.data.functionFromStaircase(intensityForCurveFitting, staircase.data, bins='unique')
-         
+
+pCorr = np.array(combinedResp)
+ns = np.array(combinedN)
+print('pCorr=',pCorr)
+#Calculate standard error of each percent correct observed, because the curvefitting asks for that (thus the curvefitting algorithm used is not really suitable for binomial data)
+# which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
+variances = pCorr*(1-pCorr)
+quit
+#Problem with these variances is that if there's only one trial at an intensity, then the variance is calculated as zero.
+#Which is an artifact of having only one trial, which is why calculating CIs of proportions is notorious.
+#Deal with this by just imposing a floor and ceiling on the SEM, although there are sophisticated ways of doing it which I should do.
+#Because really the max and min should depend on how many trials there are.
+variances = variances.clip(.2*.8,.8*.2)  #truncate at reasonable values rather than letting extend to 0 and to 1
+#print('variances=',variances)
+sds = np.sqrt(variances)
+stderrs = sds / np.sqrt(ns)
+#print('stderrs=',stderrs)
+
 try:
-    fit = data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems = 1.0/len(staircase.intensities))
+    fit = data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems = stderrs)
     print('Fitting a Weibull to the data=',fit)
 except Exception as e:
     print("An exception occurred when curvefitting:",str(e))
