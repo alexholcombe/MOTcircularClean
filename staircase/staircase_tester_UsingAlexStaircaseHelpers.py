@@ -9,7 +9,7 @@ from questplus.psychometric_function import weibull
 
 from psychopy import core, visual, gui, data, event
 from psychopy.tools.filetools import fromFile, toFile
-import psychopy, time, os, pylab
+import psychopy, time, os, pylab, scipy
 import numpy as np
 
 try: #This only works if the code executing is in this folder
@@ -75,6 +75,10 @@ if showStimuli:# display instructions and wait
     event.waitKeys()
 
 guessRate=0.5
+
+def logistic(x, c, d):
+    return 1 / (1. + np.exp(-c * (x - d)))
+    
 # create an idealized participant (weibull function)
 def calc_pCorrect(intensity, guessRate):
     if descendingPsychometricCurve:
@@ -193,11 +197,21 @@ try:
     #Really should switch to a robust fit like logistic regression that is set up for binomial data.
     #print(dir(fit))
 except Exception as e:
-    print("An exception occurred when curvefitting:",str(e))
+    print("An exception occurred when curvefitting with Psychopy method:",str(e))
+    print("Fit failed.")
+    fit = None
+
+#Alternative way of curve fitting because Psychopy's algorithm often fails
+try: #from https://stackoverflow.com/questions/56329180/fitting-a-logistic-curve-to-data?rq=3
+    (locatn, slope), _ = scipy.optimize.curve_fit(logistic, combinedInten, combinedResp, method="trf")
+    y_fit_Alex = logistic(combinedInten, locatn, slope)
+except Exception as e:
+    print("An exception occurred when curvefitting with my method:",str(e))
     print("Fit failed.")
     fit = None
     
 staircaseAndNoiseHelpers.plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=0.79)
+pylab.plot(combinedInten, y_fit_Alex, 'g-') #Alex fitted curve
 pylab.show() #must call this to actually show plot
 
 if showStimuli:
