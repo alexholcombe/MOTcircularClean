@@ -20,6 +20,7 @@ except Exception as e:
 
 autopilot = True; showStimuli = False
 descendingPsychometricCurve = False
+saveDataInFile = False
 
 expInfo = {'observer':'aohSim', 'refOrientation':0}
 dateStr = time.strftime("%b_%d_%H%M", time.localtime())  # add the current time
@@ -27,11 +28,11 @@ dateStr = time.strftime("%b_%d_%H%M", time.localtime())  # add the current time
 results_folder = 'data_and_results_for_tests'
 
 # make a text file to save data. Will also save as psydat pickle, which can be read in by JND_staircase_analysis.py
-fileName = expInfo['observer'] + dateStr + '.txt'
-output_file = os.path.join(results_folder, fileName)
- 
-dataFile = open(output_file, 'w')
-dataFile.write('targetSide	oriIncrement	correct\n')
+if saveDataInFile:
+    fileName = expInfo['observer'] + dateStr + '.txt'
+    output_file = os.path.join(results_folder, fileName)
+    dataFile = open(output_file, 'w')
+    dataFile.write('targetSide	oriIncrement	correct\n')
 
 # create window and stimuli
 globalClock = core.Clock()  # to keep track of time
@@ -142,11 +143,13 @@ for thisIncrement in staircase:  # will step through the staircase
 
     # add the data to the staircase so it can calculate the next level
     staircase.addResponse(thisResp)
-    dataFile.write('%i	%.3f	%i\n' % (targetSide, thisIncrement, thisResp))
+    if saveDataInFile:
+        dataFile.write('%i	%.3f	%i\n' % (targetSide, thisIncrement, thisResp))
 
 # staircase has ended
-dataFile.close()
-staircase.saveAsPickle(output_file)  # special python data file to save all the info
+if saveDataInFile:
+    dataFile.close()
+    staircase.saveAsPickle(output_file)  # special python data file to save all the info
 
 # give some output to user
 #print('printStaircase output:')
@@ -213,6 +216,9 @@ except Exception as e:
 staircaseAndNoiseHelpers.plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=0.79)
 pylab.plot(combinedInten, y_fit_Alex, 'g-') #Alex fitted curve
 pylab.show() #must call this to actually show plot
+
+print('dir staircase=')
+print(dir(staircase))
 
 if showStimuli:
     win.close()

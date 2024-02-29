@@ -143,7 +143,26 @@ def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho): #this is 
     ns = list(ns['response'])
     dfResults = DataFrame({'intensity': intensitiesTested, 'Pcorr': pCorrect, 'n': ns })
     return (dfResults)
-    
+
+#Alternative non-psychopy way but not being used now
+def make_my_weibull(chanceRate):
+    def _weibull(x,a,b):
+        y = chanceRate + (1.0-chanceRate)*(1 - np.exp( -(x/a)**(b) ) )
+        return y
+    return _weibull
+        
+#my_weibull = make_my_weibull(chanceRate)
+
+def make_my_weibull_inverse(chanceRate):
+    def _weibull_inverse(y,a,b):
+        toTakeLogOf = (1.0 - y)/(1 - chanceRate)
+        #print('toTakeLogOf=',toTakeLogOf)
+        x = a * ( -np.log( toTakeLogOf )  ) ** (1.0/b)
+        return x
+    return _weibull_inverse
+
+#my_weibull_inverse = make_my_weibull_inverse(chanceRate)
+
 def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     #Expects staircase, which has intensities and responses in it
     #May or may not be log steps staircase internals
