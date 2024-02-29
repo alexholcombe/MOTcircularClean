@@ -245,7 +245,7 @@ def calc_pCorrect(intensity,guessRate, descendingPsychometricCurve):
     #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
 
     thresh = 25
-    slope = 6
+    slope = 2
     if descendingPsychometricCurve:
         slope = -1*slope
         #intensity = 100-intensity
@@ -265,7 +265,7 @@ def simulateResponse(intensity,guessRate,descendingPsychometricCurve):
     
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
-    descendingPsychometricCurve = True
+    descendingPsychometricCurve = False
     guessRate = 0.0
     threshCriterion = 0.794 #same as what 1 up, 3 down staircase converges on
     staircaseTrials = 200
@@ -312,7 +312,7 @@ if __name__ == "__main__":  #executable example of using these functions
 
     #Fit and plot data
     fit = None
-    intensityForCurveFitting = outOfStaircase(np.array(staircase.intensities),staircase,descendingPsychometricCurve)
+    intensityForCurveFitting = outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
     print('intensityForCurveFitting=',intensityForCurveFitting) #debug
     if descendingPsychometricCurve: 
          intensityForCurveFitting = 100-np.array(staircase.intensities) #because fitWeibull assumes curve is ascending
@@ -343,7 +343,8 @@ if __name__ == "__main__":  #executable example of using these functions
         #sems: A scalar or 1-D sigma should contain values of standard deviations of errors in ydata. 
         fit = psychopy.data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems=stderrs)
         #fit = psychopy.data.FitLogistic(combinedInten, combinedResp, expectedMin=guessRate, sems=stderrs)
-        print('fit=',fit)
+        print('fit params=',fit.params)
+        #print(dir(fit))
     except Exception as e:
         print("An exception occurred when curvefitting:",str(e))
         print("Fit failed.")

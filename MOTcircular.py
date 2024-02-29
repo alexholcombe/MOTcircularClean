@@ -24,7 +24,7 @@ except Exception as e:
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 
 from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTargets, LCM, gcd
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = True #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 
 quitFinder = True 
@@ -58,7 +58,7 @@ numRings=3
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
-refreshRate= 110.0   #160 #set to the framerate of the monitor
+refreshRate= 100.0   #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
 fullscr=1; scrn=0
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
@@ -300,13 +300,13 @@ if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 fixatnNoise = True
-fixSizePix = 6 #20 make fixation big so flicker more conspicuous
+fixSizePix = 60#6 #20 make fixation big so flicker more conspicuous
 if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
     fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
-    fixation= visual.PatchStim(myWin, tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin, tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+    fixation= visual.PatchStim(myWin,pos=(0,300), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
+    fixationBlank= visual.PatchStim(myWin,pos=(0,300), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
 else:
     fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
@@ -1041,11 +1041,9 @@ while trialNum < trials.nTotal and expStop==False:
         else: fixationBlank.draw()
         myWin.flip() #clearBuffer=True)  
     trialClock.reset()
-    t0=trialClock.getTime(); t=trialClock.getTime()-t0     
     for L in range(len(ts)):
         ts.remove(ts[0]) # clear ts array, to try to avoid memory problems?
     stimClock.reset()
-    print('About to start trial and trialDurFrames =',round(trialDurFrames,1))
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
         gratingObjAngle = 20; #the angle an individual object subtends, of the circle
@@ -1064,7 +1062,8 @@ while trialNum < trials.nTotal and expStop==False:
         currentSpeed = 0.01
         speedRampStep = 0.01
         print('currentSpeed =',round(currentSpeed,2))
-    
+        
+    t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
         offsetXYeachRing=[ [0,0],[0,0],[0,0] ]

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Measure your JND in orientation using a staircase method
+Measure simulated orientation JND using a staircase method
 """
 #questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
 from questplus.psychometric_function import weibull 
@@ -80,7 +80,7 @@ def calc_pCorrect(intensity, guessRate):
     if descendingPsychometricCurve:
         intensity = 100-intensity
     pCorr = weibull(intensity=intensity, threshold=30,
-                        slope=6.35, lower_asymptote=guessRate, lapse_rate=0.00,
+                        slope=2, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
     return pCorr
 
@@ -174,7 +174,6 @@ print('pCorr=',pCorr)
 #Calculate standard error of each percent correct observed, because the curvefitting asks for that (thus the curvefitting algorithm used is not really suitable for binomial data)
 # which depends on the number of trials of course. For proportion data, it's sqrt(p*(1-p))/sqrt(n)
 variances = pCorr*(1-pCorr)
-quit
 #Problem with these variances is that if there's only one trial at an intensity, then the variance is calculated as zero.
 #Which is an artifact of having only one trial, which is why calculating CIs of proportions is notorious.
 #Deal with this by just imposing a floor and ceiling on the SEM, although there are sophisticated ways of doing it which I should do.
@@ -184,10 +183,15 @@ variances = variances.clip(.2*.8,.8*.2)  #truncate at reasonable values rather t
 sds = np.sqrt(variances)
 stderrs = sds / np.sqrt(ns)
 #print('stderrs=',stderrs)
-
 try:
     fit = data.FitWeibull(combinedInten, combinedResp, expectedMin=guessRate, sems = stderrs)
-    print('Fitting a Weibull to the data=',fit)
+    print('Fit a Weibull to the data=',fit)
+    print('combinedInten=',combinedInten)
+    print('combinedResp=',combinedResp)
+    print('fit params=',fit.params)
+    print('I have no idea why the fit often ends up with a negative slope even though the data are ascending')
+    #Really should switch to a robust fit like logistic regression that is set up for binomial data.
+    #print(dir(fit))
 except Exception as e:
     print("An exception occurred when curvefitting:",str(e))
     print("Fit failed.")
@@ -196,5 +200,6 @@ except Exception as e:
 staircaseAndNoiseHelpers.plotDataAndPsychometricCurve(staircase,fit,descendingPsychometricCurve,threshVal=0.79)
 pylab.show() #must call this to actually show plot
 
-win.close()
+if showStimuli:
+    win.close()
 core.quit()
