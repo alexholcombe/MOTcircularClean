@@ -7,7 +7,6 @@
 ##############
 import psychopy.info
 from psychopy import sound, monitors, logging, visual, data, core
-useSound=True
 import psychopy.gui, psychopy.event
 import numpy as np
 import itertools #to calculate all subsets
@@ -15,6 +14,8 @@ from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
 import time, random, sys, platform, os, gc, io #io is successor to StringIO
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
+import helpersAOH
+from helpersAOH import openMyStimWindow
 
 try:
     from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder.
@@ -23,10 +24,9 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
 
-from helpersAOH import accelerateComputer, openMyStimWindow, calcCondsPerNumTargets, LCM, gcd
 eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
-
+useSound=True
 quitFinder = True 
 if quitFinder and ('Darwin' in platform.system()): #turn Finder off. Only know the command for MacOS (Darwin)
     applescript="\'tell application \"Finder\" to quit\'" #quit Finder.
@@ -48,7 +48,8 @@ trackAllIdenticalColors = True#with tracking, can either use same colors as othe
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 respTypes=['order']; respType=respTypes[0]
-bindRadiallyRingToIdentify=1 #0 is inner, 1 is outer
+rng_seed = int(time.time())
+np.random.seed(seed=rng_seed); random.seed(rng_seed)
 
 drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
@@ -246,7 +247,7 @@ logging.info("computer platform="+sys.platform)
 logging.info('File that generated this = sys.argv[0]= '+sys.argv[0])
 logging.info("has_retina_scrn="+str(has_retina_scrn))
 logging.info('trialsPerCondition =' + str(trialsPerCondition))
-
+logging.info('random number seed =' + str(rng_seed))
 #Not a test - the final window opening
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 
@@ -332,8 +333,8 @@ if useSound:
 stimList = []
 # temporalfrequency limit test
 
-numTargets =                              [3,                 3] #AHtemp  #3
-numObjsInRing =                         [  4,                 8]  #AHtemp #4,8   #Limitation: gratings don't align with blobs with odd number of objects
+numTargets =                   [2,                 3] 
+numObjsInRing =                [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
 
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
@@ -351,23 +352,22 @@ for i in range(0, len(speedsPrelimiExp), 2):
 #dont go faster than 2 rps because of temporal blur/aliasing
 
 doStaircase = False
+maxTrialsPerStaircase = 60
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase:
     #create the staircase handler
-    stepSizesLinear = [.5,.5,.5,.4,.3,.3,.1,.1,.1,.1,.05]
-    minSpeedForStaircase = 0.2
+    minSpeedForStaircase = 0.05
     maxSpeedForStaircase = 1.8
     staircase = data.StairHandler(
         startVal=ltrColor,
         stepType='lin',
-        stepSizes=stepSizesLinear,  # reduce step size every two reversals
+        stepSizes= [.5,.4,.3,.2,.1,.1,.05],
         minVal=minSpeedForStaircase, 
         maxVal=maxSpeedForStaircase, 
-        nUp=1, nDown=3,  # 1-up 3-down homes in on the 79.4% threshold.
-        nTrials=200)
-    print('Created staircase')
-        
-    phasesMsg = ('Doing '+str(prefaceStaircaseTrialsN)+'trials with noisePercent= '+str(prefaceStaircaseNoise)+' then doing a max '+str(staircaseTrials)+'-trial staircase')
+        nUp=1, nDown=3,  #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
+        nTrials = maxTrialsPerStaircase)
+    phasesMsg = ('Doing '+str(prefaceStaircaseTrialsN)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
+                  str(maxTrialsPerStaircase)+'-trial staircase for each condition')
 
     printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
     #print('staircase.quantile=',round(staircase.quantile(),2),' sd=',round(staircase.sd(),2))
@@ -375,8 +375,8 @@ if doStaircase:
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
 if queryEachRingEquallyOften:
-    leastCommonMultipleSubsets = int( calcCondsPerNumTargets(numRings,numTargets) )
-    leastCommonMultipleTargetNums = int( LCM( numTargets ) )  #have to use this to choose ringToQuery.
+    leastCommonMultipleSubsets = int( helpersAOH.calcCondsPerNumTargets(numRings,numTargets) )
+    leastCommonMultipleTargetNums = int( helpersAOH.LCM( numTargets ) )  #have to use this to choose ringToQuery.
     #for each subset, need to counterbalance which target is queried. Because each element occurs equally often, which one queried can be an independent factor. But need as many repetitions as largest number of target numbers.
     # 3 targets . 3 subsets maximum. Least common multiple is 3. 3 rings that could be post-cued. That means counterbalancing requires 3 x 3 x 3 = 27 trials. NO! doesn't work
     # But what do you do when 2 targets, which one do you pick in the 3 different situations? Can't counterbalance it evenly, because when draw 3rd situation, half of time should pick one and half the time the other. Therefore have to use least common multiple of all the possible set sizes. Unless you just want to throw away that possibility. But then have different number of trials in 2 targets than in 3 targets.
@@ -939,20 +939,21 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
     return responses,responsesAutopilot,respondedEachToken, expStop
     ####### #End of function definition that collects responses!!!! #################################################
     
-print('Starting experiment of',trials.nTotal,'trials. Current trial is trial 0.')
+print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
 print('orderCorrect\ttrialDurTotal\tnumTargets', end= '\t', file=dataFile) 
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
 print('ringToQuery',end='\t',file=dataFile)
-for i in range(numRings):dataFile.write('Direction'+str(i)+'\t')
-for i in range(numRings):dataFile.write('respAdj'+str(i)+'\t')
+for i in range(numRings):   dataFile.write('direction'+str(i)+'\t')
+for i in range(numRings):   dataFile.write('respAdj'+str(i)+'\t')
 for r in range(numRings):
     for j in range(maxPossibleReversals()):
         dataFile.write('rev'+str(r)+'_'+str(j)+'\t')  #reversal times for each ring
 print('timingBlips', file=dataFile)
 #end of header
+
 trialClock = core.Clock()
 stimClock = core.Clock()
 trialNum=0; numTrialsOrderCorrect=0; numAllCorrectlyIdentified=0; blueMistakes=0; expStop=False; framesSaved=0;
@@ -969,7 +970,7 @@ randomInitialDirExceptRing0 = True
 oppositeInitialDirFirstTwoRings = True
 
 while trialNum < trials.nTotal and expStop==False:
-    accelerateComputer(1,process_priority, disable_gc) #I don't know if this does anything
+    helpersAOH.accelerateComputer(1,process_priority, disable_gc) #I don't know if this does anything
     if quickMeasurement:
         maxSpeed = 1.0; numObjects = 10; numTargets = 3
         # create a dialog box from dictionary 
@@ -1016,7 +1017,7 @@ while trialNum < trials.nTotal and expStop==False:
     trackVariableIntervDur=np.random.uniform(0,trackVariableIntervMax) #random interval tacked onto tracking to make total duration variable so cant predict final position
     trialDurTotal = maxTrialDur() - trackVariableIntervDur
     trialDurFrames= int( trialDurTotal*refreshRate )
-    print('trialDurTotal=',np.around(trialDurTotal,2),' trialDurFrames=',np.around(trialDurFrames,2), 'refreshRate=',np.around(refreshRate) ) 
+    #print('trialDurTotal=',np.around(trialDurTotal,2),' trialDurFrames=',np.around(trialDurFrames,2), 'refreshRate=',np.around(refreshRate) ) 
     xyTargets = np.zeros( [thisTrial['numTargets'], 2] ) #need this for eventual case where targets can change what ring they are in
     numDistracters = numRings*thisTrial['numObjectsInRing'] - thisTrial['numTargets']
     xyDistracters = np.zeros( [numDistracters, 2] )
@@ -1029,7 +1030,7 @@ while trialNum < trials.nTotal and expStop==False:
     myMouse.setVisible(False)      
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
-            #and calibrate. Does this allow it to draw on the screen for the calibration?
+            #and calibrate. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
         
     fixatnPeriodFrames = int(   (np.random.rand(1)/2.+0.8)   *refreshRate)  #random interval between x and x+800ms
@@ -1040,7 +1041,7 @@ while trialNum < trials.nTotal and expStop==False:
         myWin.flip() #clearBuffer=True)  
     trialClock.reset()
     for L in range(len(ts)):
-        ts.remove(ts[0]) # clear ts array, to try to avoid memory problems?
+        ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
     stimClock.reset()
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
@@ -1096,7 +1097,7 @@ while trialNum < trials.nTotal and expStop==False:
     psychopy.event.clearEvents(eventType='mouse')
 
     #end of big stimulus loop
-    accelerateComputer(0,process_priority, disable_gc) #turn off stuff that sped everything up
+    helpersAOH.accelerateComputer(0,process_priority, disable_gc) #turn off stuff that sped everything up. But I don't know if this works.
     #check for timing problems
     interframeIntervs = np.diff(ts)*1000 #difference in time between successive frames, in ms
     idxsInterframeLong = np.where( interframeIntervs > longFrameLimit ) [0] #frames that exceeded longerThanRefreshTolerance of expected duration
@@ -1124,15 +1125,6 @@ while trialNum < trials.nTotal and expStop==False:
             #end timing check
     myMouse.setVisible(True)
     
-    #ansIter=(answer).reshape(1,-1)[0]; ln=len(ansIter) #in case it's two dimensions like in bindRadially
-    #print 'answer=',answer,' or ', [colorNames[ int(ansIter[i]) ] for i in range( ln )], ' it is type ',type(answer), ' and shape ', np.shape(answer)  
-    #shuffledAns = deepcopy(answer);  #just to use for options, to ensure they are in a different order
-    #if numObjects == 2:
-    #     shuffledAns = shuffledAns[0:2]  #kludge. Really this should be controlled by nb_colors but that would require fancy array indexing where I currently have 0,2,1 etc above
-   # np.random.shuffle(shuffledAns)  
-    #if len(np.shape(answer)) >1: #more than one dimension, because bindRadiallyTask
-    #     np.random.shuffle(shuffledAns[:,0]) #unfortunately for bindRadially task, previous shuffling shuffled pairs, not individuals
-    #print 'answer after shuffling=',shuffledAns 
     passThisTrial=False
     
     #Create response prompt / postcue
@@ -1196,8 +1188,9 @@ while trialNum < trials.nTotal and expStop==False:
     if passThisTrial:orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
 
     #header print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
-    print(trialNum,subject,thisTrial['basicShape'],thisTrial['numObjectsInRing'],thisTrial['speed'],thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile)
-    print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) #override newline end
+    print(trialNum,subject,thisTrial['basicShape'],thisTrial['numObjectsInRing'],thisTrial['speed'],
+                                    thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
+    print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) 
     for i in range(numRings):  print( thisTrial['whichIsTargetEachRing'][i], end='\t', file=dataFile  )
     print( thisTrial['ringToQuery'],end='\t',file=dataFile )
     for i in range(numRings):dataFile.write(str(round(initialDirectionEachRing[i],4))+'\t') 
@@ -1301,10 +1294,10 @@ if eyetracking:
     msg = 'You will have to get the Eyelink EDF file off the eyetracking machine by hand'
     print(msg); logging.info(msg)
 else:
-  logging.info('Didnt try to eyetrack because eyetracking was set to ' + str(eyetracking))
+  logging.info('Didnt try to eyetrack because "eyetracking" was set to ' + str(eyetracking))
 logging.flush();
 
-if quitFinder and ('Darwin' in platform.system()): #turn Finder back on. Only tried this with MacOS and probably doesn't work anymore.
+if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
         os.system(shellCmd)
