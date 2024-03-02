@@ -344,9 +344,7 @@ for i in range(0, len(speedsPrelimiExp), 2):
     sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
     sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
     speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
-
-#Old way of setting all speeds manually
-#
+#Old way of setting all speeds manually:
 #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
 #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
 
