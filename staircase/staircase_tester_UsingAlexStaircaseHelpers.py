@@ -18,8 +18,8 @@ except Exception as e:
     print("An exception occurred in staircase_tester_.py:",str(e))
     print('Could not import staircaseAndNoiseHelpers.py (you need that file to be in the staircase subdirectory, which needs an __init__.py file in it too)')
 
-autopilot = True; showStimuli = False
-descendingPsychometricCurve = False
+autopilot = False; showStimuli = True
+descendingPsychometricCurve = True
 saveDataInFile = False
 
 expInfo = {'observer':'aohSim', 'refOrientation':0}
@@ -85,7 +85,7 @@ def calc_pCorrect(intensity, guessRate):
     if descendingPsychometricCurve:
         intensity = 100-intensity
     pCorr = weibull(intensity=intensity, threshold=30,
-                        slope=2, lower_asymptote=guessRate, lapse_rate=0.00,
+                        slope=.5, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
     return pCorr
 
