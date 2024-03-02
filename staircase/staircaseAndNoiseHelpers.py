@@ -216,10 +216,9 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     #print thresh proportion top of plot
     figure_title = 'mean of reversals= %0.2f' %(meanOfFinalReversals)
     if fit is not None:
-        figure_title += ', fitted threshold (%.2f) = %0.2f' %(threshVal, thresh)
+        figure_title += ',\nfitted threshold (%.2f) = %0.2f' %(threshVal, thresh)
 
-    #pylab.title(figure_title,  loc='left') #not enough space because only applies to this subfigure
-    pylab.text(0, 1.11, figure_title, horizontalalignment='center', fontsize=12)
+    pylab.title(figure_title,  loc='left') #not enough space because only applies to this subfigure
 
     print('Aggregation of trials:'); 
     tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho)
@@ -237,7 +236,7 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         zorder=10, #make sure the points plot on top of the line
         )
     pylab.ylim([-0.01,1.01])
-    pylab.xlim([-2,102])
+    pylab.xlim( [min(intensLinear), max(intensLinear)] )
     pylab.xlabel("intensity")
     pylab.ylabel("proportion correct")
     #save a vector-graphics format for future
@@ -247,7 +246,7 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     if createSecondAxis: #presently not used, if fit to log would need this to also show linear scale
         #create second x-axis to show linear percentNoise instead of log
         ax2 = ax1.twiny()
-        ax2.set(xlabel='%noise', xlim=[2, 102]) #not quite right but if go to 0, end up with -infinity? and have error
+        ax2.set(xlabel='%noise', xlim=[min(intensLinear), max(intensLinear)]) #not quite right but if go to 0, end up with -infinity? and have error
         #ax2.axis.set_major_formatter(ScalarFormatter()) #Show linear labels, not scientific notation
         #ax2 seems to be the wrong object. Why am I using pylab anyway? Matplotlib documentation seems more clear
         #for programming it is recommended that the namespaces be kept separate, http://matplotlib.org/api/pyplot_api.html
