@@ -375,40 +375,42 @@ for i in range(0, len(speedsPrelimiExp), 2):
 
 #don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
-doStaircase = False
+doStaircase = True
 maxTrialsPerStaircase = 60
+staircases = []
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase: #create the staircases
-    descendingPsycho = True
-    #give them all the same starting value of 50% of the average threshold speed across conditions
-    startVal = mainCondsDf['midpointThreshPrevLit'].mean()
-    print('staircase startVal=',startVal)
-    condition = {'participant': 'John Doe', 'session': '001'}
-    #filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
-
-    nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
-    if nUp==1 and nDown==3:
-        staircaseConvergePct = 0.794
-    else:
-        print('ERROR: dont know what staircaseConvergePct is')    
-    minSpeedForStaircase = 0.05
-    maxSpeedForStaircase = 1.8
-    staircase = data.StairHandler(
-        extraInfo = condition,
-        startVal=startVal,
-        stepType='lin',
-        stepSizes= [.5,.4,.3,.2,.1,.1,.05],
-        minVal=minSpeedForStaircase, 
-        maxVal=maxSpeedForStaircase, 
-        nUp=nUp, nDown=nDown,  
-        nTrials = maxTrialsPerStaircase)
-
-    numPreStaircaseTrials = 0
-    phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
-                  str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
-    staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
-    thisStaircase = staircase
-    staircases = [staircase]
+    for stairI in range(len(mainCondsDf)): #one staircase for each main condition
+        descendingPsycho = True
+        #give them all the same starting value of 50% of the average threshold speed across conditions
+        startVal = mainCondsDf['midpointThreshPrevLit'].mean()
+        this_row = mainCondsDf.iloc[stairI]
+        condition = this_row.to_dict() # {'numTargets': 2, 'numObjects': 4}
+        print('staircase startVal=',startVal, ' condition=',condition)
+    
+        nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
+        if nUp==1 and nDown==3:
+            staircaseConvergePct = 0.794
+        else:
+            print('ERROR: dont know what staircaseConvergePct is')    
+        minSpeedForStaircase = 0.05
+        maxSpeedForStaircase = 1.8
+        staircase = data.StairHandler(
+            extraInfo = condition,
+            startVal=startVal,
+            stepType='lin',
+            stepSizes= [.5,.4,.3,.2,.1,.1,.05],
+            minVal=minSpeedForStaircase, 
+            maxVal=maxSpeedForStaircase, 
+            nUp=nUp, nDown=nDown,  
+            nTrials = maxTrialsPerStaircase)
+    
+        numPreStaircaseTrials = 0
+        phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
+                      str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
+        #staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
+        print('Adding this staircase to list')
+        staircases.append(staircase)
 
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
@@ -1087,7 +1089,8 @@ while trialNum < trials.nTotal and expStop==False:
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
         ringRadial,cueRing,currentlyCuedBlob = \
-                constructRingAsGratingSimplified(radiiGratings,numObjects,gratingObjAngle,colors_all,stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+                constructRingAsGratingSimplified(radiiGratings,thisTrial['numObjectsInRing'],gratingObjAngle,colors_all,
+                                                 stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
@@ -1101,7 +1104,13 @@ while trialNum < trials.nTotal and expStop==False:
         print('currentSpeed =',round(currentSpeed,2))
     elif doStaircase: #speed will be set by staircase corresponding to this condition.
         #But don't forget about including some slow trials for lapseRate estimation
-        staircaseThis = staircases[0]
+        #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
+        numTargets = thisTrial['numTargets']; numObjs = thisTrial['numObjectsInRing'] 
+        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == numTargets) &
+                              (mainCondsDf['numObjects'] == numObjs)       ].index
+        condnum = rownum[0] #Because it was a pandas Index object, I guess to allow for possibility of multiple indices
+        staircaseThis = staircases[condnum]
+        print('rownum in mainConds =',condnum)  #' staircaseThis=',staircaseThis)
         speedThisTrial = staircaseThis.next()
         speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisTrial, staircaseThis, descendingPsycho) 
         currentSpeed = speedThisTrial #no speed ramp
@@ -1204,19 +1213,19 @@ while trialNum < trials.nTotal and expStop==False:
     if True: #not expStop: #if short on responses, too hard to write code to handle it so don't even try
         orderCorrect=0; numColorsCorrectlyIdentified=0; blueMistake=0;respAdj=list();sCorrect=list();targetCorrect=0;
         for l in range(numRings):
-                    if responses[l] !=[]: 
-                       tokenChosenEachRing[l]=np.where(respondedEachToken[l])  [0][0] 
-                       respAdjs= initialDirectionEachRing[l]*isReversed[l]*(tokenChosenEachRing[l]-thisTrial['whichIsTargetEachRing'][l])
-                       if respAdjs> numObjects/2. : respAdjs-= numObjects  #code in terms of closest way around. So if 9 objects and 8 ahead, code as -1
-                       if respAdjs < -numObjects/2. : respAdjs += numObjects
-                       respAdj.append(respAdjs)
-                       if tokenChosenEachRing[l]==thisTrial['whichIsTargetEachRing'][l]: 
-                          sCorrects=1
-                          sCorrect.append(sCorrects);
-                          targetCorrect+=sCorrects
-                    else:
-                       respAdj.append(-999)
-                       sCorrect.append(0)
+            if responses[l] !=[]: 
+               tokenChosenEachRing[l]=np.where(respondedEachToken[l])  [0][0] 
+               respAdjs= initialDirectionEachRing[l]*isReversed[l]*(tokenChosenEachRing[l]-thisTrial['whichIsTargetEachRing'][l])
+               if respAdjs> numObjects/2. : respAdjs-= numObjects  #code in terms of closest way around. So if 9 objects and 8 ahead, code as -1
+               if respAdjs < -numObjects/2. : respAdjs += numObjects
+               respAdj.append(respAdjs)
+               if tokenChosenEachRing[l]==thisTrial['whichIsTargetEachRing'][l]: 
+                  sCorrects=1
+                  sCorrect.append(sCorrects);
+                  targetCorrect+=sCorrects
+            else:
+               respAdj.append(-999)
+               sCorrect.append(0)
         if targetCorrect==1: orderCorrect = 3
         else: orderCorrect = 0
                  
@@ -1335,11 +1344,11 @@ else:
 logging.flush();
 
 if doStaircase: #report results
-
     meanReversalsEachStaircase = np.zeros( len(staircases) )
     for staircase in staircases: #Calculate staircase results
+        print('condition of this staircase = ', staircase.extraInfo)
         #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
-        actualThreshold = 999
+        actualThreshold = staircase.extraInfo['midpointThreshPrevList']
         print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
         #Average all the reversals after the first few.
         numReversals = len(staircase.reversalIntensities)
