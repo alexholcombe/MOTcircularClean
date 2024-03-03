@@ -309,9 +309,12 @@ if __name__ == "__main__":  #executable example of using these functions
     useQuest = False
 
     np.random.seed(seed=233423) #so that simulated observer is reproducible. For this value, the curvefit works
-    
+
+    startVal=20
+    startVal = toStaircase(startVal, descendingPsychometricCurve)
+
     if useQuest:
-        staircase = psychopy.data.QuestHandler(startVal = 95,
+        staircase = psychopy.data.QuestHandler(startVal = startVal,
                         minVal=0, maxVal = 100,
                         startValSd = 30,
                         stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
