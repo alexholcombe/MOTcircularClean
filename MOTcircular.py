@@ -12,7 +12,7 @@ import numpy as np
 import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
-import time, random, sys, platform, os, pylab, gc, io #io is successor to StringIO
+import time, random, sys, platform, os, pylab, gc, io, pandas
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
@@ -43,7 +43,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False; showStimuli = True
+autopilot= True; showStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -339,6 +339,27 @@ stimList = []
 numTargets =                   [2,                 3] 
 numObjsInRing =                [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
 
+mainCondsInfo = {
+    'numTargets':    [2, 2, 3, 3],
+    'numObjects':    [4, 8, 4, 8],
+}
+
+try:
+    from theory import publishedEmpiricalThreshes #imports from theory subfolder.
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
+
+publishedThreshes = publishedEmpiricalThreshes.getAvgMidpointThreshes()
+publishedThreshes = publishedThreshes[['numTargets', 'HzAvgPreviousLit']] #only want average of previous literature
+
+mainCondsDf = pandas.DataFrame( mainCondsInfo )
+mainCondsDf = pandas.merge(mainCondsDf, publishedThreshes, on='numTargets', how='left')
+mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCondsDf['numObjects']
+mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)
+print('mainCondsDf')
+print(mainCondsDf) #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
+                           
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
 factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
@@ -359,6 +380,12 @@ maxTrialsPerStaircase = 60
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase: #create the staircases
     descendingPsycho = True
+    #give them all the same starting value of 50% of the average threshold speed across conditions
+    startVal = mainCondsDf['midpointThreshPrevLit'].mean()
+    print('staircase startVal=',startVal)
+    condition = {'participant': 'John Doe', 'session': '001'}
+    #filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
+
     nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
     if nUp==1 and nDown==3:
         staircaseConvergePct = 0.794
@@ -367,7 +394,8 @@ if doStaircase: #create the staircases
     minSpeedForStaircase = 0.05
     maxSpeedForStaircase = 1.8
     staircase = data.StairHandler(
-        startVal=0.2,
+        extraInfo = condition,
+        startVal=startVal,
         stepType='lin',
         stepSizes= [.5,.4,.3,.2,.1,.1,.05],
         minVal=minSpeedForStaircase, 
@@ -1310,7 +1338,7 @@ if doStaircase: #report results
 
     meanReversalsEachStaircase = np.zeros( len(staircases) )
     for staircase in staircases: #Calculate staircase results
-        #actualThreshold = thresholdEachCondition[ staircases.index(staircase) ]
+        #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
         actualThreshold = 999
         print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
         #Average all the reversals after the first few.
