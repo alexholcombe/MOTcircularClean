@@ -218,7 +218,7 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     if fit is not None:
         figure_title += ',\nfitted threshold (%.2f) = %0.2f' %(threshVal, thresh)
 
-    pylab.title(figure_title,  loc='left') #not enough space because only applies to this subfigure
+    pylab.title(figure_title,  loc='left')
 
     print('Aggregation of trials:'); 
     tallied = fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho)

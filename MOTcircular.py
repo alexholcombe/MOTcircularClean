@@ -16,7 +16,11 @@ import time, random, sys, platform, os, gc, io #io is successor to StringIO
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
-
+try: #This only works if the code executing is in this folder
+    from staircasing import staircaseAndNoiseHelpers
+except Exception as e:
+    print("An exception occurred in staircase_tester_.py:",str(e))
+    print('Could not import staircaseAndNoiseHelpers.py (you need that file to be in the staircasing subdirectory, which needs an __init__.py file in it too)')
 try:
     from eyetrackingCode import EyelinkHolcombeLabHelpers #imports from eyetrackingCode subfolder.
     #EyeLinkTrack_Holcombe class originally created by Chris Fajou to combine lots of eyelink commands to create simpler functions
@@ -39,7 +43,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False
+autopilot= True; showStimuli = True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -102,7 +106,7 @@ cueRampDownDur=0 #duration of contrast ramp down to the end of the trial
 
 def maxTrialDur():
     return( trialDurMin+trackingExtraTime+trackVariableIntervMax )
-badTimingCushion = 0.1 #Creating 100ms more of reversals than should need. Because if miss frames and using clock time instead of frames, might go longer
+badTimingCushion = 0.3 #Creating more of reversals than should need. Because if miss frames and using clock time instead of frames, might go longer
 def maxPossibleReversals():  #need answer to know how many blank fields to print to file
     return int( ceil(      (maxTrialDur() - trackingExtraTime)  / timeTillReversalMin          ) )
 def getReversalTimes():
@@ -149,7 +153,7 @@ mon.setSizePix( (widthPixRequested,heightPixRequested) )
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 myWin.setRecordFrameIntervals(False)
 
-trialsPerCondition = 1 #default value
+trialsPerCondition = 4
 
 refreshMsg2 = ''
 if not checkRefreshEtc:
@@ -306,8 +310,8 @@ if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
     fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
-    fixation= visual.PatchStim(myWin,pos=(0,300), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin,pos=(0,300), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+    fixation= visual.PatchStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
+    fixationBlank= visual.PatchStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
 else:
     fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
@@ -332,7 +336,6 @@ if useSound:
 
 stimList = []
 # temporalfrequency limit test
-
 numTargets =                   [2,                 3] 
 numObjsInRing =                [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
 
@@ -349,28 +352,28 @@ for i in range(0, len(speedsPrelimiExp), 2):
 #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
 #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
 
-#dont go faster than 2 rps because of temporal blur/aliasing
+#don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
-doStaircase = False
+doStaircase = True
 maxTrialsPerStaircase = 60
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
-if doStaircase:
-    #create the staircase handler
+if doStaircase: #create the staircases
     minSpeedForStaircase = 0.05
     maxSpeedForStaircase = 1.8
     staircase = data.StairHandler(
-        startVal=ltrColor,
+        startVal=0.2,
         stepType='lin',
         stepSizes= [.5,.4,.3,.2,.1,.1,.05],
         minVal=minSpeedForStaircase, 
         maxVal=maxSpeedForStaircase, 
         nUp=1, nDown=3,  #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
         nTrials = maxTrialsPerStaircase)
-    phasesMsg = ('Doing '+str(prefaceStaircaseTrialsN)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
-                  str(maxTrialsPerStaircase)+'-trial staircase for each condition')
-
-    printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
-    #print('staircase.quantile=',round(staircase.quantile(),2),' sd=',round(staircase.sd(),2))
+    numPreStaircaseTrials = 0
+    phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
+                  str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
+    staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
+    thisStaircase = staircase
+    staircases = [staircase]
 
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
@@ -1053,15 +1056,20 @@ while trialNum < trials.nTotal and expStop==False:
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
-    speed = thisTrial['speed']
-    currentSpeed = speed #In normal experiment, no speed ramp
-    
-    if quickMeasurement: #in quick measurement mode, which uses a speed ramp
+    if not doStaircase and not quickMeasurement:
+        speedThisTrial = thisTrial['speed']
+        currentSpeed = speed #In normal experiment, no speed ramp
+    elif quickMeasurement: #in quick measurement mode, which uses a speed ramp
         speed = maxSpeed
         currentSpeed = 0.01
         speedRampStep = 0.01
         print('currentSpeed =',round(currentSpeed,2))
-        
+    elif doStaircase: #speed will be set by staircase corresponding to this condition.
+        #But don't forget about including some slow trials for lapseRate estimatino
+        speedThisTrial = staircaseThis.next()
+        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisTrial, staircaseThis, descendingPsychometricCurve) 
+        currentSpeed = speedThisTrial #no speed ramp
+    
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
@@ -1071,7 +1079,7 @@ while trialNum < trials.nTotal and expStop==False:
         if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
             perimeter = radii[numRing]*4.0
             circum = 2*pi*radii[numRing]
-            finalspeed = thisTrial['speed'] * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
+            finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
 
@@ -1089,6 +1097,9 @@ while trialNum < trials.nTotal and expStop==False:
             if t > trialDurTotal:
                 msg="Must not have kept up with some frames, breaking out of loop"; print(msg)
                 break
+        if not showStimuli: #abort after just one frame
+            break
+            
     #End of trial stimulus loop!
     
     if eyetracking:
@@ -1185,11 +1196,12 @@ while trialNum < trials.nTotal and expStop==False:
                     if 4 in response: #dark blue in answer
                         blueMistake =1                
         #end if statement for if not expStop
-    if passThisTrial:orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
+    if passThisTrial:   orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
 
     #header print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
-    print(trialNum,subject,thisTrial['basicShape'],thisTrial['numObjectsInRing'],thisTrial['speed'],
-                                    thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
+    print(trialNum,subject,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
+            speedThisTrial, #could be different than thisTrial['speed'] because staircase
+            thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
     print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) 
     for i in range(numRings):  print( thisTrial['whichIsTargetEachRing'][i], end='\t', file=dataFile  )
     print( thisTrial['ringToQuery'],end='\t',file=dataFile )
@@ -1203,10 +1215,6 @@ while trialNum < trials.nTotal and expStop==False:
     print(numCasesInterframeLong, file=dataFile)
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
-    speedIdx = np.where(uniqSpeeds==thisTrial['speed'])[0][0]  #extract index, where returns a list with first element array of the indexes
-    numRightWrongEachSpeedOrder[ speedIdx, (orderCorrect >0) ] +=1  #if right, add to 1th column, otherwise add to 0th column count
-    numRightWrongEachSpeedIdent[ speedIdx, (numColorsCorrectlyIdentified==3) ] +=1
-    blueMistakes+=blueMistake
     dataFile.flush(); logging.flush(); 
     
     if feedback and not expStop:
@@ -1263,16 +1271,7 @@ if expStop == True:
 msg = 'Finishing now, at ' + timeAndDateStr
 logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')
-numTrialsEachSpeed = numRightWrongEachSpeedOrder[:,0] + numRightWrongEachSpeedOrder[:,1]
-allNonZeros = np.all( numTrialsEachSpeed )
-if allNonZeros: #Has to be all nonzeros otherwise will get divide by zero error
-    msg = '%correct each speed: '
-    msg = msg + str(  np.around( numRightWrongEachSpeedOrder[:,1] / numTrialsEachSpeed, 2)  )    
-else:
-    msg = 'Num correct each speed: '
-    msg = msg + str(  np.around( numRightWrongEachSpeedOrder[:,1] , 2) )
 
-msg = msg + '\t\tNum trials each speed =' + str( numTrialsEachSpeed )
 
 logging.info(msg); print(msg)
 logging.flush(); dataFile.close();
@@ -1296,6 +1295,34 @@ if eyetracking:
 else:
   logging.info('Didnt try to eyetrack because "eyetracking" was set to ' + str(eyetracking))
 logging.flush();
+
+if doStaircase: #report results
+
+    for staircase in staircases: #Calculate staircase results
+        #actualThreshold = thresholdEachCondition[ staircases.index(staircase) ]
+        actualThreshold = 999
+        print('Staircase was trying to find the', str(100*threshTryingToEstimate), '% threshold, whose actual value for this condition is', actualThreshold)
+        #Average all the reversals after the first few.
+        numReversals = len(staircase.reversalIntensities)
+        numRevsToUse = max( 1, numReversals-2 )
+        meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
+        print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
+        meanReversalsEachStaircase[ staircases.index(staircase) ] = meanOfFinalReversals
+    
+    #plot staircases
+    pylab.subplot(111) #1 row, 1 column, which panel
+    pylab.title('circle = mean of final reversals; triangle = true threshold')
+    pylab.xlabel("staircase trial")
+    pylab.ylabel("speed (rps)")
+    for staircase in staircases:
+        colors = 'grby'
+        idx = staircases.index(staircase)
+        pylab.plot(staircase.intensities, colors[idx]+'-')
+        #plot mean of last reversals point
+        lastTrial = len(staircase.intensities)
+        pylab.plot( lastTrial, meanReversalsEachStaircase[ idx ], colors[idx]+'o' )
+        #plot correct answer, to help visualize if staircase is converging on the right place
+        #pylab.plot( lastTrial+1, thresholdEachCondition[ idx ], colors[idx]+'<' )
 
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
