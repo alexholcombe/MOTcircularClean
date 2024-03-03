@@ -144,7 +144,26 @@ def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho): #this is 
     dfResults = DataFrame({'intensity': intensitiesTested, 'Pcorr': pCorrect, 'n': ns })
     return (dfResults)
 
-#Alternative non-psychopy way but not being used now
+#questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
+import questplus.psychometric_function #for weibull equation and inverse
+
+# create an idealized participant (weibull function)
+def calc_pCorrect(intensity, guessRate, threshold):
+    if descendingPsychometricCurve:
+        intensity = 100-intensity
+    pCorr = questplus.psychometric_function.weibull(intensity=intensity, threshold=threshold,
+                                        slope=2, lower_asymptote=guessRate, lapse_rate=0.00,
+                                        scale='linear').item()
+    return pCorr
+
+# Use idealized participant to get correct/incorrect on an individual trial
+def simulate_response(intensity,guessRate,threshold):
+    pCorr = calc_pCorrect(intensity,guessRate,threshold)
+    dice_roll = np.random.random()
+    return int(dice_roll <= pCorr)
+
+
+#Alternative non-psychopy way of creating equation for weibull but not being used now
 def make_my_weibull(chanceRate):
     def _weibull(x,a,b):
         y = chanceRate + (1.0-chanceRate)*(1 - np.exp( -(x/a)**(b) ) )

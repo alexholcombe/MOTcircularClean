@@ -43,7 +43,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; showStimuli = False
+autopilot= True; simulateObserver=True; showOnlyOneFrameOfStimuli = True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -1142,9 +1142,8 @@ while trialNum < trials.nTotal and expStop==False:
             if t > trialDurTotal:
                 msg="Must not have kept up with some frames, breaking out of loop"; print(msg)
                 break
-        if not showStimuli: #abort after just one frame
+        if showOnlyOneFrameOfStimuli: #abort after just one frame
             break
-            
     #End of trial stimulus loop!
     
     if eyetracking:
@@ -1203,7 +1202,7 @@ while trialNum < trials.nTotal and expStop==False:
     responses = list();  responsesAutopilot = list()
     responses,responsesAutopilot,respondedEachToken,expStop = \
             collectResponses(thisTrial,n,responses,responsesAutopilot,respPromptSoundFileNum,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
-    print("responses=",responses,";respondedEachToken=",respondedEachToken,"expStop=",expStop) #debug
+    #print("responses=",responses,";respondedEachToken=",respondedEachToken,"expStop=",expStop)
     core.wait(.1)
     if exportImages:  #maybe catch one frame of response
         myWin.saveMovieFrames('exported/frame.png')    
@@ -1228,19 +1227,7 @@ while trialNum < trials.nTotal and expStop==False:
                sCorrect.append(0)
         if targetCorrect==1: orderCorrect = 3
         else: orderCorrect = 0
-                 
-        if respType=='order':  #: this used to work without last conditional
-            numColorsCorrectlyIdentified=-1
-        else: 
-            numColorsCorrectlyIdentified = len(   intersect1d(response,answer)   )
-            if numColorsCorrectlyIdentified < 3:
-                if 4 in answer and not (3 in answer): #dark blue present
-                    if 3 in response: #light blue in answer
-                        blueMistake =1
-                elif 3 in answer and not (4 in answer): #light blue present
-                    if 4 in response: #dark blue in answer
-                        blueMistake =1                
-        #end if statement for if not expStop
+
     if passThisTrial:   orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
 
     #header print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
@@ -1258,7 +1245,14 @@ while trialNum < trials.nTotal and expStop==False:
         for j in range(i+1,maxPossibleReversals()):
             print('-999\t', end='', file=dataFile)
     print(numCasesInterframeLong, file=dataFile)
-    
+
+    if autopilot and doStaircase and simulateObserver:
+        guessRate = 1.0 / thisTrial['numObjectsInRing'] 
+        threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
+        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold)
+        orderCorrect = correct_sim*3 #3 is fully correct
+        print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
+        
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
     dataFile.flush(); logging.flush(); 
@@ -1276,7 +1270,7 @@ while trialNum < trials.nTotal and expStop==False:
                 lowSound.play()
     if doStaircase:
         # add the data to the staircase so it can calculate the next speed
-        staircaseThis.addResponse(correct)
+        staircaseThis.addResponse(orderCorrect==3)
     
     trialNum+=1
     waitForKeyPressBetweenTrials = False
@@ -1322,6 +1316,7 @@ msg = 'Finishing now, at ' + timeAndDateStr
 logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')
 logging.flush(); dataFile.close();
+myWin.close()
 
 if eyetracking:
   logging.info('eyetracking = ' + str(eyetracking))
@@ -1348,7 +1343,7 @@ if doStaircase: #report results
     for staircase in staircases: #Calculate staircase results
         print('condition of this staircase = ', staircase.extraInfo)
         #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
-        actualThreshold = staircase.extraInfo['midpointThreshPrevList']
+        actualThreshold = staircase.extraInfo['midpointThreshPrevLit']
         print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
         #Average all the reversals after the first few.
         numReversals = len(staircase.reversalIntensities)
@@ -1356,7 +1351,7 @@ if doStaircase: #report results
         meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
         print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
         meanReversalsEachStaircase[ staircases.index(staircase) ] = meanOfFinalReversals
-    
+    print('About to plot staircases')
     #plot staircases
     pylab.subplot(111) #1 row, 1 column, which panel
     pylab.title('circle = mean of final reversals; triangle = true threshold')
@@ -1366,12 +1361,14 @@ if doStaircase: #report results
         colors = 'grby'
         idx = staircases.index(staircase)
         pylab.plot(staircase.intensities, colors[idx]+'-')
+        print('Plotted one set of intensities') 
         #plot mean of last reversals point
         lastTrial = len(staircase.intensities)
         pylab.plot( lastTrial, meanReversalsEachStaircase[ idx ], colors[idx]+'o' )
         #plot correct answer, to help visualize if staircase is converging on the right place
         #pylab.plot( lastTrial+1, thresholdEachCondition[ idx ], colors[idx]+'<' )
-
+    pylab.show()
+    
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript

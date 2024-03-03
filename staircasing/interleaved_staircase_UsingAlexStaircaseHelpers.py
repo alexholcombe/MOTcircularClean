@@ -7,7 +7,7 @@ Measure simulated orientation JND using a staircase method
 #https://www.psychopy.org/recipes/interleaveStaircases.html
 
 #questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
-from questplus.psychometric_function import weibull 
+import questplus.psychometric_function #for weibull equation and inverse
 
 from psychopy import core, visual, gui, data, event
 from psychopy.tools.filetools import fromFile, toFile
@@ -128,7 +128,7 @@ def logistic(x, c, d):
 def calc_pCorrect(intensity, guessRate, threshold):
     if descendingPsychometricCurve:
         intensity = 100-intensity
-    pCorr = weibull(intensity=intensity, threshold=threshold,
+    pCorr = questplus.psychometric_function.weibull(intensity=intensity, threshold=threshold,
                         slope=2, lower_asymptote=guessRate, lapse_rate=0.00,
                         scale='linear').item()
     return pCorr
@@ -211,7 +211,7 @@ meanReversalsEachStaircase = np.zeros( len(staircases) )
 for staircase in staircases:
     actualThreshold = thresholdEachCondition[ staircases.index(staircase) ]
     print('Staircase was trying to find the', str(100*threshTryingToEstimate), '% threshold, whose actual value for this condition is', actualThreshold)
-    #Print all the reversals after the first few.
+    #Average all the reversals after the first few.
     numReversals = len(staircase.reversalIntensities)
     numRevsToUse = max( 1, numReversals-2 )
     meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
