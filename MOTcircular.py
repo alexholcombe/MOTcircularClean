@@ -12,7 +12,7 @@ import numpy as np
 import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
-import time, random, sys, platform, os, gc, io #io is successor to StringIO
+import time, random, sys, platform, os, pylab, gc, io #io is successor to StringIO
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
@@ -43,7 +43,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; showStimuli = True
+autopilot= False; showStimuli = True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -354,10 +354,16 @@ for i in range(0, len(speedsPrelimiExp), 2):
 
 #don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
-doStaircase = True
+doStaircase = False
 maxTrialsPerStaircase = 60
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase: #create the staircases
+    descendingPsycho = True
+    nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
+    if nUp==1 and nDown==3:
+        staircaseConvergePct = 0.794
+    else:
+        print('ERROR: dont know what staircaseConvergePct is')    
     minSpeedForStaircase = 0.05
     maxSpeedForStaircase = 1.8
     staircase = data.StairHandler(
@@ -366,8 +372,9 @@ if doStaircase: #create the staircases
         stepSizes= [.5,.4,.3,.2,.1,.1,.05],
         minVal=minSpeedForStaircase, 
         maxVal=maxSpeedForStaircase, 
-        nUp=1, nDown=3,  #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
+        nUp=nUp, nDown=nDown,  
         nTrials = maxTrialsPerStaircase)
+
     numPreStaircaseTrials = 0
     phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
                   str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
@@ -1065,9 +1072,10 @@ while trialNum < trials.nTotal and expStop==False:
         speedRampStep = 0.01
         print('currentSpeed =',round(currentSpeed,2))
     elif doStaircase: #speed will be set by staircase corresponding to this condition.
-        #But don't forget about including some slow trials for lapseRate estimatino
+        #But don't forget about including some slow trials for lapseRate estimation
+        staircaseThis = staircases[0]
         speedThisTrial = staircaseThis.next()
-        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisTrial, staircaseThis, descendingPsychometricCurve) 
+        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisTrial, staircaseThis, descendingPsycho) 
         currentSpeed = speedThisTrial #no speed ramp
     
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
@@ -1213,6 +1221,7 @@ while trialNum < trials.nTotal and expStop==False:
         for j in range(i+1,maxPossibleReversals()):
             print('-999\t', end='', file=dataFile)
     print(numCasesInterframeLong, file=dataFile)
+    
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
     dataFile.flush(); logging.flush(); 
@@ -1228,6 +1237,10 @@ while trialNum < trials.nTotal and expStop==False:
             if useSound:
                 lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
+    if doStaircase:
+        # add the data to the staircase so it can calculate the next speed
+        staircaseThis.addResponse(correct)
+    
     trialNum+=1
     waitForKeyPressBetweenTrials = False
     if trialNum< trials.nTotal:
@@ -1271,9 +1284,6 @@ if expStop == True:
 msg = 'Finishing now, at ' + timeAndDateStr
 logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')
-
-
-logging.info(msg); print(msg)
 logging.flush(); dataFile.close();
 
 if eyetracking:
@@ -1298,10 +1308,11 @@ logging.flush();
 
 if doStaircase: #report results
 
+    meanReversalsEachStaircase = np.zeros( len(staircases) )
     for staircase in staircases: #Calculate staircase results
         #actualThreshold = thresholdEachCondition[ staircases.index(staircase) ]
         actualThreshold = 999
-        print('Staircase was trying to find the', str(100*threshTryingToEstimate), '% threshold, whose actual value for this condition is', actualThreshold)
+        print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
         #Average all the reversals after the first few.
         numReversals = len(staircase.reversalIntensities)
         numRevsToUse = max( 1, numReversals-2 )
