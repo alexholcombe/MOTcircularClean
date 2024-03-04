@@ -10,6 +10,9 @@ from matplotlib.ticker import ScalarFormatter
 
 def toStaircase(x,descendingPsycho):
     #Don't need to take log, staircase internals will do that
+    if isinstance(x,list):
+        x = np.array(x) #because can't do math with lists
+
     if descendingPsycho:
         y = 100 - np.array(x) #100 because assuming maximum value is 100. E.g. percentNoise is 0 to 100
     else:
@@ -30,6 +33,7 @@ def outOfStaircase(y,staircase,descendingPsycho):
         x = 10**np.array(y)
     else:
         x = y
+        
     if descendingPsycho:
         x = 100-x
 
@@ -51,7 +55,7 @@ def printStaircase(s, descendingPsycho=False, briefTrialUpdate=False, printInter
         msg+= ']'
         print(msg)
         if alsoLog:     logging.info(msg)
-    msg = '\tstaircase.intensities, values [' 
+    msg = '\tstaircase.intensities (back-transformed, if descendingPsycho), values [' 
     for j in range( len(s.intensities) ):
         msg += '{:.2f}, '.format( outOfStaircase(s.intensities[j], s, descendingPsycho) )
     msg+= ']'
@@ -61,15 +65,15 @@ def printStaircase(s, descendingPsycho=False, briefTrialUpdate=False, printInter
     if type(s) is psychopy.data.StairHandler:
         numReversals = len(s.reversalIntensities)
         msg= 'staircase number of reversals=' + str(numReversals) + '] '
-        msg+= 'reversal intensities=' +  str( np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) ) # str( 1- np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) )
-        #might need to subtract above from 1 if descending
+        msg+= 'reversal intensities (back-transformed if descendingPsycho)=' + \
+              str( np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) ) # str( 1- np.array( outOfStaircase(s.reversalIntensities,s,descendingPsycho)) )
         print(msg)
         if alsoLog:     logging.info(msg)
         if numReversals>0:
             numReversalsToAvg = numReversals-2
             msg= ('mean of final ' + str(numReversalsToAvg) + 
-                      ' reversals =' + str( np.average(  outOfStaircase(s.reversalIntensities[-numReversalsToAvg:],s,descendingPsycho),   ) ) )
-            #might need to subtract above from 1 if descending
+                      ' reversals (back-transformed if descendingPsycho) =' +
+                      str( np.average(  outOfStaircase(s.reversalIntensities[-numReversalsToAvg:],s,descendingPsycho),   ) ) )
             print(msg)
             if alsoLog:     logging.info(msg)
     elif type(s) is psychopy.data.QuestHandler:
@@ -147,20 +151,29 @@ def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho): #this is 
 #questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
 import questplus.psychometric_function #for weibull equation and inverse
 
+#questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
+from questplus.psychometric_function import weibull 
+
 # create an idealized participant (weibull function)
-def calc_pCorrect(intensity, guessRate, threshold):
+def calc_pCorrect(intensity,guessRate,thresh,descendingPsychometricCurve):
+    #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
+    slope = 2
     if descendingPsychometricCurve:
-        intensity = 100-intensity
-    pCorr = questplus.psychometric_function.weibull(intensity=intensity, threshold=threshold,
-                                        slope=2, lower_asymptote=guessRate, lapse_rate=0.00,
-                                        scale='linear').item()
+        slope = -1*slope
+        #intensity = 100-intensity
+    
+    pCorr = weibull(intensity=intensity, threshold=thresh,
+                        slope=slope, lower_asymptote=guessRate, lapse_rate=0.00,
+                        scale='linear').item()
+                        
     return pCorr
 
 # Use idealized participant to get correct/incorrect on an individual trial
-def simulate_response(intensity,guessRate,threshold):
-    pCorr = calc_pCorrect(intensity,guessRate,threshold)
+def simulate_response(intensity,guessRate,thresh,descendingPsychometricCurve):
+    pCorr = calc_pCorrect(intensity,guessRate,thresh,descendingPsychometricCurve)
     dice_roll = np.random.random()
-    return int(dice_roll <= pCorr)
+    response = int(dice_roll <= pCorr)
+    return response
 
 
 #Alternative non-psychopy way of creating equation for weibull but not being used now
@@ -274,57 +287,37 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         ax2.tick_params(axis='x',which='minor',bottom='off')
         
 
-#questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
-from questplus.psychometric_function import weibull 
 
-# create an idealized participant (weibull function)
-def calc_pCorrect(intensity,guessRate, descendingPsychometricCurve):
-    #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
-
-    thresh = 25
-    slope = 2
-    if descendingPsychometricCurve:
-        slope = -1*slope
-        #intensity = 100-intensity
-    
-    pCorr = weibull(intensity=intensity, threshold=thresh,
-                        slope=slope, lower_asymptote=guessRate, lapse_rate=0.00,
-                        scale='linear').item()
-                        
-    return pCorr
-
-# Use idealized participant to get correct/incorrect on an individual trial
-def simulateResponse(intensity,guessRate,descendingPsychometricCurve):
-    pCorr = calc_pCorrect(intensity,guessRate,descendingPsychometricCurve)
-    dice_roll = np.random.random()
-    return int(dice_roll <= pCorr)
-    
     
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
     descendingPsychometricCurve = False
-    guessRate = 0.0
+    guessRate = 0.5
+    actualThresh = 40
     threshCriterion = 0.794 #same as what 1 up, 3 down staircase converges on
-    staircaseTrials = 200
+    staircaseTrials = 400
     useQuest = False
 
     np.random.seed(seed=233423) #so that simulated observer is reproducible. For this value, the curvefit works
-
-    startVal=20
-    startVal = toStaircase(startVal, descendingPsychometricCurve)
+    
+    startVal=30
+    minVal=0
+    maxVal=100
 
     if useQuest:
-        staircase = psychopy.data.QuestHandler(startVal = startVal,
-                        minVal=0, maxVal = 100,
-                        startValSd = 30,
-                        stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
-                        nTrials = staircaseTrials,
-                        #extraInfo = thisInfo,
-                        pThreshold = threshCriterion, #0.25,    
-                        gamma = 1./26,
-                        delta=0.02, #lapse rate, I suppose for Weibull function fit
-                        method = 'quantile', #uses the median of the posterior as the final answer
-                        stepType = 'log'  #will home in on the 80% threshold. But stepType = 'log' doesn't usually work
+        staircase = psychopy.data.QuestHandler(
+            startVal = toStaircase(startVal, descendingPsychometricCurve),
+            minVal= toStaircase(minVal, descendingPsychometricCurve),
+            maxVal=  toStaircase(maxVal, descendingPsychometricCurve) ,
+            startValSd = 30,
+            stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
+            nTrials = staircaseTrials,
+            #extraInfo = thisInfo,
+            pThreshold = threshCriterion, #0.25,    
+            gamma = 1./26,
+            delta=0.02, #lapse rate, I suppose for Weibull function fit
+            method = 'quantile', #uses the median of the posterior as the final answer
+            stepType = 'log'  #will home in on the 80% threshold. But stepType = 'log' doesn't usually work
                         )
         print('Created QUEST staircase.')
     else:
@@ -344,7 +337,7 @@ if __name__ == "__main__":  #executable example of using these functions
         intensityThisTrial = outOfStaircase(intensityThisTrial, staircase, descendingPsychometricCurve)
         
         #Simulate observer for this trial's intensity
-        correct = simulateResponse(intensityThisTrial,guessRate,descendingPsychometricCurve)
+        correct = simulate_response(intensityThisTrial,guessRate,actualThresh,descendingPsychometricCurve)
         staircase.addResponse( correct )
         trialnum = trialnum + 1
     

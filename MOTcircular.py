@@ -336,13 +336,21 @@ if useSound:
 
 stimList = []
 # temporalfrequency limit test
-numTargets =                   [2,                 3] 
-numObjsInRing =                [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
+numTargets =               [2]#    [2,                 3] 
+numObjsInRing =            [4]#    [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
 
-mainCondsInfo = {
-    'numTargets':    [2, 2, 3, 3],
-    'numObjects':    [4, 8, 4, 8],
-}
+import pandas as pd
+import itertools
+
+# Get all combinations of those two main factors
+#mainCondsInfo = {
+#    'numTargets':    [2, 2, 3, 3],
+#    'numObjects':    [4, 8, 4, 8],
+#}
+combinations = list(itertools.product(numTargets, numObjsInRing))
+# Create the DataFrame with all combinations
+mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
+mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
 
 try:
     from theory import publishedEmpiricalThreshes #imports from theory subfolder.
@@ -381,23 +389,25 @@ staircases = []
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase: #create the staircases
     for stairI in range(len(mainCondsDf)): #one staircase for each main condition
-        descendingPsycho = True
+        descendingPsychometricCurve = True
         #give them all the same starting value of 50% of the average threshold speed across conditions
-        startVal = mainCondsDf['midpointThreshPrevLit'].mean()
+        startVal = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
+        startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
+        print('staircase startVal=',startVal,' startValInternal=',startValInternal)
+
         this_row = mainCondsDf.iloc[stairI]
         condition = this_row.to_dict() # {'numTargets': 2, 'numObjects': 4}
-        print('staircase startVal=',startVal, ' condition=',condition)
-    
+        
         nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
         if nUp==1 and nDown==3:
             staircaseConvergePct = 0.794
         else:
             print('ERROR: dont know what staircaseConvergePct is')    
-        minSpeedForStaircase = 0.05
-        maxSpeedForStaircase = 1.8
+        minSpeedForStaircase = -999 #0.05
+        maxSpeedForStaircase = 1.8    #1.8
         staircase = data.StairHandler(
             extraInfo = condition,
-            startVal=startVal,
+            startVal=startValInternal,
             stepType='lin',
             stepSizes= [.5,.4,.3,.2,.1,.1,.05],
             minVal=minSpeedForStaircase, 
@@ -406,12 +416,13 @@ if doStaircase: #create the staircases
             nTrials = maxTrialsPerStaircase)
     
         numPreStaircaseTrials = 0
-        phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
-                      str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
+
         #staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
         print('Adding this staircase to list')
         staircases.append(staircase)
 
+#phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
+#              str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
 queryEachRingEquallyOften = False
 #To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
 if queryEachRingEquallyOften:
@@ -1111,8 +1122,9 @@ while trialNum < trials.nTotal and expStop==False:
         condnum = rownum[0] #Because it was a pandas Index object, I guess to allow for possibility of multiple indices
         staircaseThis = staircases[condnum]
         print('rownum in mainConds =',condnum)  #' staircaseThis=',staircaseThis)
-        speedThisTrial = staircaseThis.next()
-        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisTrial, staircaseThis, descendingPsycho) 
+        speedThisInternal = staircaseThis.next()
+        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
+        print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
         currentSpeed = speedThisTrial #no speed ramp
     
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
@@ -1249,7 +1261,8 @@ while trialNum < trials.nTotal and expStop==False:
     if autopilot and doStaircase and simulateObserver:
         guessRate = 1.0 / thisTrial['numObjectsInRing'] 
         threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
-        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold)
+        print('simulating response with speedThisTrial=',round(speedThisTrial,2),'guessRate=',guessRate,'threshold=',threshold)
+        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold,descendingPsychometricCurve)
         orderCorrect = correct_sim*3 #3 is fully correct
         print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
         
@@ -1347,8 +1360,9 @@ if doStaircase: #report results
         print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
         #Average all the reversals after the first few.
         numReversals = len(staircase.reversalIntensities)
-        numRevsToUse = max( 1, numReversals-2 )
-        meanOfFinalReversals = np.average(staircase.reversalIntensities[-numRevsToUse:])
+        numRevsToUse = max( 1, numReversals-2 ) #To avoid asking for less than 1 reversal
+        finalReversals = staircaseAndNoiseHelpers.outOfStaircase(staircase.reversalIntensities[-numRevsToUse:],staircase,descendingPsychometricCurve)   
+        meanOfFinalReversals = np.average( finalReversals )
         print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
         meanReversalsEachStaircase[ staircases.index(staircase) ] = meanOfFinalReversals
     print('About to plot staircases')
@@ -1360,11 +1374,15 @@ if doStaircase: #report results
     for staircase in staircases:
         colors = 'grby'
         idx = staircases.index(staircase)
-        pylab.plot(staircase.intensities, colors[idx]+'-')
-        print('Plotted one set of intensities') 
-        #plot mean of last reversals point
-        lastTrial = len(staircase.intensities)
-        pylab.plot( lastTrial, meanReversalsEachStaircase[ idx ], colors[idx]+'o' )
+        colorThis = colors[idx]
+        intensities = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
+        if len(intensities)>0:
+            pylab.plot(intensities, colorThis+'-')
+            print('Plotted one set of intensities') 
+        if len(staircase.reversalIntensities)>0: #plot mean of last reversals
+            lastTrial = len(staircase.intensities)
+            pylab.plot( lastTrial, meanReversalsEachStaircase[ idx ], colorThis+'o' )
+            print('Plotted mean reversal for this staircase') 
         #plot correct answer, to help visualize if staircase is converging on the right place
         #pylab.plot( lastTrial+1, thresholdEachCondition[ idx ], colors[idx]+'<' )
     pylab.show()
