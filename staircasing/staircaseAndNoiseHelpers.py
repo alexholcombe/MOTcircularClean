@@ -291,7 +291,7 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
     
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
-    descendingPsychometricCurve = False
+    descendingPsychometricCurve = True
     guessRate = 0.5
     actualThresh = 40
     threshCriterion = 0.794 #same as what 1 up, 3 down staircase converges on
@@ -303,20 +303,22 @@ if __name__ == "__main__":  #executable example of using these functions
     startVal=30
     minVal=0
     maxVal=100
+    minValForStaircase= toStaircase(minVal, descendingPsychometricCurve)
+    maxValForStaircase=  toStaircase(maxVal, descendingPsychometricCurve)
 
     if useQuest:
         staircase = psychopy.data.QuestHandler(
             startVal = toStaircase(startVal, descendingPsychometricCurve),
-            minVal= toStaircase(minVal, descendingPsychometricCurve),
-            maxVal=  toStaircase(maxVal, descendingPsychometricCurve) ,
-            startValSd = 30,
+            minVal= minValForStaircase,
+            maxVal= maxValForStaircase,
+            startValSd = 30, #for QUEST
             stopInterval= 1, #sd of posterior has to be this small or smaller for staircase to stop, unless nTrials reached
             nTrials = staircaseTrials,
             #extraInfo = thisInfo,
             pThreshold = threshCriterion, #0.25,    
             gamma = 1./26,
             delta=0.02, #lapse rate, I suppose for Weibull function fit
-            method = 'quantile', #uses the median of the posterior as the final answer
+            method = 'quantile', #for QUEST, then uses the median of the posterior as the final answer
             stepType = 'log'  #will home in on the 80% threshold. But stepType = 'log' doesn't usually work
                         )
         print('Created QUEST staircase.')

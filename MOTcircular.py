@@ -403,15 +403,22 @@ if doStaircase: #create the staircases
             staircaseConvergePct = 0.794
         else:
             print('ERROR: dont know what staircaseConvergePct is')    
-        minSpeedForStaircase = -999 #0.05
-        maxSpeedForStaircase = 1.8    #1.8
+        minSpeed = .03# -999 #0.05
+        maxSpeed= 1.8 #1.8    #1.8
+        minSpeedForStaircase = staircaseAndNoiseHelpers.toStaircase(minSpeed, descendingPsychometricCurve)
+        maxSpeedForStaircase = staircaseAndNoiseHelpers.toStaircase(maxSpeed, descendingPsychometricCurve)
+        #if descendingPsychometricCurve
+        if minSpeedForStaircase > maxSpeedForStaircase:
+            #Swap values of the two variables
+            minSpeedForStaircase, maxSpeedForStaircase = maxSpeedForStaircase, minSpeedForStaircase
+        print('minSpeedForStaircase=',minSpeedForStaircase, 'maxSpeedForStaircase=',maxSpeedForStaircase)
         staircase = data.StairHandler(
             extraInfo = condition,
             startVal=startValInternal,
             stepType='lin',
             stepSizes= [.5,.4,.3,.2,.1,.1,.05],
-            minVal=minSpeedForStaircase, 
-            maxVal=maxSpeedForStaircase, 
+            minVal = minSpeedForStaircase, 
+            maxVal= maxSpeedForStaircase,
             nUp=nUp, nDown=nDown,  
             nTrials = maxTrialsPerStaircase)
     
@@ -1107,7 +1114,7 @@ while trialNum < trials.nTotal and expStop==False:
 
     if not doStaircase and not quickMeasurement:
         speedThisTrial = thisTrial['speed']
-        currentSpeed = speed #In normal experiment, no speed ramp
+        currentSpeed = speedThisTrial #In normal experiment, no speed ramp
     elif quickMeasurement: #in quick measurement mode, which uses a speed ramp
         speed = maxSpeed
         currentSpeed = 0.01
@@ -1131,7 +1138,7 @@ while trialNum < trials.nTotal and expStop==False:
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
         offsetXYeachRing=[ [0,0],[0,0],[0,0] ]
-        if (currentSpeed < speed):
+        if currentSpeed < speedThisTrial:
             currentSpeed = currentSpeed + speedRampStep
         if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
             perimeter = radii[numRing]*4.0
@@ -1261,29 +1268,30 @@ while trialNum < trials.nTotal and expStop==False:
     if autopilot and doStaircase and simulateObserver:
         guessRate = 1.0 / thisTrial['numObjectsInRing'] 
         threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
-        print('simulating response with speedThisTrial=',round(speedThisTrial,2),'guessRate=',guessRate,'threshold=',threshold)
+        #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'guessRate=',guessRate,'threshold=',threshold)
         correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold,descendingPsychometricCurve)
         orderCorrect = correct_sim*3 #3 is fully correct
-        print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
+        #print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
         
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
     dataFile.flush(); logging.flush(); 
-    
+
+    if orderCorrect==3:
+        correctForFeedback=1
+    else:
+        correctForFeedback=0
     if feedback and not expStop:
-        if orderCorrect==3  :correct=1
-        else:correct=0
-        if correct:
-            if useSound:
-                corrSound.play()
-            #hiA = sound.Sound('A',octave=4, volume=0.9,  secs=.8); hiA.play()
+        if correctForFeedback and useSound:
+            corrSound.play()
         else: #incorrect
             if useSound:
                 lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
+                
     if doStaircase:
         # add the data to the staircase so it can calculate the next speed
-        staircaseThis.addResponse(orderCorrect==3)
+        staircaseThis.addResponse(correctForFeedback)
     
     trialNum+=1
     waitForKeyPressBetweenTrials = False
