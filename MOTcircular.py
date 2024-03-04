@@ -9,6 +9,7 @@ import psychopy.info
 from psychopy import sound, monitors, logging, visual, data, core
 import psychopy.gui, psychopy.event
 import numpy as np
+import pandas as pd 
 import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
@@ -336,11 +337,8 @@ if useSound:
 
 stimList = []
 # temporalfrequency limit test
-numTargets =               [2]#    [2,                 3] 
-numObjsInRing =            [4]#    [4,                 8]   #Limitation: gratings don't align with blobs with odd number of objects
-
-import pandas as pd
-import itertools
+numTargets =        [2,                 3] #[2]
+numObjsInRing =     [4,                 8] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
 
 # Get all combinations of those two main factors
 #mainCondsInfo = {
@@ -402,7 +400,7 @@ if doStaircase: #create the staircases
         if nUp==1 and nDown==3:
             staircaseConvergePct = 0.794
         else:
-            print('ERROR: dont know what staircaseConvergePct is')    
+            print('WARNING: dont know what staircaseConvergePct is')    
         minSpeed = .03# -999 #0.05
         maxSpeed= 1.8 #1.8    #1.8
         minSpeedForStaircase = staircaseAndNoiseHelpers.toStaircase(minSpeed, descendingPsychometricCurve)
@@ -1359,8 +1357,11 @@ else:
   logging.info('Didnt try to eyetrack because "eyetracking" was set to ' + str(eyetracking))
 logging.flush();
 
-if doStaircase: #report results
+if doStaircase: #report staircase results
     meanReversalsEachStaircase = np.zeros( len(staircases) )
+    # Create a new column and initialize with NaN or some default value
+    mainCondsDf['meanReversal'] = np.nan
+
     for staircase in staircases: #Calculate staircase results
         print('condition of this staircase = ', staircase.extraInfo)
         #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
@@ -1372,7 +1373,12 @@ if doStaircase: #report results
         finalReversals = staircaseAndNoiseHelpers.outOfStaircase(staircase.reversalIntensities[-numRevsToUse:],staircase,descendingPsychometricCurve)   
         meanOfFinalReversals = np.average( finalReversals )
         print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
-        meanReversalsEachStaircase[ staircases.index(staircase) ] = meanOfFinalReversals
+        stairI = staircases.index(staircase)
+        meanReversalsEachStaircase[ stairI ] = meanOfFinalReversals
+        # Set the stairI row's 'meanReversal' value
+        mainCondsDf.at[stairI, 'meanReversal'] = meanOfFinalReversals  # Indexing is 0-based in Python, so the 4th row is at index 3
+    print('mainCondsDf=',mainCondsDf)
+    
     print('About to plot staircases')
     #plot staircases
     pylab.subplot(111) #1 row, 1 column, which panel
@@ -1381,18 +1387,19 @@ if doStaircase: #report results
     pylab.ylabel("speed (rps)")
     for staircase in staircases:
         colors = 'grby'
-        idx = staircases.index(staircase)
-        colorThis = colors[idx]
+        stairI = staircases.index(staircase)
+        colorThis = colors[stairI]
         intensities = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
         if len(intensities)>0:
             pylab.plot(intensities, colorThis+'-')
             print('Plotted one set of intensities') 
+        #Calculate correct answer, to help visualize if staircase is converging on the right place
+        actualThresh = staircase.extraInfo['midpointThreshPrevLit']
         if len(staircase.reversalIntensities)>0: #plot mean of last reversals
             lastTrial = len(staircase.intensities)
-            pylab.plot( lastTrial, meanReversalsEachStaircase[ idx ], colorThis+'o' )
-            print('Plotted mean reversal for this staircase') 
-        #plot correct answer, to help visualize if staircase is converging on the right place
-        #pylab.plot( lastTrial+1, thresholdEachCondition[ idx ], colors[idx]+'<' )
+            pylab.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
+            #plot correct answer
+            pylab.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
     pylab.show()
     
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
