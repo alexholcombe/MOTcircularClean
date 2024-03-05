@@ -17,7 +17,7 @@ import time, random, sys, platform, os, pylab, gc, io, pandas
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
-try: #This only works if the code executing is in this folder
+try:
     from staircasing import staircaseAndNoiseHelpers
 except Exception as e:
     print("An exception occurred in staircase_tester_.py:",str(e))
@@ -1411,6 +1411,11 @@ if doStaircase: #report staircase results
 df = trials.saveAsWideText("temp")  #Only calling this to retrieve dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
 
+try: 
+    from analysisPython import logisticRegression as logisticR
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import logisticRegression.py (you need that file in the analysisPython directory, which needs an __init__.py file in its directory too)')
 
 pylab.subplot(111) #1 row, 1 column, which panel
 pylab.title('circle = mean of final reversals; triangle = true threshold')
