@@ -367,7 +367,7 @@ print('mainCondsDf')
 print(mainCondsDf) #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
                            
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   #  Preliminary list of thresholds
+speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   # Preliminary list of thresholds for each condition.
 factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
 #these are the factors to multiply by each preliminarily-tested threshold
 speedsEachNumTargetsNumObjects = []
@@ -396,7 +396,7 @@ if doStaircase: #create the staircases
         this_row = mainCondsDf.iloc[stairI]
         condition = this_row.to_dict() # {'numTargets': 2, 'numObjects': 4}
         
-        nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 wrong in a row
+        nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 right in a row
         if nUp==1 and nDown==3:
             staircaseConvergePct = 0.794
         else:
@@ -414,7 +414,7 @@ if doStaircase: #create the staircases
             extraInfo = condition,
             startVal=startValInternal,
             stepType='lin',
-            stepSizes= [.5,.4,.3,.2,.1,.1,.05],
+            stepSizes= [.3,.3,.2,.1,.1,.05],
             minVal = minSpeedForStaircase, 
             maxVal= maxSpeedForStaircase,
             nUp=nUp, nDown=nDown,  
@@ -444,7 +444,11 @@ for numObjs in numObjsInRing: #set up experiment design
     for nt in numTargets: #for each num targets condition,
       numObjectsIdx = numObjsInRing.index(numObjs)
       numTargetsIdx = numTargets.index(nt)
-      speeds= speedsEachNumTargetsNumObjects[  numTargetsIdx ][ numObjectsIdx ]
+      if doStaircase: #Speeds will be determined trial-by-trial by the staircases. However, to estimate lapse rate,
+        #we need occasional trials with a slow speed.
+        speeds = [[.02,.1],'staircase','staircase','staircase']  #speeds = [0.02, 0.1, -99, -99, -99]
+      else: 
+        speeds= speedsEachNumTargetsNumObjects[  numTargetsIdx ][ numObjectsIdx ]
       for speed in speeds:
         ringNums = np.arange(numRings)
         if queryEachRingEquallyOften:
@@ -468,28 +472,17 @@ for numObjs in numObjsInRing: #set up experiment design
                                 stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                         'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )
         else: # not queryEachRingEquallyOften, because that requires too many trials for a quick session. Instead
-            #, will randomly at time of trial choose which rings have targets and which one querying.
+            #will randomly at time of trial choose which rings have targets and which one querying.
             whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
-            #for t in range( int(nt) ):
-            #    whichIsTargetEachRing[t] = 0 #dummy value for now. Will set to random value when run trial.
             ringToQuery = 999 #this is the signal to choose the ring randomly
             for basicShape in ['circle']: #'diamond'
                 for initialDirRing0 in [-1,1]:
                     stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                 'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
 
-#set up record of proportion correct in various conditions
-trialSpeeds = list() #purely to allow report at end of how many trials got right at each speed
-for s in stimList: trialSpeeds.append( s['speed'] )
-uniqSpeeds = set(trialSpeeds) #reduce speedsUsed list to unique members, unordered set
-uniqSpeeds = sorted( list(uniqSpeeds)  )
-uniqSpeeds = np.array( uniqSpeeds ) 
-numRightWrongEachSpeedOrder = np.zeros([ len(uniqSpeeds), 2 ]); #summary results to print out at end
-numRightWrongEachSpeedIdent = deepcopy(numRightWrongEachSpeedOrder)
-#end setup of record of proportion correct in various conditions
-
 trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
-
+print('num conditions - len(stimList) =',len(stimList))
+print('stimList = ',stimList)
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
 msg = 'numtrials='+ str(trials.nTotal)+', trialDurMin= '+str(trialDurMin)+ ' trackVariableIntervMax= '+ str(trackVariableIntervMax) + 'refreshRate=' +str(refreshRate)     
@@ -499,14 +492,13 @@ msg = 'cueRampUpDur=' + str(cueRampUpDur) + ' cueRampDownDur= ' + str(cueRampDow
 logging.info(msg);
 logging.info('task='+'track'+'   respType='+respType)
 logging.info('ring radii=' + str(radii))
-
-def decimalPart(x):
-    return ( abs(x-floor(x)) )
-
 logging.info('drawingAsGrating=' + str(drawingAsGrating) +  ' gratingTexPix='+ str(gratingTexPix) + ' antialiasGrating=' + str(antialiasGrating))
 logging.flush()
 
 stimColorIdxsOrder=[[0,0],[0,0],[0,0]]#this was used for drawing blobs during LinaresVaziriPashkam stimulus, now just vestigial for grating
+
+def decimalPart(x):
+    return ( abs(x-floor(x)) )
 
 def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColorIdxsOrder,gratingTexPix,blobToCue):
     #Will create the ring of objects (ringRadial) grating and also a ring grating for the cue, for each ring
@@ -859,7 +851,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 
 showclickableRegions = True
 showClickedRegion = True
-def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop ):
+def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop):
     optionSets=numRings
     #Draw/play response cues
     timesRespPromptSoundPlayed=0
@@ -895,7 +887,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
           for ncheck in range( numOptionsEachSet[optionSet] ):  #draw each available to click on in this ring
                 angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi
                 stretchOutwardRingsFactor = 1
-                x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,thisTrial['speed'])
+                x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
                 x = x+ offsetXYeachRing[optionSet][0]
                 y = y+ offsetXYeachRing[optionSet][1]            
                 if not drawingAsGrating and not debugDrawBothAsGratingAndAsBlobs:
@@ -934,7 +926,7 @@ def collectResponses(thisTrial,n,responses,responsesAutopilot, respPromptSoundFi
             for optionSet in range(optionSets):
               for ncheck in range( numOptionsEachSet[optionSet] ): 
                     angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi #radians
-                    x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,thisTrial['speed'])
+                    x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
                     x = x+ offsetXYeachRing[optionSet][0]
                     y = y+ offsetXYeachRing[optionSet][1]
                     #check whether mouse click was close to any of the colors
@@ -1110,28 +1102,35 @@ while trialNum < trials.nTotal and expStop==False:
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
+    speedThisTrial = thisTrial['speed']
     if not doStaircase and not quickMeasurement:
-        speedThisTrial = thisTrial['speed']
         currentSpeed = speedThisTrial #In normal experiment, no speed ramp
     elif quickMeasurement: #in quick measurement mode, which uses a speed ramp
-        speed = maxSpeed
+        speedThisTrial = maxSpeed
         currentSpeed = 0.01
         speedRampStep = 0.01
-        print('currentSpeed =',round(currentSpeed,2))
-    elif doStaircase: #speed will be set by staircase corresponding to this condition.
-        #But don't forget about including some slow trials for lapseRate estimation
-        #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
-        numTargets = thisTrial['numTargets']; numObjs = thisTrial['numObjectsInRing'] 
-        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == numTargets) &
-                              (mainCondsDf['numObjects'] == numObjs)       ].index
-        condnum = rownum[0] #Because it was a pandas Index object, I guess to allow for possibility of multiple indices
-        staircaseThis = staircases[condnum]
-        print('rownum in mainConds =',condnum)  #' staircaseThis=',staircaseThis)
-        speedThisInternal = staircaseThis.next()
-        speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
-        print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
+        print('ramp currentSpeed =',round(currentSpeed,2))
+    elif doStaircase: #speed will be set by staircase corresponding to this condition, or occasional ultra-slow speed as specified by speeds,
+          #to estimate lapseRate
+        if speedThisTrial == 'staircase':
+            #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
+            rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
+                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
+            condnum = rownum[0] #Because it was a pandas Index object, I guess to allow for possibility of multiple indices
+            staircaseThis = staircases[condnum]
+            speedThisInternal = staircaseThis.next()
+            speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
+            print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
+        else: #manual occasional speed, probably ultra-slow to estimate lapseRate
+            print('Non-staircase slow speed!, speedThisTrial=',speedThisTrial, ' will pick a random one')
+            if len(speedThisTrial) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
+                # while also trying to have overwhelming majority be staircase
+                speedThisTrial = random.choice(speedThisTrial)
+            else:
+                speedThisTrial = speedThisTrial
         currentSpeed = speedThisTrial #no speed ramp
-    
+        print('currentSpeed=',round(currentSpeed,2))
+        
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
@@ -1142,6 +1141,7 @@ while trialNum < trials.nTotal and expStop==False:
             perimeter = radii[numRing]*4.0
             circum = 2*pi*radii[numRing]
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
+        #print('currentSpeed=',currentSpeed) #debugAH
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
 
@@ -1218,7 +1218,7 @@ while trialNum < trials.nTotal and expStop==False:
 
     responses = list();  responsesAutopilot = list()
     responses,responsesAutopilot,respondedEachToken,expStop = \
-            collectResponses(thisTrial,n,responses,responsesAutopilot,respPromptSoundFileNum,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
+            collectResponses(thisTrial,currentSpeed,n,responses,responsesAutopilot,respPromptSoundFileNum,offsetXYeachRing,respRadius,currAngle,expStop)  #collect responses!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#####
     #print("responses=",responses,";respondedEachToken=",respondedEachToken,"expStop=",expStop)
     core.wait(.1)
     if exportImages:  #maybe catch one frame of response
@@ -1286,8 +1286,9 @@ while trialNum < trials.nTotal and expStop==False:
             if useSound:
                 lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
-                
-    if doStaircase:
+    trials.addData('orderCorrect',orderCorrect)
+    trials.addData('correctForFeedback',correctForFeedback)
+    if doStaircase and :
         # add the data to the staircase so it can calculate the next speed
         staircaseThis.addResponse(correctForFeedback)
     
