@@ -1115,7 +1115,7 @@ while trialNum < trials.nTotal and expStop==False:
             #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
             rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
                                   (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
-            condnum = rownum[0] #Because it was a pandas Index object, I guess to allow for possibility of multiple indices
+            condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
             staircaseThis = staircases[condnum]
             speedThisInternal = staircaseThis.next()
             speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
@@ -1263,7 +1263,11 @@ while trialNum < trials.nTotal and expStop==False:
     print(numCasesInterframeLong, file=dataFile)
 
     if autopilot and doStaircase and simulateObserver:
-        guessRate = 1.0 / thisTrial['numObjectsInRing'] 
+        guessRate = 1.0 / thisTrial['numObjectsInRing']
+        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
+                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
+        condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
+        staircaseThis = staircases[condnum] #needed to look this up because on some trials, staircase is possibly not used (slow speed to estimate lapserate)
         threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
         #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'guessRate=',guessRate,'threshold=',threshold)
         correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold,descendingPsychometricCurve)
@@ -1404,7 +1408,7 @@ if doStaircase: #report staircase results
     pylab.show()
 
 #Plot percent correct by condition and speed
-df = trials.saveAsWideText("temp.csv")  #Only calling this to retrieve dataframe df
+df = trials.saveAsWideText("temp")  #Only calling this to retrieve dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
 
 
