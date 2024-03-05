@@ -1102,9 +1102,8 @@ while trialNum < trials.nTotal and expStop==False:
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
-    speedThisTrial = thisTrial['speed']
     if not doStaircase and not quickMeasurement:
-        currentSpeed = speedThisTrial #In normal experiment, no speed ramp
+        currentSpeed = thisTrial['speed'] #In normal experiment, no speed ramp
     elif quickMeasurement: #in quick measurement mode, which uses a speed ramp
         speedThisTrial = maxSpeed
         currentSpeed = 0.01
@@ -1112,7 +1111,7 @@ while trialNum < trials.nTotal and expStop==False:
         print('ramp currentSpeed =',round(currentSpeed,2))
     elif doStaircase: #speed will be set by staircase corresponding to this condition, or occasional ultra-slow speed as specified by speeds,
           #to estimate lapseRate
-        if speedThisTrial == 'staircase':
+        if thisTrial['speed'] == 'staircase':
             #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
             rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
                                   (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
@@ -1122,12 +1121,12 @@ while trialNum < trials.nTotal and expStop==False:
             speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
             print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
         else: #manual occasional speed, probably ultra-slow to estimate lapseRate
-            print('Non-staircase slow speed!, speedThisTrial=',speedThisTrial, ' will pick a random one')
-            if len(speedThisTrial) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
+            print('Non-staircase slow speed!, speedThisTrial=',thisTrial['speed'], ' will pick a random one')
+            if len(thisTrial['speed']) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
                 # while also trying to have overwhelming majority be staircase
-                speedThisTrial = random.choice(speedThisTrial)
+                speedThisTrial = random.choice(thisTrial['speed'])
             else:
-                speedThisTrial = speedThisTrial
+                speedThisTrial = thisTrial['speed']
         currentSpeed = speedThisTrial #no speed ramp
         print('currentSpeed=',round(currentSpeed,2))
         
@@ -1286,9 +1285,10 @@ while trialNum < trials.nTotal and expStop==False:
             if useSound:
                 lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
+    trials.addData('speedThisTrial',speedThisTrial)  #when doStaircase is true, this will often be different than thisTrial['speed]
     trials.addData('orderCorrect',orderCorrect)
     trials.addData('correctForFeedback',correctForFeedback)
-    if doStaircase and :
+    if doStaircase and (thisTrial['speed']=='staircase'):
         # add the data to the staircase so it can calculate the next speed
         staircaseThis.addResponse(correctForFeedback)
     
@@ -1402,7 +1402,18 @@ if doStaircase: #report staircase results
             #plot correct answer
             pylab.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
     pylab.show()
-    
+
+#Plot percent correct by condition and speed
+df = trials.saveAsWideText("temp.csv")  #Only calling this to retrieve dataframe df
+#groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
+
+
+pylab.subplot(111) #1 row, 1 column, which panel
+pylab.title('circle = mean of final reversals; triangle = true threshold')
+pylab.xlabel("speed (rps)")
+pylab.ylabel("Percent correct")
+
+
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
