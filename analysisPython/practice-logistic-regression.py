@@ -11,7 +11,6 @@ import pylab, os
 # load your data using pandas
 data = pd.read_csv('some_data.tsv',delimiter='\t')
 
-# assuming the last column is the target and the rest are features
 X = data[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
 y = data['correctForFeedback']
 y = y.values #because otherwise y is a Series for some reason

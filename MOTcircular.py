@@ -1408,7 +1408,7 @@ if doStaircase: #report staircase results
     pylab.show()
 
 #Plot percent correct by condition and speed
-df = trials.saveAsWideText("temp")  #Only calling this to retrieve dataframe df
+df = trials.saveAsWideText("tempData",delimiter='\t')  #Only calling this to get the dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
 
 try: 
@@ -1416,6 +1416,45 @@ try:
 except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import logisticRegression.py (you need that file in the analysisPython directory, which needs an __init__.py file in its directory too)')
+
+try: #This only works if the code executing is in this folder
+    import logisticRegression as logisticR
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import logisticRegression.py (you need that file which needs an __init__.py file in its directory too)')
+
+#Fit logistic regressions
+for cond in mainCondsDf: #Calculate staircase results
+    print('condition about to do logistic regression on = ', cond)
+    #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
+    # Create a mask to reference this specific condition in my df
+    maskForThisCond = (df['numTargets'] == 2) & (df['numObjectsInRing'] == 4)
+    dataThisCond =  df[ maskForThisCond  ]
+    
+    X = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    y = dataThisCond['correctForFeedback']
+    y = y.values #because otherwise y is a Series for some reason
+    print('X=',X)
+    print('y=',y, 'type(y)=',type(y))
+    
+    # add an extra column of ones to act as the bias (intercept?) term in the model
+    X = np.hstack((np.ones((X.shape[0], 1)), X))
+    # initialize theta (regression coefficients?) to zeros
+    theta = np.zeros((X.shape[1], 1))
+    #fit
+    parameters = logisticR.fit(X, y, theta)
+    print('parameters=',parameters)
+    
+    #predict
+    mypredicted = logisticR.predict(X,parameters)
+    print('logistic regression-predicted values=', mypredicted)
+
+    # Create a new column 'predicted' and assign the values from mypredicted
+    # to the rows matching the condition
+    df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
+
+    
+print('mainCondsDf=',mainCondsDf)
 
 pylab.subplot(111) #1 row, 1 column, which panel
 pylab.title('circle = mean of final reversals; triangle = true threshold')
