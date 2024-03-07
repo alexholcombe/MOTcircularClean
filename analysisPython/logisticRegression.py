@@ -25,7 +25,11 @@ def gradient(theta, x, y):
     m = x.shape[0]
     return (1 / m) * np.dot(x.T, sigmoid(net_input(theta, x)) - y)
 
-def fit(x, y, theta):
+def fit(x, y, parametersGuess):
+
+    # initialize theta to zeros
+    theta = np.zeros((x.shape[1], 1))
+
     opt_weights = fmin_tnc(func=cost_function, x0=theta,
                   fprime=gradient,args=(x, y.flatten()))
     return opt_weights[0]
@@ -50,11 +54,11 @@ if __name__ == "__main__":  #executable example of using these functions
     # add an extra column of ones to act as the bias term in the model
     X = np.hstack((np.ones((X.shape[0], 1)), X))
 
-    # initialize theta to zeros
-    theta = np.zeros((X.shape[1], 1))
+
+    parametersGuess = None
 
     #fit
-    parameters = fit(X, y, theta)
+    parameters = fit(X, y, parametersGuess)
     print('parameters=',parameters)
 
     #predict
