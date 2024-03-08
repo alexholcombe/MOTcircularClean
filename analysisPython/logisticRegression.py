@@ -5,14 +5,17 @@ import pandas as pd
 import pylab, os
 from scipy.optimize import fmin_tnc
 
-def sigmoid(x): 
+def my_logistic(x): 
     return 1 / (1 + np.exp(-x))
 
-def net_input(theta, x):
+def usual_regression_part(theta, x):
+    #theta is the bias terms and regression coefficients
+    #Multiply them by the x's, like in any regression
     return np.dot(x, theta)
 
 def probability(theta, x):
-    return sigmoid(net_input(theta, x))
+    ys = usual_regression_part(theta, x)
+    return my_logistic( ys )
 
 def cost_function(theta, x, y):
     m = x.shape[0]
@@ -23,7 +26,7 @@ def cost_function(theta, x, y):
 
 def gradient(theta, x, y):
     m = x.shape[0]
-    return (1 / m) * np.dot(x.T, sigmoid(net_input(theta, x)) - y)
+    return (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
 
 def fit(x, y, initialParametersGuess):
 
@@ -109,7 +112,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
     print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
-    pylab.plot( xForCurve, predictedDoubleA, 'g'+'-' )
+    pylab.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
 
     #Show the effect on the predictions of quadrupling the second parameter
     #fix so doesnt have to be numpy array
@@ -118,10 +121,11 @@ if __name__ == "__main__":  #executeable example of using these functions
     predictedQuadrupleB = predict(xForCurve, paramsQuadrupleB) # np.array(paramsDoubleA) )
     predictedQuadrupleB = predictedQuadrupleB.flatten()
 
-    pylab.plot( xForCurve, predictedQuadrupleB, 'r'+'-' )
-    pylab.title('fitted params (location,slope)=' +str(parameters))
+    pylab.plot( xForCurve, predictedQuadrupleB, 'r'+'-',label='double the slope')
+    pylab.title('fitted params (location,slope)=' +str(np.round(parameters,2))+"\nnote slope affects location")
     pylab.ylim([0, None])
     pylab.xlim([0, None])
+    pylab.legend()
     # save a vector-graphics format for future
     #dataFolder='.'
     #outputFile = os.path.join(dataFolder, 'last.pdf')
