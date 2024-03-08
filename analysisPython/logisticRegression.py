@@ -5,7 +5,7 @@ import pandas as pd
 import pylab, os
 from scipy.optimize import fmin_tnc
 
-def sigmoid(x):
+def sigmoid(x): 
     return 1 / (1 + np.exp(-x))
 
 def net_input(theta, x):
@@ -25,19 +25,24 @@ def gradient(theta, x, y):
     m = x.shape[0]
     return (1 / m) * np.dot(x.T, sigmoid(net_input(theta, x)) - y)
 
-def fit(x, y, parametersGuess):
+def fit(x, y, initialParametersGuess):
 
     # add an extra column of ones to act as the bias term in the model
     X = np.hstack((np.ones((x.shape[0], 1)), x))
 
-    # initialize theta to zeros
-    theta = np.zeros((X.shape[1], 1))
+    # initialize parameters to start search with
+    initialParams = np.ones((X.shape[1], 1))
+    initialParams = np.array([  [initialParametersGuess[0]], 
+                                 [initialParametersGuess[1]]  ])
 
-    opt_weights = fmin_tnc(func=cost_function, x0=theta,
+    opt_weights = fmin_tnc(func=cost_function, x0=initialParams,
                   fprime=gradient,args=(X, y.flatten()))
     return opt_weights[0]
 
 def predict(x,params):
+
+    if not isinstance(params, np.ndarray):
+        params = np.array(params)
 
     # add an extra column of ones to act as the bias term in the model
     X = np.hstack((np.ones((x.shape[0], 1)), x))
@@ -45,7 +50,7 @@ def predict(x,params):
     theta = params[:, np.newaxis]
     return probability(theta, X)
 
-if __name__ == "__main__":  #executable example of using these functions
+if __name__ == "__main__":  #executeable example of using these functions
 
     # load your data using pandas
     data = pd.read_csv('some_data.tsv',delimiter='\t')
@@ -57,17 +62,16 @@ if __name__ == "__main__":  #executable example of using these functions
 
     #print('X=',X)
     #print('y=',y, 'type(y)=',type(y))
-
-    parametersGuess = None
+    parametersGuess = [1,-2]
 
     #fit
     parameters = fit(x, y, parametersGuess)
-    print('parameters=',parameters)
+    print('parameters=',parameters, 'type(parameters)=', type(parameters))
 
     #predict
     predicted = predict(x,parameters)
-    print('predicted values=', predicted)
-    print('End predicted values')
+    #print('predicted values=', predicted)
+    #print('End predicted values')
 
     data['predicted']=predicted
 
@@ -89,7 +93,27 @@ if __name__ == "__main__":  #executable example of using these functions
         edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
         zorder=10,  # make sure the points plot on top of the line
         )
-    pylab.plot(grouped_df['speedThisTrial'],grouped_df['predicted'], 'r'+'-')
+    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'r'+'-' )
+
+    paramsDoubleA = [ 2*parameters[0], parameters[1] ]
+    print('paramsDoubleA=',paramsDoubleA, 'type(paramsDoubleA)=', type(paramsDoubleA))
+    
+    #Show the effect on the predictions of doubling the first parameter
+    #fix so doesnt have to be numpy array
+    predictedDoubleA = predict(x, paramsDoubleA) # np.array(paramsDoubleA) )
+    predictedDoubleA = predictedDoubleA.flatten()
+    print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
+    data['predictedDoubleA'] = predictedDoubleA
+
+    grouped_df = data.groupby(['speedThisTrial']).agg(
+        pctCorrect=('correctForFeedback', 'mean'),
+        n=('correctForFeedback', 'count'),
+        predicted = ('predicted','mean'),
+        predictedDoubleA = ('predictedDoubleA','mean'),
+    )
+    grouped_df = grouped_df.reset_index()
+
+    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predictedDoubleA'], 'g'+'-' )
 
     pylab.ylim([0, 1])
     pylab.xlim([0, None])
