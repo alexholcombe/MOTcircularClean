@@ -97,7 +97,7 @@ if __name__ == "__main__":  #executeable example of using these functions
         edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
         zorder=10,  # make sure the points plot on top of the line
         )
-    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'r'+'-' )
+    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
     paramsDoubleA = [ 2*parameters[0], parameters[1] ]
     print('paramsDoubleA=',paramsDoubleA, 'type(paramsDoubleA)=', type(paramsDoubleA))
@@ -111,15 +111,15 @@ if __name__ == "__main__":  #executeable example of using these functions
     print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
     pylab.plot( xForCurve, predictedDoubleA, 'g'+'-' )
 
-    #Show the effect on the predictions of doubling the second paramger parameter
+    #Show the effect on the predictions of quadrupling the second parameter
     #fix so doesnt have to be numpy array
-    paramsDoubleB = [ parameters[0], 2*parameters[1] ]
+    paramsQuadrupleB = [ parameters[0], 4*parameters[1] ]
 
-    predictedDoubleB = predict(xForCurve, paramsDoubleB) # np.array(paramsDoubleA) )
-    predictedDoubleB = predictedDoubleB.flatten()
+    predictedQuadrupleB = predict(xForCurve, paramsQuadrupleB) # np.array(paramsDoubleA) )
+    predictedQuadrupleB = predictedQuadrupleB.flatten()
 
-    pylab.plot( xForCurve, predictedDoubleB, 'y'+'-' )
-    pylab.title('params=' +str(parameters))
+    pylab.plot( xForCurve, predictedQuadrupleB, 'r'+'-' )
+    pylab.title('fitted params (location,slope)=' +str(parameters))
     pylab.ylim([0, None])
     pylab.xlim([0, None])
     # save a vector-graphics format for future
