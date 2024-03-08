@@ -27,16 +27,23 @@ def gradient(theta, x, y):
 
 def fit(x, y, parametersGuess):
 
+    # add an extra column of ones to act as the bias term in the model
+    X = np.hstack((np.ones((x.shape[0], 1)), x))
+
     # initialize theta to zeros
-    theta = np.zeros((x.shape[1], 1))
+    theta = np.zeros((X.shape[1], 1))
 
     opt_weights = fmin_tnc(func=cost_function, x0=theta,
-                  fprime=gradient,args=(x, y.flatten()))
+                  fprime=gradient,args=(X, y.flatten()))
     return opt_weights[0]
 
 def predict(x,params):
+
+    # add an extra column of ones to act as the bias term in the model
+    X = np.hstack((np.ones((x.shape[0], 1)), x))
+
     theta = params[:, np.newaxis]
-    return probability(theta, x)
+    return probability(theta, X)
 
 if __name__ == "__main__":  #executable example of using these functions
 
@@ -44,25 +51,21 @@ if __name__ == "__main__":  #executable example of using these functions
     data = pd.read_csv('some_data.tsv',delimiter='\t')
 
     # assuming the last column is the target and the rest are features
-    X = data[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    x = data[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
 
     #print('X=',X)
     #print('y=',y, 'type(y)=',type(y))
 
-    # add an extra column of ones to act as the bias term in the model
-    X = np.hstack((np.ones((X.shape[0], 1)), X))
-
-
     parametersGuess = None
 
     #fit
-    parameters = fit(X, y, parametersGuess)
+    parameters = fit(x, y, parametersGuess)
     print('parameters=',parameters)
 
     #predict
-    predicted = predict(X,parameters)
+    predicted = predict(x,parameters)
     print('predicted values=', predicted)
     print('End predicted values')
 
