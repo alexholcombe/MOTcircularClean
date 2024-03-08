@@ -27,8 +27,12 @@ def gradient(theta, x, y):
 
 def fit(x, y, initialParametersGuess):
 
+    if not isinstance(x, pd.DataFrame):
+        x = pd.DataFrame(x)  
+    lenX = x.shape[0] #shape only works on DataFrames
+
     # add an extra column of ones to act as the bias term in the model
-    X = np.hstack((np.ones((x.shape[0], 1)), x))
+    X = np.hstack((np.ones((lenX, 1)), x))
 
     # initialize parameters to start search with
     initialParams = np.ones((X.shape[1], 1))
@@ -60,7 +64,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
 
-    #print('X=',X)
+    print('x=',x,'type(x)=',type(x))
     #print('y=',y, 'type(y)=',type(y))
     parametersGuess = [1,-2]
 
@@ -70,7 +74,7 @@ if __name__ == "__main__":  #executeable example of using these functions
 
     #predict
     predicted = predict(x,parameters)
-    #print('predicted values=', predicted)
+    #print('predicted values=', predicted, 'type=',type(predicted))
     #print('End predicted values')
 
     data['predicted']=predicted
@@ -100,22 +104,23 @@ if __name__ == "__main__":  #executeable example of using these functions
     
     #Show the effect on the predictions of doubling the first parameter
     #fix so doesnt have to be numpy array
-    predictedDoubleA = predict(x, paramsDoubleA) # np.array(paramsDoubleA) )
+    xForCurve = np.arange(0,5,.02)
+    xForCurve = pd.DataFrame(xForCurve)
+    predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
     print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
-    data['predictedDoubleA'] = predictedDoubleA
+    pylab.plot( xForCurve, predictedDoubleA, 'g'+'-' )
 
-    grouped_df = data.groupby(['speedThisTrial']).agg(
-        pctCorrect=('correctForFeedback', 'mean'),
-        n=('correctForFeedback', 'count'),
-        predicted = ('predicted','mean'),
-        predictedDoubleA = ('predictedDoubleA','mean'),
-    )
-    grouped_df = grouped_df.reset_index()
+    #Show the effect on the predictions of doubling the second paramger parameter
+    #fix so doesnt have to be numpy array
+    paramsDoubleB = [ parameters[0], 2*parameters[1] ]
 
-    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predictedDoubleA'], 'g'+'-' )
+    predictedDoubleB = predict(xForCurve, paramsDoubleB) # np.array(paramsDoubleA) )
+    predictedDoubleB = predictedDoubleB.flatten()
 
-    pylab.ylim([0, 1])
+    pylab.plot( xForCurve, predictedDoubleB, 'y'+'-' )
+    pylab.title('params=' +str(parameters))
+    pylab.ylim([0, None])
     pylab.xlim([0, None])
     # save a vector-graphics format for future
     #dataFolder='.'
