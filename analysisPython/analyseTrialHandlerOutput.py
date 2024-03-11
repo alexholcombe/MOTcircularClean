@@ -94,17 +94,7 @@ points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=p
     edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
     zorder=10,  # make sure the points plot on top of the line
     )
-#print(grouped_df)
-speeds= grouped_df['speedThisTrial'].values
-#print('speeds=',speeds)
-""" speeds= [0.02   ,    0.03    ,   0.1  ,      0.23  ,     0.23   ,    0.28,
- 0.29570313, 0.29570313, 0.33   ,    0.34570313, 0.39570313 ,0.43,
- 0.49570313, 0.49570313, 0.59570312, 0.59570313, 0.69570313, 0.79570313,
- 0.79570313, 0.84570313, 0.89570312 ,0.89570313, 0.94570313 ,0.99570313,
- 1.04570313, 1.09570312 , 1.19570312] """
-#speeds = speeds.values()
-points = plt.plot(speeds, grouped_df['pctCorrect'].values.tolist(),
-                  marker='o', markersize=2, linestyle='')
+
 
 if fitSucceeded:
     xForCurve = np.arange(0,2,.02)
