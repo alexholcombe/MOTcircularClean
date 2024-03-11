@@ -33,9 +33,10 @@ combinations = list(itertools.product(numTargets, numObjsInRing))
 # Create the DataFrame with all combinations
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 
-#Fit logistic regressions for each condition
+#Plot data and  logistic regressions for each condition
 for cond in mainCondsDf:
-    print('condition about to do logistic regression on condition:', cond)
+    #Plot data first
+
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == 2) & (df['numObjectsInRing'] == 4)
@@ -46,7 +47,9 @@ for cond in mainCondsDf:
     y = y.values #because otherwise y is a Series for some reason
     #print('X=',x)
     #print('y=',y, 'type(y)=',type(y))
-    
+
+    print('condition about to do logistic regression on condition:', cond)
+
     parametersGuess = [1,-2]
 
     #fit
@@ -83,14 +86,14 @@ plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
 threshVal = 0.794
 maxX = x.max()
-plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
+#plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
 # plot points
 pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
-#points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-#    edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
-#    zorder=10,  # make sure the points plot on top of the line
-#    )
+points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
+    edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
+    zorder=10,  # make sure the points plot on top of the line
+    )
 #print(grouped_df)
 speeds= grouped_df['speedThisTrial'].values
 #print('speeds=',speeds)
