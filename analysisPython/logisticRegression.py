@@ -14,15 +14,15 @@ def usual_regression_part(theta, x):
     #Multiply them by the x's, like in any regression
     return np.dot(x, theta)
 
-def probability(theta, x):
+def calcLogisticRegressionY(theta, x):
     ys = usual_regression_part(theta, x)
     return my_logistic( ys )
 
 def cost_function(theta, x, y):
     m = x.shape[0]
     total_cost = -(1 / m) * np.sum(
-        y * np.log(probability(theta, x)) + (1 - y) * np.log(
-            1 - probability(theta, x)))
+        y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * np.log(
+            1 - calcLogisticRegressionY(theta, x)))
     return total_cost
 
 def gradient(theta, x, y):
@@ -30,13 +30,13 @@ def gradient(theta, x, y):
     return (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
 
 def fit(x, y, initialParametersGuess):
+    x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
 
-    if not isinstance(x, pd.DataFrame):
-        x = pd.DataFrame(x)  
-    lenX = x.shape[0] #shape only works on DataFrames
-    print('lenX=',lenX, 'type(x)=',type(x),'shape=',x.shape,'\nx=',x)
     # add an extra column of ones to act as the bias term in the model
-    X = np.hstack((np.ones((lenX, 1)), x))
+    lenX = x.shape[0]
+    onesForBiasTerm = np.ones( (lenX, 1) )
+    #print('dims onesForBiasTerm=',onesForBiasTerm.ndim, 'dims x=',x.ndim)
+    X = np.hstack(   ( onesForBiasTerm  , x)    )
 
     # initialize parameters to start search with
     initialParams = np.ones((X.shape[1], 1))
@@ -48,15 +48,19 @@ def fit(x, y, initialParametersGuess):
     return opt_weights[0]
 
 def predict(x,params):
+    x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
 
     if not isinstance(params, np.ndarray):
         params = np.array(params)
 
     # add an extra column of ones to act as the bias term in the model
-    X = np.hstack((np.ones((x.shape[0], 1)), x))
+    lenX = x.shape[0]
+    onesForBiasTerm = np.ones( (lenX, 1) )
+    #print('dims onesForBiasTerm=',onesForBiasTerm.ndim, 'dims x=',x.ndim)
+    X = np.hstack(   ( onesForBiasTerm  , x)    )
 
     theta = params[:, np.newaxis]
-    return probability(theta, X)
+    return calcLogisticRegressionY(theta, X)
 
 if __name__ == "__main__":  #executeable example of using these functions
 
@@ -64,21 +68,9 @@ if __name__ == "__main__":  #executeable example of using these functions
     data = pd.read_table('some_data.tsv')
 
     # assuming the last column is the target and the rest are features
-    x = data[['speedThisTrial']] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    x = data['speedThisTrial'] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
-
-    print('type(x)=',type(x),'shape=',x.shape,'shape[0]',x.shape[0])
-    badx = data['speedThisTrial'] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
-    if not isinstance(badx, pd.DataFrame):
-        badx = pd.DataFrame(badx)  
-    print('type(badx)=',type(badx),'shape=',badx.shape,'shape[0]',badx.shape[0])
-    #print('x=\n',x)
-    #print('badx=\n',badx)
-    X = np.hstack((np.ones((x.shape[0], 1)), x))
-    X = np.hstack((np.ones((badx.shape[0], 1)), badx))
-    QUIT
-
 
     #print('y=',y, 'type(y)=',type(y))
     parametersGuess = [1,-2]
@@ -112,7 +104,6 @@ if __name__ == "__main__":  #executeable example of using these functions
         )
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
-
     # set up plot
     #plt.subplot(111)
     plt.xlabel("speed (rps)")
@@ -120,12 +111,11 @@ if __name__ == "__main__":  #executeable example of using these functions
 
     threshVal = 0.794
 
-    plt.plot([0, data['speedThisTrial'].max()], [threshVal, threshVal], 'k--')  # horizontal dashed line
-
-    #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+    maxSpeed = data['speedThisTrial'].max()
+    plt.plot([0, maxSpeed], [threshVal, threshVal], 'k--')  # horizontal dashed line
+    #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # Error! because max(x) returns string:"speedThisTrial"
 
     plt.show()
-    QUIT
     
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
@@ -157,10 +147,11 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.title('fitted params (location,slope)=' +str(np.round(parameters,2))+"\nnote slope affects location")
     plt.ylim([0, None])
     plt.xlim([0, None])
+    plt.xlabel("speed (rps)")
     plt.legend()
     # save a vector-graphics format for future
-    #dataFolder='.'
-    #outputFile = os.path.join(dataFolder, 'last.pdf')
-    #plt.savefig(outputFile)
-    #print('saved figure to: ' + outputFile)
+    dataFolder='.'
+    outputFile = os.path.join(dataFolder, 'last.pdf')
+    plt.savefig(outputFile)
+    print('saved figure to: ' + outputFile)
     plt.show()

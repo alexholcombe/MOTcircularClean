@@ -33,19 +33,19 @@ combinations = list(itertools.product(numTargets, numObjsInRing))
 # Create the DataFrame with all combinations
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 
-#Fit logistic regressions
-for cond in mainCondsDf: #Calculate staircase results
+#Fit logistic regressions for each condition
+for cond in mainCondsDf:
     print('condition about to do logistic regression on condition:', cond)
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == 2) & (df['numObjectsInRing'] == 4)
     dataThisCond =  df[ maskForThisCond  ]
     
-    x = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    x = dataThisCond['speedThisTrial' ] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = dataThisCond['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
-    print('X=',x)
-    print('y=',y, 'type(y)=',type(y))
+    #print('X=',x)
+    #print('y=',y, 'type(y)=',type(y))
     
     parametersGuess = [1,-2]
 
@@ -74,16 +74,16 @@ grouped_df = df.groupby(['speedThisTrial']).agg(
     n=('correctForFeedback', 'count')
 )
 grouped_df = grouped_df.reset_index()
+#print('grouped_df=',grouped_df)
 
-print('grouped_df=',grouped_df)
-
-QUIT
 # set up plot
 plt.subplot(111) #(122)
 #plt.xlabel("speed (rps)")
-plt.ylabel("Percent correct")
+plt.ylabel("Proportion correct")
+plt.xlabel('speed (rps)')
 threshVal = 0.794
-plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+maxX = x.max()
+plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
 # plot points
 pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
@@ -93,24 +93,22 @@ pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
 #    )
 #print(grouped_df)
 speeds= grouped_df['speedThisTrial'].values
-print('speeds=',speeds)
-speeds= [0.02   ,    0.03    ,   0.1  ,      0.23  ,     0.23   ,    0.28,
+#print('speeds=',speeds)
+""" speeds= [0.02   ,    0.03    ,   0.1  ,      0.23  ,     0.23   ,    0.28,
  0.29570313, 0.29570313, 0.33   ,    0.34570313, 0.39570313 ,0.43,
  0.49570313, 0.49570313, 0.59570312, 0.59570313, 0.69570313, 0.79570313,
  0.79570313, 0.84570313, 0.89570312 ,0.89570313, 0.94570313 ,0.99570313,
- 1.04570313, 1.09570312 , 1.19570312]
+ 1.04570313, 1.09570312 , 1.19570312] """
 #speeds = speeds.values()
 points = plt.plot(speeds, grouped_df['pctCorrect'].values.tolist(),
                   marker='o', markersize=2, linestyle='')
-
-plt.show()
 
 if fitSucceeded:
     xForCurve = np.arange(0,2,.02)
     xForCurve = pd.DataFrame(xForCurve)
     predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
     predicted = predicted.flatten()
-    #plt.plot( xForCurve, predicted, 'k'+'-' )
+    plt.plot( xForCurve, predicted, 'k'+'-' )
     
 title = 'circle = mean of final reversals'
 autopilot = True; simulateObserver = True
