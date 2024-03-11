@@ -34,7 +34,7 @@ def fit(x, y, initialParametersGuess):
     if not isinstance(x, pd.DataFrame):
         x = pd.DataFrame(x)  
     lenX = x.shape[0] #shape only works on DataFrames
-
+    print('lenX=',lenX, 'type(x)=',type(x),'shape=',x.shape,'\nx=',x)
     # add an extra column of ones to act as the bias term in the model
     X = np.hstack((np.ones((lenX, 1)), x))
 
@@ -68,7 +68,18 @@ if __name__ == "__main__":  #executeable example of using these functions
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
 
-    #print('x=',x,'type(x)=',type(x))
+    print('type(x)=',type(x),'shape=',x.shape,'shape[0]',x.shape[0])
+    badx = data['speedThisTrial'] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    if not isinstance(badx, pd.DataFrame):
+        badx = pd.DataFrame(badx)  
+    print('type(badx)=',type(badx),'shape=',badx.shape,'shape[0]',badx.shape[0])
+    #print('x=\n',x)
+    #print('badx=\n',badx)
+    X = np.hstack((np.ones((x.shape[0], 1)), x))
+    X = np.hstack((np.ones((badx.shape[0], 1)), badx))
+    QUIT
+
+
     #print('y=',y, 'type(y)=',type(y))
     parametersGuess = [1,-2]
 
@@ -108,8 +119,10 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.ylabel("Percent correct")
 
     threshVal = 0.794
-    #Below is the PROBLEMS!
-    plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+
+    plt.plot([0, data['speedThisTrial'].max()], [threshVal, threshVal], 'k--')  # horizontal dashed line
+
+    #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
     plt.show()
     QUIT
