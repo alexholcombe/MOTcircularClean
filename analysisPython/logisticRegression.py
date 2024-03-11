@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-import pylab #If need to install this library, install matplotlib and that installs it
+import matplotlib.pyplot as plt
 import os
 from scipy.optimize import fmin_tnc
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":  #executeable example of using these functions
 
     # assuming the last column is the target and the rest are features
     x = data[['speedThisTrial']] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
-    y = data[['correctForFeedback']]
+    y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
 
     #print('x=',x,'type(x)=',type(x))
@@ -90,20 +90,23 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
+    plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
+    plt.show()
+    QUIT
     # set up plot
-    pylab.subplot(111)
-    pylab.xlabel("speed (rps)")
-    pylab.ylabel("Percent correct")
+    plt.subplot(111)
+    plt.xlabel("speed (rps)")
+    plt.ylabel("Percent correct")
     threshVal = 0.794
-    pylab.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+    plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
     # plot points
-    pointSizes = pylab.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
-    points = pylab.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
+    pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
+    points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
         edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
         zorder=10,  # make sure the points plot on top of the line
         )
-    pylab.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
+    plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
     paramsDoubleA = [ 2*parameters[0], parameters[1] ]
     
@@ -114,7 +117,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
     #print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
-    pylab.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
+    plt.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
 
     #Show the effect on the predictions of quadrupling the second parameter
     #fix so doesnt have to be numpy array
@@ -123,14 +126,14 @@ if __name__ == "__main__":  #executeable example of using these functions
     predictedQuadrupleB = predict(xForCurve, paramsQuadrupleB) # np.array(paramsDoubleA) )
     predictedQuadrupleB = predictedQuadrupleB.flatten()
 
-    pylab.plot( xForCurve, predictedQuadrupleB, 'r'+'-',label='double the slope')
-    pylab.title('fitted params (location,slope)=' +str(np.round(parameters,2))+"\nnote slope affects location")
-    pylab.ylim([0, None])
-    pylab.xlim([0, None])
-    pylab.legend()
+    plt.plot( xForCurve, predictedQuadrupleB, 'r'+'-',label='double the slope')
+    plt.title('fitted params (location,slope)=' +str(np.round(parameters,2))+"\nnote slope affects location")
+    plt.ylim([0, None])
+    plt.xlim([0, None])
+    plt.legend()
     # save a vector-graphics format for future
     #dataFolder='.'
     #outputFile = os.path.join(dataFolder, 'last.pdf')
-    #pylab.savefig(outputFile)
+    #plt.savefig(outputFile)
     #print('saved figure to: ' + outputFile)
-    pylab.show()
+    plt.show()
