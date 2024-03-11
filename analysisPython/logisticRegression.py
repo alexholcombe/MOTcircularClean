@@ -2,7 +2,8 @@
 
 import numpy as np
 import pandas as pd
-import pylab, os
+import pylab #If need to install this library, install matplotlib and that installs it
+import os
 from scipy.optimize import fmin_tnc
 
 def my_logistic(x): 
@@ -60,14 +61,14 @@ def predict(x,params):
 if __name__ == "__main__":  #executeable example of using these functions
 
     # load your data using pandas
-    data = pd.read_csv('some_data.tsv',delimiter='\t')
+    data = pd.read_csv('some_data.tsv',delim='\t')
 
     # assuming the last column is the target and the rest are features
     x = data[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
 
-    print('x=',x,'type(x)=',type(x))
+    #print('x=',x,'type(x)=',type(x))
     #print('y=',y, 'type(y)=',type(y))
     parametersGuess = [1,-2]
 
@@ -89,10 +90,12 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
-    # plot curve
+    # set up plot
     pylab.subplot(111)
     pylab.xlabel("speed (rps)")
     pylab.ylabel("Percent correct")
+    threshVal = 0.794
+    pylab.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
     # plot points
     pointSizes = pylab.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
@@ -103,7 +106,6 @@ if __name__ == "__main__":  #executeable example of using these functions
     pylab.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
     paramsDoubleA = [ 2*parameters[0], parameters[1] ]
-    print('paramsDoubleA=',paramsDoubleA, 'type(paramsDoubleA)=', type(paramsDoubleA))
     
     #Show the effect on the predictions of doubling the first parameter
     #fix so doesnt have to be numpy array
@@ -111,7 +113,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     xForCurve = pd.DataFrame(xForCurve)
     predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
-    print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
+    #print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
     pylab.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
 
     #Show the effect on the predictions of quadrupling the second parameter

@@ -154,7 +154,7 @@ mon.setSizePix( (widthPixRequested,heightPixRequested) )
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 myWin.setRecordFrameIntervals(False)
 
-trialsPerCondition = 4
+trialsPerCondition = 1
 
 refreshMsg2 = ''
 if not checkRefreshEtc:
@@ -1387,9 +1387,13 @@ if doStaircase: #report staircase results
     print('About to plot staircases')
     #plot staircases
     pylab.subplot(111) #1 row, 1 column, which panel
-    pylab.title('circle = mean of final reversals; triangle = true threshold')
+    title = 'circle = mean of final reversals'
+    if autopilot and simulateObserver:
+        title += '; triangle = true threshold'
+    pylab.title(title)
     pylab.xlabel("staircase trial")
     pylab.ylabel("speed (rps)")
+
     for staircase in staircases:
         colors = 'grby'
         stairI = staircases.index(staircase)
@@ -1406,9 +1410,13 @@ if doStaircase: #report staircase results
             #plot correct answer
             pylab.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
     pylab.show()
+    # save a vector-graphics format for future
+    figDir = 'analysisPython'
+    outputFile = os.path.join(figDir, 'lastStaircases.pdf') #'lastStaircases.pdf'
+    pylab.savefig(outputFile)
 
 #Plot percent correct by condition and speed
-df = trials.saveAsWideText("tempData",delimiter='\t')  #Only calling this to get the dataframe df
+df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
 
 try: 
@@ -1453,11 +1461,13 @@ for cond in mainCondsDf: #Calculate staircase results
     # to the rows matching the condition
     df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
-    
 print('mainCondsDf=',mainCondsDf)
 
 pylab.subplot(111) #1 row, 1 column, which panel
-pylab.title('circle = mean of final reversals; triangle = true threshold')
+title = 'circle = mean of final reversals'
+if autopilot and simulateObserver:
+    title += 'triangle = true threshold'
+pylab.title(title)
 pylab.xlabel("speed (rps)")
 pylab.ylabel("Percent correct")
 

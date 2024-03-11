@@ -203,9 +203,7 @@ if saveDataInFile:
     dataFile.close()
     staircaseThis.saveAsPickle(output_file)  # special python data file to save all the info
 
-# give some output to user
-#print('printStaircase output:')
-#staircaseAndNoiseHelpers.printStaircase(staircase, briefTrialUpdate=False, printInternalVal=True, alsoLog=False) #Is this what's showing the range error?
+#Output some results from the staircases
 meanReversalsEachStaircase = np.zeros( len(staircases) )
 
 for staircase in staircases:
