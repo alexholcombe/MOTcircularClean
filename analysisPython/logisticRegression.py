@@ -107,12 +107,13 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.xlabel("speed (rps)")
     plt.ylabel("Percent correct")
 
+    threshVal = 0.794
+    #Below is the PROBLEMS!
+    plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+
     plt.show()
     QUIT
     
-    threshVal = 0.794
-    plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
-
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
