@@ -90,13 +90,26 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
-    plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
-    plt.show()
-    QUIT
+    #plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
+    #plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
+
+    # plot points
+    pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
+    points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
+        edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
+        zorder=10,  # make sure the points plot on top of the line
+        )
+    plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
+
+
     # set up plot
-    plt.subplot(111)
+    #plt.subplot(111)
     plt.xlabel("speed (rps)")
     plt.ylabel("Percent correct")
+
+    plt.show()
+    QUIT
+    
     threshVal = 0.794
     plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
