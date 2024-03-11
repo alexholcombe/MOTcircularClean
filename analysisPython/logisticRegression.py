@@ -61,11 +61,11 @@ def predict(x,params):
 if __name__ == "__main__":  #executeable example of using these functions
 
     # load your data using pandas
-    data = pd.read_csv('some_data.tsv',delim='\t')
+    data = pd.read_table('some_data.tsv')
 
     # assuming the last column is the target and the rest are features
-    x = data[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
-    y = data['correctForFeedback']
+    x = data[['speedThisTrial']] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    y = data[['correctForFeedback']]
     y = y.values #because otherwise y is a Series for some reason
 
     #print('x=',x,'type(x)=',type(x))

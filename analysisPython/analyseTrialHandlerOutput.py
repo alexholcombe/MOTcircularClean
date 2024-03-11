@@ -2,7 +2,8 @@
 import pandas as pd
 import numpy as np
 import itertools #to calculate all subsets
-import pylab, warnings
+import matplotlib.pyplot as plt
+import warnings
 
 #df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
@@ -62,7 +63,7 @@ for cond in mainCondsDf: #Calculate staircase results
     if fitSucceeded:
         print('parameters=',parameters)
         mypredicted = logisticR.predict(x,parameters)
-        print('logistic regression-predicted values=', mypredicted)
+        #print('logistic regression-predicted values=', mypredicted)
         # Create a new column 'predicted' and assign the values from mypredicted
         # to the rows matching the condition
         df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
@@ -74,30 +75,46 @@ grouped_df = df.groupby(['speedThisTrial']).agg(
 )
 grouped_df = grouped_df.reset_index()
 
+print('grouped_df=',grouped_df)
+
+QUIT
 # set up plot
-pylab.subplot(122)
-pylab.xlabel("speed (rps)")
-pylab.ylabel("Percent correct")
+plt.subplot(111) #(122)
+#plt.xlabel("speed (rps)")
+plt.ylabel("Percent correct")
 threshVal = 0.794
-pylab.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
+plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # horizontal dashed line
 
 # plot points
-pointSizes = pylab.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
-points = pylab.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-    edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
-    zorder=10,  # make sure the points plot on top of the line
-    )
+pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
+#points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
+#    edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
+#    zorder=10,  # make sure the points plot on top of the line
+#    )
+#print(grouped_df)
+speeds= grouped_df['speedThisTrial'].values
+print('speeds=',speeds)
+speeds= [0.02   ,    0.03    ,   0.1  ,      0.23  ,     0.23   ,    0.28,
+ 0.29570313, 0.29570313, 0.33   ,    0.34570313, 0.39570313 ,0.43,
+ 0.49570313, 0.49570313, 0.59570312, 0.59570313, 0.69570313, 0.79570313,
+ 0.79570313, 0.84570313, 0.89570312 ,0.89570313, 0.94570313 ,0.99570313,
+ 1.04570313, 1.09570312 , 1.19570312]
+#speeds = speeds.values()
+points = plt.plot(speeds, grouped_df['pctCorrect'].values.tolist(),
+                  marker='o', markersize=2, linestyle='')
+
+plt.show()
 
 if fitSucceeded:
     xForCurve = np.arange(0,2,.02)
     xForCurve = pd.DataFrame(xForCurve)
     predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
     predicted = predicted.flatten()
-    pylab.plot( xForCurve, predicted, 'k'+'-' )
+    #plt.plot( xForCurve, predicted, 'k'+'-' )
     
 title = 'circle = mean of final reversals'
 autopilot = True; simulateObserver = True
 if autopilot and simulateObserver:
     title += 'triangle = true threshold'
-pylab.title(title)
-pylab.show()
+plt.title(title)
+plt.show()
