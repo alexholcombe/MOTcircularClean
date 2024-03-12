@@ -99,7 +99,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-        edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
+        linewidths=1, c='k',
         zorder=10,  # make sure the points plot on top of the line
         )
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )

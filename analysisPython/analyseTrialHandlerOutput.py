@@ -32,23 +32,45 @@ numObjsInRing =     [4,                 8] #[4]      #Limitation: gratings don't
 combinations = list(itertools.product(numTargets, numObjsInRing))
 # Create the DataFrame with all combinations
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
+print('mainCondsDf=',mainCondsDf)
+# set up plot
+plt.subplot(111) #(122)
+#plt.xlabel("speed (rps)")
+plt.ylabel("Proportion correct")
+plt.xlabel('speed (rps)')
+threshVal = 0.794
+maxX = df['speedThisTrial'].max()
+plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
+colors='rgby'
+paramsEachCond = list()
 
 #Plot data and  logistic regressions for each condition
-for cond in mainCondsDf:
-    #Plot data first
-
+for index, cond in mainCondsDf.iterrows():
+    #Plot data first without logistic regression
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
-    maskForThisCond = (df['numTargets'] == 2) & (df['numObjectsInRing'] == 4)
+    maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
     dataThisCond =  df[ maskForThisCond  ]
-    
+
+    #Aggregate data into percent correct for plotting actual data
+    grouped_df = dataThisCond.groupby(['speedThisTrial']).agg(
+        pctCorrect=('correctForFeedback', 'mean'),
+        n=('correctForFeedback', 'count')
+    )
+    aggregatedDf = grouped_df.reset_index()
+    #print('grouped_df=',grouped_df)
+
+    # plot points
+    pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
+    points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
+        c= colors[index], 
+        zorder=10,  # make sure the points plot on top of the line
+        )
+
+    print('condition about to do logistic regression on condition:', cond)
     x = dataThisCond['speedThisTrial' ] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = dataThisCond['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
-    #print('X=',x)
-    #print('y=',y, 'type(y)=',type(y))
-
-    print('condition about to do logistic regression on condition:', cond)
 
     parametersGuess = [1,-2]
 
@@ -64,45 +86,20 @@ for cond in mainCondsDf:
             
     #predict
     if fitSucceeded:
-        print('parameters=',parameters)
+        paramsEachCond.append(parameters)
         mypredicted = logisticR.predict(x,parameters)
         #print('logistic regression-predicted values=', mypredicted)
         # Create a new column 'predicted' and assign the values from mypredicted
         # to the rows matching the condition
         df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
-#Aggregate data into percent correct for plotting actual data
-grouped_df = df.groupby(['speedThisTrial']).agg(
-    pctCorrect=('correctForFeedback', 'mean'),
-    n=('correctForFeedback', 'count')
-)
-grouped_df = grouped_df.reset_index()
-#print('grouped_df=',grouped_df)
+        xForCurve = np.arange(0,1.6,.02)
+        xForCurve = pd.DataFrame(xForCurve)
+        predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
+        predicted = predicted.flatten()
+        plt.plot( xForCurve, predicted, colors[index]+'-' )
 
-# set up plot
-plt.subplot(111) #(122)
-#plt.xlabel("speed (rps)")
-plt.ylabel("Proportion correct")
-plt.xlabel('speed (rps)')
-threshVal = 0.794
-maxX = x.max()
-#plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
-
-# plot points
-pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
-points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-    edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
-    zorder=10,  # make sure the points plot on top of the line
-    )
-
-
-if fitSucceeded:
-    xForCurve = np.arange(0,2,.02)
-    xForCurve = pd.DataFrame(xForCurve)
-    predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
-    predicted = predicted.flatten()
-    plt.plot( xForCurve, predicted, 'k'+'-' )
-    
+print('paramsEachCond=',paramsEachCond)
 title = 'circle = mean of final reversals'
 autopilot = True; simulateObserver = True
 if autopilot and simulateObserver:
