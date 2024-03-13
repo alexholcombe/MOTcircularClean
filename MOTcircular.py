@@ -13,10 +13,16 @@ import pandas as pd
 import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
-import time, random, sys, platform, os, pylab, gc, io, pandas
+import time, random, sys, platform, os, gc, io, pandas
+import matplotlib.pyplot as plt
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
+try: 
+    from analysisPython import logisticRegression as logisticR
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import logisticRegression.py (you need that file in the analysisPython directory, which needs an __init__.py file in its directory too)')
 try:
     from staircasing import staircaseAndNoiseHelpers
 except Exception as e:
@@ -1382,98 +1388,161 @@ if doStaircase: #report staircase results
         meanReversalsEachStaircase[ stairI ] = meanOfFinalReversals
         # Set the stairI row's 'meanReversal' value
         mainCondsDf.at[stairI, 'meanReversal'] = meanOfFinalReversals  # Indexing is 0-based in Python, so the 4th row is at index 3
-    print('mainCondsDf=',mainCondsDf)
     
     print('About to plot staircases')
     #plot staircases
-    pylab.subplot(111) #1 row, 1 column, which panel
+    plt.subplot(111) #1 row, 1 column, which panel
     title = 'circle = mean of final reversals'
     if autopilot and simulateObserver:
         title += '; triangle = true threshold'
-    pylab.title(title)
-    pylab.xlabel("staircase trial")
-    pylab.ylabel("speed (rps)")
+    plt.title(title)
+    plt.xlabel("staircase trial")
+    plt.ylabel("speed (rps)")
 
     for staircase in staircases:
         colors = 'grby'
         stairI = staircases.index(staircase)
         colorThis = colors[stairI]
+        print('About to get intensities this staircase')
         intensities = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
         if len(intensities)>0:
-            pylab.plot(intensities, colorThis+'-')
-            print('Plotted one set of intensities') 
+            plt.plot(intensities, colorThis+'-')
         #Calculate correct answer, to help visualize if staircase is converging on the right place
         actualThresh = staircase.extraInfo['midpointThreshPrevLit']
         if len(staircase.reversalIntensities)>0: #plot mean of last reversals
+            print('About to plot mean this staircase')
             lastTrial = len(staircase.intensities)
-            pylab.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
+            plt.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
             #plot correct answer
-            pylab.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
-    pylab.show()
+            plt.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
+    plt.show()
     # save a vector-graphics format for future
     figDir = 'analysisPython'
     outputFile = os.path.join(figDir, 'lastStaircases.pdf') #'lastStaircases.pdf'
-    pylab.savefig(outputFile)
+    plt.savefig(outputFile)
 
-#Plot percent correct by condition and speed
+
+#Plot percent correct by condition and speed for all trials. 
 df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
-#groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
+#If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
+# Create a boolean mask for where 'speedThisTrial' is '--'
+dashes_mask = (df['speedThisTrial'] == '--')
+all_false = (~dashes_mask).all()
+if all_false:
+    numLegitTrials = len(df)
+    print('Session appears to have completed (',len(df),'trials), because no double-dashes ("--") appear in the file')
+else:
+    # Find the first True in the mask, which is the first trial that didn't complete
+    first_row_with_dashes_num = dashes_mask.idxmax()
+    numLegitTrials = first_row_with_dashes_num
+    print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
+    #Throw away all the non-legitimate trials
+    df = df[:numLegitTrials]
+    print('Completed portion of session=',df)
+    if numLegitTrials < 2:
+        print('Forget it, I cannot analyze a one-trial experiment')
+        quit()
+    # Convert to numeric, forcing errors to NaN
+    df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
+    df['numTargets'] = pd.to_numeric(df['numTargets'])
+    df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
+    df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
+#Finished clean-up of dataframe that results from incomplete session
 
-try: 
-    from analysisPython import logisticRegression as logisticR
-except Exception as e:
-    print("An exception occurred:",str(e))
-    print('Could not import logisticRegression.py (you need that file in the analysisPython directory, which needs an __init__.py file in its directory too)')
-
-try: #This only works if the code executing is in this folder
-    import logisticRegression as logisticR
-except Exception as e:
-    print("An exception occurred:",str(e))
-    print('Could not import logisticRegression.py (you need that file which needs an __init__.py file in its directory too)')
+# set up plot
+plt.subplot(111) #122
+#plt.xlabel("speed (rps)")
+plt.ylabel("Proportion correct")
+plt.xlabel('speed (rps)')
+threshVal = 0.794
+print('df=',df)
+speedEachTrial = df['speedThisTrial']
+print('\ndtypes=',speedEachTrial.dtypes ) #object means it's probably a string, which probably happened because didn't complete all trials
+#Need to convert from string to number
+print('trialNum=',trialNum)
+speedEachTrial = speedEachTrial
+#maxX = speedEachTrial.nlargest(1).iloc[0]
+#print('maxX with nlargest=',maxX)
+maxX = speedEachTrial.max()
+plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
+colors='rgby'
+paramsEachCond = list()
 
 #Fit logistic regressions
-for cond in mainCondsDf: #Calculate staircase results
-    print('condition about to do logistic regression on = ', cond)
+for condi, cond in mainCondsDf.iterrows():
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
-    maskForThisCond = (df['numTargets'] == 2) & (df['numObjectsInRing'] == 4)
+    maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
+    condLabelForPlot= str(cond['numTargets']) + 'targets,' + str(cond['numObjects']) + 'objs'
+    all_false = (~maskForThisCond).all()
+    if all_false:
+        print('No trials available for condition ',cond, 'so stopping plotting.')
+        break
+
     dataThisCond =  df[ maskForThisCond  ]
-    
+
+    #Aggregate data into percent correct for plotting actual data
+    grouped_df = dataThisCond.groupby(['speedThisTrial']).agg(
+        pctCorrect=('correctForFeedback', 'mean'),
+        n=('correctForFeedback', 'count')
+    )
+    aggregatedDf = grouped_df.reset_index()
+
+    # plot points
+    pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
+    points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
+        c= colors[condi], label = condLabelForPlot,
+        zorder=10,  # make sure the points plot on top of the line
+        )    
+
+    #Get variables for logistic regression fit
     X = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = dataThisCond['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
     print('X=',X)
     print('y=',y, 'type(y)=',type(y))
-    
-    # add an extra column of ones to act as the bias (intercept?) term in the model
-    X = np.hstack((np.ones((X.shape[0], 1)), X))
-    # initialize theta (regression coefficients?) to zeros
-    theta = np.zeros((X.shape[1], 1))
-    #fit
-    parameters = logisticR.fit(X, y, theta)
-    print('parameters=',parameters)
-    
-    #predict
-    mypredicted = logisticR.predict(X,parameters)
-    print('logistic regression-predicted values=', mypredicted)
 
-    # Create a new column 'predicted' and assign the values from mypredicted
-    # to the rows matching the condition
-    df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
+    parametersGuess = [1,-2]
 
-print('mainCondsDf=',mainCondsDf)
+    #fit data with logistic regression
+    with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
+        warnings.filterwarnings('error')
+        try:
+            parameters = logisticR.fit(x, y, parametersGuess)
+            fitSucceeded = True
+        except Warning as e:
+            print('error when doing logistic fit:', e)
+            fitSucceeded = False
+            
+    #predict psychometric curve from logistic regression
+    if fitSucceeded:
+        paramsEachCond.append(parameters)
+        mypredicted = logisticR.predict(x,parameters)
+        #print('logistic regression-predicted values=', mypredicted)
+        # Create a new column 'predicted' and assign the values from mypredicted
+        # to the rows matching the condition
+        df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
-pylab.subplot(111) #1 row, 1 column, which panel
-title = 'circle = mean of final reversals'
+        xForCurve = np.arange(0,1.6,.02)
+        xForCurve = pd.DataFrame(xForCurve)
+        predicted = logisticR.predict(xForCurve, parameters)
+        predicted = predicted.flatten()
+        plt.plot( xForCurve, predicted, colors[condi]+'-' )
+
+plt.legend()
+#print('paramsEachCond=',paramsEachCond)
+title = 'Data and logistic regression fit'
+""" autopilot = True; simulateObserver = True
 if autopilot and simulateObserver:
-    title += 'triangle = true threshold'
-pylab.title(title)
-pylab.xlabel("speed (rps)")
-pylab.ylabel("Percent correct")
-
+    title += 'triangle = true threshold' """
+plt.title(title)
+plt.show()
+outputFile = fileName + '.pdf' #os.path.join(fileName, 'last.pdf')
+plt.savefig(outputFile)
 
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
         shellCmd = 'osascript -e '+applescript
         os.system(shellCmd)
+print('Got to the end of the program and now quitting normally.')
 core.quit()

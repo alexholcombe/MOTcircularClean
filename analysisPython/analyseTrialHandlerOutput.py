@@ -3,13 +3,39 @@ import pandas as pd
 import numpy as np
 import itertools #to calculate all subsets
 import matplotlib.pyplot as plt
-import warnings
+import warnings, os
 
 #df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
 #groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
 
-df = pd.read_table('exampleTrialHandlerExportData4trialsPerCond.tsv')
+fname = 'exampleTrialHandlerAbortedSession13trials.tsv' # 'exampleTrialHandlerExportData4trialsPerCond.tsv' #'exampleTrialHandlerExportData1trialPerCond.tsv'
+directory = 'dataExamples'
+df = pd.read_table( os.path.join(directory,fname) )
 #exampleTrialHandlerExportData1trialPerCond.tsv for data where fit fails
+
+#If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
+# Create a boolean mask for where 'speedThisTrial' is '--'
+dashes_mask = (df['speedThisTrial'] == '--')
+all_false = (~dashes_mask).all()
+if all_false:
+    numLegitTrials = len(df)
+    print('Session appears to have completed (',len(df),'trials), because no double-dashes ("--") appear in the file')
+else:
+    # Find the first True in the mask, which is the first trial that didn't complete
+    first_row_with_dashes_num = dashes_mask.idxmax()
+    numLegitTrials = first_row_with_dashes_num
+    print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
+    #Throw away all the non-legitimate trials
+    df = df[:numLegitTrials]
+    print('Completed portion of session=',df)
+    if numLegitTrials < 2:
+        print('Forget it, I cannot analyze a one-trial experiment')
+        quit()
+    # Convert to numeric, forcing errors to NaN
+    df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
+    df['numTargets'] = pd.to_numeric(df['numTargets'])
+    df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
+    df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
 
 try: 
     #from analysisPython 
@@ -50,6 +76,7 @@ for index, cond in mainCondsDf.iterrows():
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
+    condLabelForPlot= str(cond['numTargets']) + 'targets,' + str(cond['numObjects']) + 'objs'
     dataThisCond =  df[ maskForThisCond  ]
 
     #Aggregate data into percent correct for plotting actual data
@@ -63,7 +90,7 @@ for index, cond in mainCondsDf.iterrows():
     # plot points
     pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
-        c= colors[index], 
+        c= colors[index], label = condLabelForPlot,
         zorder=10,  # make sure the points plot on top of the line
         )
 
@@ -93,16 +120,19 @@ for index, cond in mainCondsDf.iterrows():
         # to the rows matching the condition
         df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
-        xForCurve = np.arange(0,1.6,.02)
+        xForCurve = np.arange(0,1.7,.02)
         xForCurve = pd.DataFrame(xForCurve)
         predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
         predicted = predicted.flatten()
         plt.plot( xForCurve, predicted, colors[index]+'-' )
 
-print('paramsEachCond=',paramsEachCond)
-title = 'circle = mean of final reversals'
-autopilot = True; simulateObserver = True
+ 
+plt.legend()
+
+#print('paramsEachCond=',paramsEachCond)
+title = 'Data and logistic regression fit'
+""" autopilot = True; simulateObserver = True
 if autopilot and simulateObserver:
-    title += 'triangle = true threshold'
+    title += 'triangle = true threshold' """
 plt.title(title)
 plt.show()
