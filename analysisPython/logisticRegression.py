@@ -43,9 +43,12 @@ def fit(x, y, initialParametersGuess):
     initialParams = np.array([  [initialParametersGuess[0]], 
                                  [initialParametersGuess[1]]  ])
 
-    opt_weights = fmin_tnc(func=cost_function, x0=initialParams,
-                  fprime=gradient,args=(X, y.flatten()))
-    return opt_weights[0]
+    result = fmin_tnc(func=cost_function, x0=initialParams,
+                  fprime=gradient,
+                  args=(X, y.flatten()),
+                  disp=0  )   # 1=output final results, 2=additional info
+    optimized_weights = result[0]
+    return optimized_weights
 
 def predict(x,params):
     x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
@@ -65,7 +68,8 @@ def predict(x,params):
 if __name__ == "__main__":  #executeable example of using these functions
 
     # load your data using pandas
-    data = pd.read_table('some_data.tsv')
+    file = os.path.join('dataExamples','some_data.tsv')
+    data = pd.read_table(file)
 
     # assuming the last column is the target and the rest are features
     x = data['speedThisTrial'] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
