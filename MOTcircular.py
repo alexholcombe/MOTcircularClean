@@ -5,15 +5,13 @@
 ### For setup of new experiment variant, variables to consider: 
 ### trialDurMin, trackVariableIntervMax
 ##############
-import psychopy.info
 from psychopy import sound, monitors, logging, visual, data, core
-import psychopy.gui, psychopy.event
-import numpy as np
-import pandas as pd 
+import psychopy.gui, psychopy.event, psychopy.info
+import numpy as np, pandas as pd 
 import itertools #to calculate all subsets
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
-import time, random, sys, platform, os, gc, io, pandas
+import time, random, sys, platform, os, gc, io, warnings
 import matplotlib.pyplot as plt
 import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
@@ -228,14 +226,14 @@ else:
     print('"dataRaw" directory does not exist, so saving data in present working directory')
     dataDir='.'
 expname = ''
-fileName = dataDir+'/'+subject+ '_' + expname+timeAndDateStr
+datafileName = dataDir+'/'+subject+ '_' + expname+timeAndDateStr
 if not demo and not exportImages:
-    dataFile = open(fileName+'.txt', 'w')  # sys.stdout
+    dataFile = open(datafileName+'.tsv', 'w')  # sys.stdout
     import shutil
     #Create a copy of this actual code so we know what exact version of the code was used for each participant
-    ok = shutil.copy2(sys.argv[0], fileName+'.py') # complete target filename given
+    ok = shutil.copy2(sys.argv[0], datafileName+'.py') # complete target filename given
     #print("Result of attempt to copy = ", ok)    
-    logF = logging.LogFile(fileName+'.log', 
+    logF = logging.LogFile(datafileName+'.log', 
         filemode='w',#if you set this to 'a' it will append instead of overwriting
         level=logging.INFO)#errors, data and warnings will be sent to this logfile
 if demo or exportImages: 
@@ -365,8 +363,8 @@ except Exception as e:
 publishedThreshes = publishedEmpiricalThreshes.getAvgMidpointThreshes()
 publishedThreshes = publishedThreshes[['numTargets', 'HzAvgPreviousLit']] #only want average of previous literature
 
-mainCondsDf = pandas.DataFrame( mainCondsInfo )
-mainCondsDf = pandas.merge(mainCondsDf, publishedThreshes, on='numTargets', how='left')
+mainCondsDf = pd.DataFrame( mainCondsInfo )
+mainCondsDf = pd.merge(mainCondsDf, publishedThreshes, on='numTargets', how='left')
 mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCondsDf['numObjects']
 mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)
 print('mainCondsDf')
@@ -1390,8 +1388,7 @@ if doStaircase: #report staircase results
         mainCondsDf.at[stairI, 'meanReversal'] = meanOfFinalReversals  # Indexing is 0-based in Python, so the 4th row is at index 3
     
     print('About to plot staircases')
-    #plot staircases
-    plt.subplot(111) #1 row, 1 column, which panel
+    plt.subplot(121) #1 row, 1 column, which panel
     title = 'circle = mean of final reversals'
     if autopilot and simulateObserver:
         title += '; triangle = true threshold'
@@ -1399,8 +1396,8 @@ if doStaircase: #report staircase results
     plt.xlabel("staircase trial")
     plt.ylabel("speed (rps)")
 
+    colors = 'grby'
     for staircase in staircases:
-        colors = 'grby'
         stairI = staircases.index(staircase)
         colorThis = colors[stairI]
         print('About to get intensities this staircase')
@@ -1415,15 +1412,16 @@ if doStaircase: #report staircase results
             plt.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
             #plot correct answer
             plt.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
-    plt.show()
     # save a vector-graphics format for future
     figDir = 'analysisPython'
-    outputFile = os.path.join(figDir, 'lastStaircases.pdf') #'lastStaircases.pdf'
+    outputFile = os.path.join(figDir, 'lastStaircases.pdf') #Don't know why it saves as empty
     plt.savefig(outputFile)
+    plt.show()
 
 
-#Plot percent correct by condition and speed for all trials. 
-df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
+#Plot percent correct by condition and speed for all trials.
+trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
+df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
 #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
 # Create a boolean mask for where 'speedThisTrial' is '--'
 dashes_mask = (df['speedThisTrial'] == '--')
@@ -1450,14 +1448,17 @@ else:
 #Finished clean-up of dataframe that results from incomplete session
 
 # set up plot
-plt.subplot(111) #122
+if doStaircase:
+    plt.subplot(122) #Because already plotted staircases above
+else:
+    plt.subplot(111)
 #plt.xlabel("speed (rps)")
 plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
 threshVal = 0.794
 print('df=',df)
 speedEachTrial = df['speedThisTrial']
-print('\ndtypes=',speedEachTrial.dtypes ) #object means it's probably a string, which probably happened because didn't complete all trials
+#print('\ndtypes=',speedEachTrial.dtypes ) #object means it's probably a string, which probably happened because didn't complete all trials
 #Need to convert from string to number
 print('trialNum=',trialNum)
 speedEachTrial = speedEachTrial
@@ -1465,7 +1466,6 @@ speedEachTrial = speedEachTrial
 #print('maxX with nlargest=',maxX)
 maxX = speedEachTrial.max()
 plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
-colors='rgby'
 paramsEachCond = list()
 
 #Fit logistic regressions
@@ -1532,13 +1532,12 @@ for condi, cond in mainCondsDf.iterrows():
 plt.legend()
 #print('paramsEachCond=',paramsEachCond)
 title = 'Data and logistic regression fit'
-""" autopilot = True; simulateObserver = True
-if autopilot and simulateObserver:
-    title += 'triangle = true threshold' """
+#if autopilot and simulateObserver:
+#    title += 'triangle = true threshold'
 plt.title(title)
-plt.show()
 outputFile = fileName + '.pdf' #os.path.join(fileName, 'last.pdf')
 plt.savefig(outputFile)
+plt.show()
 
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on

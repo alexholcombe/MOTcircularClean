@@ -5,10 +5,9 @@ import itertools #to calculate all subsets
 import matplotlib.pyplot as plt
 import warnings, os
 
-#df = trials.saveAsWideText("tempData",delim='\t')  #Only calling this to get the dataframe df
-#groupBy dataframe by speedThisTrial, numTargets, numObjectsInRing, correctForFeedback 
+#df = trials.saveAsWideText("tempData",delim='\t')  #In experiment I only calling this to get the dataframe df
 
-fname = 'exampleTrialHandlerAbortedSession13trials.tsv' # 'exampleTrialHandlerExportData4trialsPerCond.tsv' #'exampleTrialHandlerExportData1trialPerCond.tsv'
+fname = 'exampleTrialHandlerExportData4trialsPerCond.tsv' #'exampleTrialHandlerAbortedSession13trials.tsv'  #'exampleTrialHandlerExportData1trialPerCond.tsv'
 directory = 'dataExamples'
 df = pd.read_table( os.path.join(directory,fname) )
 #exampleTrialHandlerExportData1trialPerCond.tsv for data where fit fails
@@ -36,7 +35,8 @@ else:
     df['numTargets'] = pd.to_numeric(df['numTargets'])
     df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
     df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
-
+#Finished clean-up of dataframe that results from incomplete session
+    
 try: 
     #from analysisPython 
     import logisticRegression as logisticR
@@ -59,6 +59,14 @@ combinations = list(itertools.product(numTargets, numObjsInRing))
 # Create the DataFrame with all combinations
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 print('mainCondsDf=',mainCondsDf)
+
+# # set up blank staircases plot, because will have that in real experiment program
+# plt.subplot(121) #(122)
+# plt.subplot(111) #1 row, 1 column, which panel
+# plt.title('staircases')
+# plt.xlabel("staircase trial")
+# plt.ylabel("speed (rps)")
+
 # set up plot
 plt.subplot(111) #(122)
 #plt.xlabel("speed (rps)")
