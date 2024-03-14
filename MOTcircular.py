@@ -13,9 +13,13 @@ from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
 import time, random, sys, platform, os, gc, io, warnings
 import matplotlib.pyplot as plt
-import pylink #to turn off eyetracker graphics environment after eyetracker calibration
 import helpersAOH
 from helpersAOH import openMyStimWindow
+try:
+    import pylink #to turn off eyetracker graphics environment after eyetracker calibration. pylink comes from Eyelink Developers Kit download
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import pylink. pylink does not come with standard PsychoPy download, you have to download and install the Eyelink Developers Kit.')
 try: 
     from analysisPython import logisticRegression as logisticR
 except Exception as e:
@@ -32,6 +36,11 @@ try:
 except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+try:
+    from theory import publishedEmpiricalThreshes #imports from theory subfolder.
+except Exception as e:
+    print("An exception occurred:",str(e))
+    print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
 eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
@@ -340,6 +349,7 @@ if useSound:
     corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
 
 stimList = []
+doStaircase = True
 # temporalfrequency limit test
 numTargets =        [2,                 3] #[2]
 numObjsInRing =     [4,                 8] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
@@ -354,12 +364,6 @@ combinations = list(itertools.product(numTargets, numObjsInRing))
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
 
-try:
-    from theory import publishedEmpiricalThreshes #imports from theory subfolder.
-except Exception as e:
-    print("An exception occurred:",str(e))
-    print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
-
 publishedThreshes = publishedEmpiricalThreshes.getAvgMidpointThreshes()
 publishedThreshes = publishedThreshes[['numTargets', 'HzAvgPreviousLit']] #only want average of previous literature
 
@@ -369,30 +373,30 @@ mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCon
 mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)
 print('mainCondsDf')
 print(mainCondsDf) #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
-                           
+                        
 #From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
 speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   # Preliminary list of thresholds for each condition.
-factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
-#these are the factors to multiply by each preliminarily-tested threshold
-speedsEachNumTargetsNumObjects = []
-for i in range(0, len(speedsPrelimiExp), 2):
-    sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
-    sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
-    speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
-#Old way of setting all speeds manually:
-#speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-#                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
+if not doStaircase: #If not staircase, seeds will try to bracket threshold estimated from preliminary trials
+    factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
+    #these are the factors to multiply by each preliminarily-tested threshold
+    speedsEachNumTargetsNumObjects = []
+    for i in range(0, len(speedsPrelimiExp), 2):
+        sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
+        sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
+        speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
+    #Old way of setting all speeds manually:
+    #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
+    #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
 
 #don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
-doStaircase = True
-maxTrialsPerStaircase = 60
+maxTrialsPerStaircase = 500 #Just an unreasonably large number so that the experiment won't stop before the number of trials set by the trialHandler is finished
 staircases = []
 #Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
 if doStaircase: #create the staircases
     for stairI in range(len(mainCondsDf)): #one staircase for each main condition
         descendingPsychometricCurve = True
-        #give them all the same starting value of 50% of the average threshold speed across conditions
+        #give them all the same starting value of 50% of the average threshold speed across conditions found by previous literature
         startVal = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
         startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
         print('staircase startVal=',startVal,' startValInternal=',startValInternal)
@@ -425,7 +429,6 @@ if doStaircase: #create the staircases
             nTrials = maxTrialsPerStaircase)
     
         numPreStaircaseTrials = 0
-
         #staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
         print('Adding this staircase to list')
         staircases.append(staircase)
@@ -1132,7 +1135,7 @@ while trialNum < trials.nTotal and expStop==False:
             else:
                 speedThisTrial = thisTrial['speed']
         currentSpeed = speedThisTrial #no speed ramp
-        print('currentSpeed=',round(currentSpeed,2))
+        #print('currentSpeed=',round(currentSpeed,2))
         
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
@@ -1391,7 +1394,7 @@ if doStaircase: #report staircase results
     plt.subplot(121) #1 row, 1 column, which panel
     title = 'circle = mean of final reversals'
     if autopilot and simulateObserver:
-        title += '; triangle = true threshold'
+        title += '\ntriangle = true threshold'
     plt.title(title)
     plt.xlabel("staircase trial")
     plt.ylabel("speed (rps)")
@@ -1400,14 +1403,14 @@ if doStaircase: #report staircase results
     for staircase in staircases:
         stairI = staircases.index(staircase)
         colorThis = colors[stairI]
-        print('About to get intensities this staircase')
+        #print('About to get intensities this staircase')
         intensities = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
         if len(intensities)>0:
             plt.plot(intensities, colorThis+'-')
         #Calculate correct answer, to help visualize if staircase is converging on the right place
         actualThresh = staircase.extraInfo['midpointThreshPrevLit']
         if len(staircase.reversalIntensities)>0: #plot mean of last reversals
-            print('About to plot mean this staircase')
+            #print('About to plot mean this staircase')
             lastTrial = len(staircase.intensities)
             plt.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
             #plot correct answer
@@ -1416,10 +1419,8 @@ if doStaircase: #report staircase results
     figDir = 'analysisPython'
     outputFile = os.path.join(figDir, 'lastStaircases.pdf') #Don't know why it saves as empty
     plt.savefig(outputFile)
-    plt.show()
 
-
-#Plot percent correct by condition and speed for all trials.
+#Plot percent correct by condition and speed for all trials, and then try to fit logistic regression.
 trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
 df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
 #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
@@ -1436,7 +1437,7 @@ else:
     print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
     #Throw away all the non-legitimate trials
     df = df[:numLegitTrials]
-    print('Completed portion of session=',df)
+    #print('Completed portion of session=',df)
     if numLegitTrials < 2:
         print('Forget it, I cannot analyze a one-trial experiment')
         quit()
@@ -1452,11 +1453,9 @@ if doStaircase:
     plt.subplot(122) #Because already plotted staircases above
 else:
     plt.subplot(111)
-#plt.xlabel("speed (rps)")
 plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
 threshVal = 0.794
-print('df=',df)
 speedEachTrial = df['speedThisTrial']
 #print('\ndtypes=',speedEachTrial.dtypes ) #object means it's probably a string, which probably happened because didn't complete all trials
 #Need to convert from string to number
@@ -1473,7 +1472,7 @@ for condi, cond in mainCondsDf.iterrows():
     #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
-    condLabelForPlot= str(cond['numTargets']) + 'targets,' + str(cond['numObjects']) + 'objs'
+    condLabelForPlot= str( round(cond['numTargets']) ) + 'targets,' + str( round(cond['numObjects']) ) + 'objs'
     all_false = (~maskForThisCond).all()
     if all_false:
         print('No trials available for condition ',cond, 'so stopping plotting.')
@@ -1496,24 +1495,25 @@ for condi, cond in mainCondsDf.iterrows():
         )    
 
     #Get variables for logistic regression fit
-    X = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
+    x = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = dataThisCond['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
-    print('X=',X)
-    print('y=',y, 'type(y)=',type(y))
+    #print('y=',y, 'type(y)=',type(y))
 
     parametersGuess = [1,-2]
 
     #fit data with logistic regression
-    with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
-        warnings.filterwarnings('error')
-        try:
-            parameters = logisticR.fit(x, y, parametersGuess)
-            fitSucceeded = True
-        except Warning as e:
-            print('error when doing logistic fit:', e)
-            fitSucceeded = False
-            
+    fitSucceeded = False
+    if len(x) > 20: #don't even try unless have a bunch of trials for this conditino
+        with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
+            warnings.filterwarnings('error')
+            try:
+                parameters = logisticR.fit(x, y, parametersGuess)
+                fitSucceeded = True
+            except Warning as e:
+                print('error when doing logistic fit:', e)
+                fitSucceeded = False
+                
     #predict psychometric curve from logistic regression
     if fitSucceeded:
         paramsEachCond.append(parameters)
@@ -1535,7 +1535,7 @@ title = 'Data and logistic regression fit'
 #if autopilot and simulateObserver:
 #    title += 'triangle = true threshold'
 plt.title(title)
-outputFile = fileName + '.pdf' #os.path.join(fileName, 'last.pdf')
+outputFile = datafileName + '.pdf' #os.path.join(fileName, 'last.pdf')
 plt.savefig(outputFile)
 plt.show()
 
