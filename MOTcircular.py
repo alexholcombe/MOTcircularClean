@@ -1430,7 +1430,11 @@ dashes_mask = (df['speedThisTrial'] == '--')
 all_false = (~dashes_mask).all()
 if all_false:
     numLegitTrials = len(df)
-    print('Session appears to have completed (',len(df),'trials), because no double-dashes ("--") appear in the file')
+    print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
+    print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
+    #But if I run autopilot with 10 trials even though it finishes ,I sometimes get object type, whereas with 1 autopilot trial I don't.
+    #And when I open the file afterward with analyseTrialHandlerOutput.py, it works fine and has type float64
+    #Need to convert from string to number
 else:
     # Find the first True in the mask, which is the first trial that didn't complete
     first_row_with_dashes_num = dashes_mask.idxmax()
@@ -1442,11 +1446,11 @@ else:
     if numLegitTrials < 2:
         print('Forget it, I cannot analyze a one-trial experiment')
         quit()
-    # Convert to numeric, forcing errors to NaN
-    df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
-    df['numTargets'] = pd.to_numeric(df['numTargets'])
-    df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
-    df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
+# Convert to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
+df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
+df['numTargets'] = pd.to_numeric(df['numTargets'])
+df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
+df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
 #Finished clean-up of dataframe that results from incomplete session
 
 # set up plot
@@ -1458,10 +1462,8 @@ plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
 threshVal = 0.794
 speedEachTrial = df['speedThisTrial']
-#print('\ndtypes=',speedEachTrial.dtypes ) #object means it's probably a string, which probably happened because didn't complete all trials
-#Need to convert from string to number
+
 print('trialNum=',trialNum)
-speedEachTrial = speedEachTrial
 #maxX = speedEachTrial.nlargest(1).iloc[0]
 #print('maxX with nlargest=',maxX)
 maxX = speedEachTrial.max()

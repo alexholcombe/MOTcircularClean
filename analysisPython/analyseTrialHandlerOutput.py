@@ -7,7 +7,7 @@ import warnings, os
 
 #df = trials.saveAsWideText("tempData",delim='\t')  #In experiment I only calling this to get the dataframe df
 
-fname = 'exampleTrialHandlerExportData4trialsPerCond.tsv' #'exampleTrialHandlerAbortedSession13trials.tsv'  #'exampleTrialHandlerExportData1trialPerCond.tsv'
+fname = 'auto_14Mar2024_15-38trialHandler10trialsPerCond.tsv' #'exampleTrialHandlerExportData4trialsPerCond.tsv' #'exampleTrialHandlerAbortedSession13trials.tsv'  #'exampleTrialHandlerExportData1trialPerCond.tsv'
 directory = 'dataExamples'
 df = pd.read_table( os.path.join(directory,fname) )
 #exampleTrialHandlerExportData1trialPerCond.tsv for data where fit fails
@@ -19,6 +19,7 @@ all_false = (~dashes_mask).all()
 if all_false:
     numLegitTrials = len(df)
     print('Session appears to have completed (',len(df),'trials), because no double-dashes ("--") appear in the file')
+    print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
 else:
     # Find the first True in the mask, which is the first trial that didn't complete
     first_row_with_dashes_num = dashes_mask.idxmax()
