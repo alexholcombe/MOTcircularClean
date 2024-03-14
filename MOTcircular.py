@@ -308,7 +308,7 @@ optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colo
 clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
 clickedRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
-clickedRegion.setColor((0,1,-1)) #show in yellow
+clickedRegion.setColor((-.1,.8,-1)) #show in yellow
 
 circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=6,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
@@ -417,7 +417,7 @@ if doStaircase: #create the staircases
         if minSpeedForStaircase > maxSpeedForStaircase:
             #Swap values of the two variables
             minSpeedForStaircase, maxSpeedForStaircase = maxSpeedForStaircase, minSpeedForStaircase
-        print('minSpeedForStaircase=',minSpeedForStaircase, 'maxSpeedForStaircase=',maxSpeedForStaircase)
+        #print('for internals, minSpeedForStaircase=',minSpeedForStaircase, 'maxSpeedForStaircase=',maxSpeedForStaircase)
         staircase = data.StairHandler(
             extraInfo = condition,
             startVal=startValInternal,
@@ -488,8 +488,8 @@ for numObjs in numObjsInRing: #set up experiment design
                                 'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
 
 trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
-print('num conditions - len(stimList) =',len(stimList))
-print('stimList = ',stimList)
+print('len(stimList), which lis the list of conditions, is =',len(stimList))
+#print('stimList = ',stimList)
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
 msg = 'numtrials='+ str(trials.nTotal)+', trialDurMin= '+str(trialDurMin)+ ' trackVariableIntervMax= '+ str(trackVariableIntervMax) + 'refreshRate=' +str(refreshRate)     
@@ -1126,9 +1126,9 @@ while trialNum < trials.nTotal and expStop==False:
             staircaseThis = staircases[condnum]
             speedThisInternal = staircaseThis.next()
             speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
-            print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
+            #print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
         else: #manual occasional speed, probably ultra-slow to estimate lapseRate
-            print('Non-staircase slow speed!, speedThisTrial=',thisTrial['speed'], ' will pick a random one')
+            #print('Non-staircase slow speed!, speedThisTrial=',thisTrial['speed'], ' will pick a random one')
             if len(thisTrial['speed']) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
                 # while also trying to have overwhelming majority be staircase
                 speedThisTrial = random.choice(thisTrial['speed'])
@@ -1391,6 +1391,7 @@ if doStaircase: #report staircase results
         mainCondsDf.at[stairI, 'meanReversal'] = meanOfFinalReversals  # Indexing is 0-based in Python, so the 4th row is at index 3
     
     print('About to plot staircases')
+    plt.rcParams["figure.figsize"] = (16, 7) #Note this will determine the size of all subsequently created plots.
     plt.subplot(121) #1 row, 1 column, which panel
     title = 'circle = mean of final reversals'
     if autopilot and simulateObserver:

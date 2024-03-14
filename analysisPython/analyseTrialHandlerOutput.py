@@ -60,6 +60,9 @@ combinations = list(itertools.product(numTargets, numObjsInRing))
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 print('mainCondsDf=',mainCondsDf)
 
+plt.rcParams["figure.figsize"] = (16, 7) #Note that this will determine the size of all subsequently created plots.
+#plt.figure(figsize=(18, 10))
+
 # # set up blank staircases plot, because will have that in real experiment program
 # plt.subplot(121) #(122)
 # plt.subplot(111) #1 row, 1 column, which panel
