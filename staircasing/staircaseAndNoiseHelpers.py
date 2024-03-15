@@ -151,26 +151,24 @@ def fromStaircaseAggregateIntensityPcorrN(staircase,descendingPsycho): #this is 
 #questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
 import questplus.psychometric_function #for weibull equation and inverse
 
-#questplus helpers are incorporated into psychopy from https://github.com/hoechenberger/questplus
-from questplus.psychometric_function import weibull 
 
 # create an idealized participant (weibull function)
-def calc_pCorrect(intensity,guessRate,thresh,descendingPsychometricCurve):
+def calc_pCorrect(intensity,chanceRate,lapseRate,thresh,descendingPsychometricCurve):
     #pCorrEachTrial = guessRate*.5 + (1-guessRate)* 1. / (1. + np.exp(-20*centeredOnZero)) #sigmoidal probability
     slope = 2
     if descendingPsychometricCurve:
         slope = -1*slope
         #intensity = 100-intensity
     
-    pCorr = weibull(intensity=intensity, threshold=thresh,
-                        slope=slope, lower_asymptote=guessRate, lapse_rate=0.00,
+    pCorr = questplus.psychometric_function.weibull(intensity=intensity, threshold=thresh,
+                        slope=slope, lower_asymptote=chanceRate, lapse_rate=lapseRate,
                         scale='linear').item()
                         
     return pCorr
 
 # Use idealized participant to get correct/incorrect on an individual trial
-def simulate_response(intensity,guessRate,thresh,descendingPsychometricCurve):
-    pCorr = calc_pCorrect(intensity,guessRate,thresh,descendingPsychometricCurve)
+def simulate_response(intensity,chanceRate,lapseRate,thresh,descendingPsychometricCurve):
+    pCorr = calc_pCorrect(intensity,chanceRate,lapseRate,thresh,descendingPsychometricCurve)
     dice_roll = np.random.random()
     response = int(dice_roll <= pCorr)
     return response
@@ -287,12 +285,12 @@ def plotDataAndPsychometricCurve(staircase,fit,descendingPsycho,threshVal):
         ax2.tick_params(axis='x',which='minor',bottom='off')
         
 
-
     
 if __name__ == "__main__":  #executable example of using these functions
     #Test staircase functions
     descendingPsychometricCurve = True
     guessRate = 0.5
+    lapseRate = 0.05
     actualThresh = 40
     threshCriterion = 0.794 #same as what 1 up, 3 down staircase converges on
     staircaseTrials = 400
@@ -339,7 +337,7 @@ if __name__ == "__main__":  #executable example of using these functions
         intensityThisTrial = outOfStaircase(intensityThisTrial, staircase, descendingPsychometricCurve)
         
         #Simulate observer for this trial's intensity
-        correct = simulate_response(intensityThisTrial,guessRate,actualThresh,descendingPsychometricCurve)
+        correct = simulate_response(intensityThisTrial,guessRate,lapseRate,actualThresh,descendingPsychometricCurve)
         staircase.addResponse( correct )
         trialnum = trialnum + 1
     

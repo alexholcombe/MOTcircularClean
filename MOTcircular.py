@@ -57,7 +57,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; simulateObserver=True; showOnlyOneFrameOfStimuli = True
+autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -205,7 +205,7 @@ if not autopilot:
     dlgLabelsOrdered.append('subject')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
-pctCompletedBreak = 50
+pctCompletedBreak = 20
 myDlg.addText(refreshMsg1, color='Black')
 if refreshRateWrong:
     myDlg.addText(refreshMsg2, color='Red')
@@ -1170,7 +1170,7 @@ while trialNum < trials.nTotal and expStop==False:
     #End of trial stimulus loop!
     
     if eyetracking:
-        my_tracker.stopEyeTracking() #This seems to work immediately and cause the eyetracking PC to save the EDF file to its drive
+        my_tracker.stopEyeTracking() 
     #clear mouse buffer in preparation for response, which may involve clicks
     psychopy.event.clearEvents(eventType='mouse')
 
@@ -1270,14 +1270,15 @@ while trialNum < trials.nTotal and expStop==False:
     print(numCasesInterframeLong, file=dataFile)
 
     if autopilot and doStaircase and simulateObserver:
-        guessRate = 1.0 / thisTrial['numObjectsInRing']
+        chanceRate = 1.0 / thisTrial['numObjectsInRing']
         rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
                                   (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
         condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
         staircaseThis = staircases[condnum] #needed to look this up because on some trials, staircase is possibly not used (slow speed to estimate lapserate)
         threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
-        #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'guessRate=',guessRate,'threshold=',threshold)
-        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,guessRate,threshold,descendingPsychometricCurve)
+        lapseRate = .05
+        #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'chanceRate=',chanceRate,'lapseRate=',lapseRate,'threshold=',threshold)
+        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,chanceRate,lapseRate,threshold,descendingPsychometricCurve)
         orderCorrect = correct_sim*3 #3 is fully correct
         #print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
         
@@ -1303,26 +1304,31 @@ while trialNum < trials.nTotal and expStop==False:
         # add the data to the staircase so it can calculate the next speed
         staircaseThis.addResponse(correctForFeedback)
     
+    breakTrialNum = round( pctCompletedBreak/100. * trials.nTotal )
     trialNum+=1
     waitForKeyPressBetweenTrials = False
     if trialNum< trials.nTotal:
-        if trialNum%( max(trials.nTotal/4,1) ) ==0:  #have to enforce at least 1, otherwise will modulus by 0 when #trials is less than 4
-            pctDone = round(    (1.0*trialNum) / (1.0*trials.nTotal)*100,  0  )
-            NextRemindPctDoneText.setText( str(pctDone) + '% complete' )
-            NextRemindCountText.setText( str(trialNum) + ' of ' + str(trials.nTotal)     )
+        pctDone =  (1.0*trialNum) / (1.0*trials.nTotal)*100
+        NextRemindPctDoneText.setText( str(round(pctDone)) + '% complete' )
+        NextRemindCountText.setText( str(trialNum) + ' of ' + str(trials.nTotal)     )
+        if trialNum == breakTrialNum and trials.nTotal > 6 and trialNum > 2: #Only have breaks if more than 6 trials
+            breakTrial = True
+        else: breakTrial = False
+        if breakTrial:
             for i in range(5):
                 myWin.flip(clearBuffer=True)
                 NextRemindPctDoneText.draw()
                 NextRemindCountText.draw()
         waitingForKeypress = False
-        if waitForKeyPressBetweenTrials:
+        if waitForKeyPressBetweenTrials or breakTrial:
             waitingForKeypress=True
             NextText.setText('Press "SPACE" to continue')
             NextText.draw()
             NextRemindCountText.draw()
-            NextRemindText.draw()
+            #NextRemindText.draw()
             myWin.flip(clearBuffer=True) 
-        else: core.wait(0.15)
+        else:
+            core.wait(0.15)
         while waitingForKeypress:
            if autopilot:
                 waitingForKeypress=False
