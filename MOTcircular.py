@@ -205,7 +205,7 @@ if not autopilot:
     dlgLabelsOrdered.append('subject')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
-pctCompletedBreak = 20
+pctCompletedBreaks = np.array([20,50])
 myDlg.addText(refreshMsg1, color='Black')
 if refreshRateWrong:
     myDlg.addText(refreshMsg2, color='Red')
@@ -1303,15 +1303,20 @@ while trialNum < trials.nTotal and expStop==False:
     if doStaircase and (thisTrial['speed']=='staircase'):
         # add the data to the staircase so it can calculate the next speed
         staircaseThis.addResponse(correctForFeedback)
-    
-    breakTrialNum = round( pctCompletedBreak/100. * trials.nTotal )
+
+    if trials.nTotal <= 10:
+        breakTrialNums = [] #Only have breaks if more than 10 trials
+    else: 
+        breakTrialNums = np.round( pctCompletedBreaks/100. * trials.nTotal )
+        breakTrialNums = breakTrialNums[breakTrialNums >= 3] #No point having a break before trial 3.
+        print('breakTrialNums=',breakTrialNums)
     trialNum+=1
     waitForKeyPressBetweenTrials = False
     if trialNum< trials.nTotal:
         pctDone =  (1.0*trialNum) / (1.0*trials.nTotal)*100
         NextRemindPctDoneText.setText( str(round(pctDone)) + '% complete' )
-        NextRemindCountText.setText( str(trialNum) + ' of ' + str(trials.nTotal)     )
-        if trialNum == breakTrialNum and trials.nTotal > 6 and trialNum > 2: #Only have breaks if more than 6 trials
+        NextRemindCountText.setText( str(trialNum) + ' of ' + str(trials.nTotal) )
+        if np.isin(trialNum, breakTrialNums): 
             breakTrial = True
         else: breakTrial = False
         if breakTrial:
