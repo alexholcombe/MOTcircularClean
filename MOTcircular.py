@@ -1301,15 +1301,14 @@ while trialNum < trials.nTotal and expStop==False:
     trials.addData('orderCorrect',orderCorrect)
     trials.addData('correctForFeedback',correctForFeedback)
     if doStaircase and (thisTrial['speed']=='staircase'):
-        # add the data to the staircase so it can calculate the next speed
-        staircaseThis.addResponse(correctForFeedback)
+        staircaseThis.addResponse(correctForFeedback) #add correct/incorrect to the staircase so it can calculate the next speed
 
     if trials.nTotal <= 10:
         breakTrialNums = [] #Only have breaks if more than 10 trials
     else: 
         breakTrialNums = np.round( pctCompletedBreaks/100. * trials.nTotal )
         breakTrialNums = breakTrialNums[breakTrialNums >= 3] #No point having a break before trial 3.
-        print('breakTrialNums=',breakTrialNums)
+        #print('breakTrialNums=',breakTrialNums)
     trialNum+=1
     waitForKeyPressBetweenTrials = False
     if trialNum< trials.nTotal:
