@@ -15,7 +15,9 @@ def usual_regression_part(theta, x):
     return np.dot(x, theta)
 
 def calcLogisticRegressionY(theta, x):
+    #First, just do the usual regression part of mx+b for all x's
     ys = usual_regression_part(theta, x)
+    #Then, apply the logistic function to each y, to transform it into a number (a probability) between 0 and 1
     return my_logistic( ys )
 
 def cost_and_gradient(theta, x, y):
@@ -34,11 +36,13 @@ def cost_and_gradient(theta, x, y):
             ) )
     
     #Understanding the gradient:
-    #The gradient is the derivative of the cost function with respect to the parameters
+    #The gradient is the derivative of the cost function with respect to the parameters.
+    #So, how does the cost function change as you change the parameters?
     #The prediction error is
-    #ChatGPT explains this multiplication by the x as "the larger the error and the larger the feature value, the larger the adjustment to the corresponding weight
+    #ChatGPT explains this multiplication by the x as "the larger the error and the larger the feature value, the larger the adjustment to the corresponding weight"
+    #I think that's because when x=0, the slope parameter(s) don't matter. But when x is large, the slope parameter(s) matter a lot.
     gradient = (1 / m) * np.dot(x.T, 
-                                my_logistic(usual_regression_part(theta, x)) - y
+                                calcLogisticRegressionY(theta, x) - y
                                 )
 
     return total_cost, gradient
