@@ -22,14 +22,24 @@ def cost_and_gradient(theta, x, y):
     #Can either return just the cost, or also the gradient
     #Return f and g, where f is the value of the function and g its gradient (a list of floats).
     m = x.shape[0]
+    #To understand the cost function, see https://towardsdatascience.com/understanding-logistic-regression-9b02c2aec102
+    #Recall that all data is in the form of 0s and 1s, so the cost function is just calculating the likelihood
+    # of a either a 1 (the first part of the expression) or a 0 (the second part of the expression, the 1-y part, which yields 1)
+    # And the probability of a 1 is just the predicted value, and the probability of a 0 is 1 - the predicted value
+    # Then you take the log of those probabilities, for convenience so you don't have to multiply them which yields ridiculously small values, and average them
     total_cost = ( -(1 / m) * 
         np.sum(
                 y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * 
                 np.log(   1 - calcLogisticRegressionY(theta, x)  )
             ) )
-    #
-
-    gradient = (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
+    
+    #Understanding the gradient:
+    #The gradient is the derivative of the cost function with respect to the parameters
+    #The prediction error is
+    #ChatGPT explains this multiplication by the x as "the larger the error and the larger the feature value, the larger the adjustment to the corresponding weight
+    gradient = (1 / m) * np.dot(x.T, 
+                                my_logistic(usual_regression_part(theta, x)) - y
+                                )
 
     return total_cost, gradient
 
