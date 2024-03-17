@@ -22,10 +22,13 @@ def cost_and_gradient(theta, x, y):
     #Can either return just the cost, or also the gradient
     #Return f and g, where f is the value of the function and g its gradient (a list of floats).
     m = x.shape[0]
-    total_cost = -(1 / m) * np.sum(
-        y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * np.log(
-            1 - calcLogisticRegressionY(theta, x)))
-    
+    total_cost = ( -(1 / m) * 
+        np.sum(
+                y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * 
+                np.log(   1 - calcLogisticRegressionY(theta, x)  )
+            ) )
+    #
+
     gradient = (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
 
     return total_cost, gradient
@@ -102,6 +105,8 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
+    plt.subplot(121)
+
     #plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
     #plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
@@ -114,7 +119,6 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
     # set up plot
-    plt.subplot(121)
     plt.xlabel("speed (rps)")
     plt.ylabel("Proportion correct")
 
@@ -123,16 +127,16 @@ if __name__ == "__main__":  #executeable example of using these functions
     maxSpeed = data['speedThisTrial'].max()
     plt.plot([0, 1.5*maxSpeed], [threshVal, threshVal], 'k--')  # horizontal dashed line
     #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # Error! because max(x) returns string:"speedThisTrial"
-    
+
+    plt.subplot(122)
+
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-        edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
-        zorder=10,  # make sure the points plot on top of the line
+        linewidths=1, c='k',
+        zorder=1,  # make sure the lines plot on top of the points
         )
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
-
-    plt.subplot(122)
 
     paramsDoubleA = [ 2*parameters[0], parameters[1] ]
     
