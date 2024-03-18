@@ -6,21 +6,26 @@ import matplotlib.pyplot as plt
 import os
 from scipy.optimize import fmin_tnc
 
-def my_logistic(x): 
-    return 1 / (1 + np.exp(-x))
+def my_logistic(x, chanceRate): 
+    #Calculate the conventional logistic function, which goes from zero to one
+    logistic_function_result = 1 / (1 + np.exp(-x))
+    #The chanceRate is the probability of a 1 in the worst case
+    #Rescale the logistic function to go from chanceRate to 1
+    answer = chanceRate + (1-chanceRate)*logistic_function_result
+    return answer
 
 def usual_regression_part(theta, x):
     #theta is the bias terms and regression coefficients
     #Multiply them by the x's, like in any regression
     return np.dot(x, theta)
 
-def calcLogisticRegressionY(theta, x):
+def calcLogisticRegressionY(theta, x, chanceRate):
     #First, just do the usual regression part of mx+b for all x's
     ys = usual_regression_part(theta, x)
     #Then, apply the logistic function to each y, to transform it into a number (a probability) between 0 and 1
-    return my_logistic( ys )
+    return my_logistic( ys, chanceRate )
 
-def cost_and_gradient(theta, x, y):
+def cost_and_gradient(theta, x, y, chanceRate):
     #Can either return just the cost, or also the gradient
     #Return f and g, where f is the value of the function and g its gradient (a list of floats).
     m = x.shape[0]
@@ -31,8 +36,8 @@ def cost_and_gradient(theta, x, y):
     # Then you take the log of those probabilities, for convenience so you don't have to multiply them which yields ridiculously small values, and average them
     total_cost = ( -(1 / m) * 
         np.sum(
-                y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * 
-                np.log(   1 - calcLogisticRegressionY(theta, x)  )
+                y * np.log(calcLogisticRegressionY(theta, x, chanceRate)) + (1 - y) * 
+                np.log(   1 - calcLogisticRegressionY(theta, x, chanceRate)  )
             ) )
     
     #Understanding the gradient:
@@ -43,7 +48,7 @@ def cost_and_gradient(theta, x, y):
     #I think that's because when x=0, the slope parameter(s) don't matter. But when x is large, the slope parameter(s) matter a lot.
     #The ".T" transposes x, 
     gradient = (1 / m) * np.dot(x.T, 
-                                calcLogisticRegressionY(theta, x) - y
+                                calcLogisticRegressionY(theta, x, chanceRate) - y
                                 )
 
     return total_cost, gradient
@@ -52,7 +57,7 @@ def cost_and_gradient(theta, x, y):
 #     m = x.shape[0]
 #     return (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
 
-def fit(x, y, initialParametersGuess):
+def fit(x, y, chanceRate, initialParametersGuess):
     x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
 
     # add an extra column of ones to act as the bias term in the model
@@ -67,12 +72,12 @@ def fit(x, y, initialParametersGuess):
                                  [initialParametersGuess[1]]  ])
 
     result = fmin_tnc( func=cost_and_gradient, x0=initialParams,
-                  args=(X, y.flatten()),
+                  args=(X, y.flatten(), chanceRate),
                   disp=0  )   # 1=output final results, 2=additional info
     optimized_weights = result[0]
     return optimized_weights
 
-def predict(x,params):
+def predict(x,chanceRate,params):
     x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
 
     if not isinstance(params, np.ndarray):
@@ -85,8 +90,7 @@ def predict(x,params):
     X = np.hstack(   ( onesForBiasTerm  , x)    )
 
     theta = params[:, np.newaxis]
-    return calcLogisticRegressionY(theta, X)
-
+    return calcLogisticRegressionY(theta, X, chanceRate)
 
 if __name__ == "__main__":  #executeable example of using these functions
 
@@ -99,16 +103,17 @@ if __name__ == "__main__":  #executeable example of using these functions
     x = data['speedThisTrial'] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
     y = data['correctForFeedback']
     y = y.values #because otherwise y is a Series for some reason
+    chanceRate = 1.0/4.0 #numObjects
 
     #print('y=',y, 'type(y)=',type(y))
     parametersGuess = [1,-2]
 
     #fit
-    parameters = fit(x, y, parametersGuess)
+    parameters = fit(x, y, chanceRate, parametersGuess)
     print('parameters=',parameters, 'type(parameters)=', type(parameters))
 
     #predict
-    predicted = predict(x,parameters)
+    predicted = predict(x,chanceRate,parameters)
     #print('predicted values=', predicted, 'type=',type(predicted))
     #print('End predicted values')
 
@@ -160,7 +165,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     #fix so doesnt have to be numpy array
     xForCurve = np.arange(0,1.5*maxSpeed,.02)
     xForCurve = pd.DataFrame(xForCurve)
-    predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
+    predictedDoubleA = predict(xForCurve, chanceRate, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
     #print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
     plt.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
@@ -169,7 +174,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     #fix so doesnt have to be numpy array
     paramsQuadrupleB = [ parameters[0], 4*parameters[1] ]
 
-    predictedQuadrupleB = predict(xForCurve, paramsQuadrupleB) # np.array(paramsDoubleA) )
+    predictedQuadrupleB = predict(xForCurve, chanceRate, paramsQuadrupleB) # np.array(paramsDoubleA) )
     predictedQuadrupleB = predictedQuadrupleB.flatten()
 
     plt.plot( xForCurve, predictedQuadrupleB, 'r'+'-',label='double the slope')
