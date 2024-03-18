@@ -112,12 +112,12 @@ for index, cond in mainCondsDf.iterrows():
     y = y.values #because otherwise y is a Series for some reason
 
     parametersGuess = [1,-2]
-
+    chanceRate = 1/cond['numObjects']
     #fit
     with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
         warnings.filterwarnings('error')
         try:
-            parameters = logisticR.fit(x, y, parametersGuess)
+            parameters = logisticR.fit(x, y, chanceRate, parametersGuess)
             fitSucceeded = True
         except Warning as e:
             print('error when doing logistic fit:', e)
@@ -126,17 +126,21 @@ for index, cond in mainCondsDf.iterrows():
     #predict
     if fitSucceeded:
         paramsEachCond.append(parameters)
-        mypredicted = logisticR.predict(x,parameters)
-        #print('logistic regression-predicted values=', mypredicted)
+        mypredicted = logisticR.predict(x,chanceRate,parameters)
         # Create a new column 'predicted' and assign the values from mypredicted
         # to the rows matching the condition
         df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
+        #Make and plot an entire smooth curve for this condition
         xForCurve = np.arange(0,1.7,.02)
         xForCurve = pd.DataFrame(xForCurve)
-        predicted = logisticR.predict(xForCurve, parameters) # np.array(paramsDoubleA) )
+        predicted = logisticR.predict(xForCurve, chanceRate, parameters) # np.array(paramsDoubleA) )
         predicted = predicted.flatten()
         plt.plot( xForCurve, predicted, colors[index]+'-' )
+    plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
+    plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)
+
+
 
  
 plt.legend()

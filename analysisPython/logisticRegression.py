@@ -126,11 +126,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
-    plt.subplot(121)
-
-    #plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
-    #plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
-
+    plt.subplot(121) #For all datapoints and associated fit
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
@@ -139,7 +135,6 @@ if __name__ == "__main__":  #executeable example of using these functions
         )
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
-    # set up plot
     plt.xlabel("speed (rps)")
     plt.ylabel("Proportion correct")
 
@@ -149,8 +144,17 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.plot([0, 1.5*maxSpeed], [threshVal, threshVal], 'k--')  # horizontal dashed line
     #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # Error! because max(x) returns string:"speedThisTrial"
 
-    plt.subplot(122)
+    #Make and plot an entire smooth curve for this condition
+    xForCurve = np.arange(0,2.1,.02)
+    xForCurve = pd.DataFrame(xForCurve)
+    predicted = predict(xForCurve, chanceRate, parameters) # np.array(paramsDoubleA) )
+    predicted = predicted.flatten()
+    plt.plot( xForCurve, predicted, 'k'+'-' )
+    plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
+    plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)
 
+
+    plt.subplot(122) #For showing effect of doubling slope and of doubling bias
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
@@ -169,6 +173,8 @@ if __name__ == "__main__":  #executeable example of using these functions
     predictedDoubleA = predictedDoubleA.flatten()
     #print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
     plt.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
+    plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
+    plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)
 
     #Show the effect on the predictions of quadrupling the second parameter
     #fix so doesnt have to be numpy array
