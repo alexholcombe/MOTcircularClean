@@ -41,6 +41,7 @@ def cost_and_gradient(theta, x, y):
     #The prediction error is
     #ChatGPT explains this multiplication by the x as "the larger the error and the larger the feature value, the larger the adjustment to the corresponding weight"
     #I think that's because when x=0, the slope parameter(s) don't matter. But when x is large, the slope parameter(s) matter a lot.
+    #The ".T" transposes x, 
     gradient = (1 / m) * np.dot(x.T, 
                                 calcLogisticRegressionY(theta, x) - y
                                 )

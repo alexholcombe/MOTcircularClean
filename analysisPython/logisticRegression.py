@@ -15,19 +15,42 @@ def usual_regression_part(theta, x):
     return np.dot(x, theta)
 
 def calcLogisticRegressionY(theta, x):
+    #First, just do the usual regression part of mx+b for all x's
     ys = usual_regression_part(theta, x)
+    #Then, apply the logistic function to each y, to transform it into a number (a probability) between 0 and 1
     return my_logistic( ys )
 
-def cost_function(theta, x, y):
+def cost_and_gradient(theta, x, y):
+    #Can either return just the cost, or also the gradient
+    #Return f and g, where f is the value of the function and g its gradient (a list of floats).
     m = x.shape[0]
-    total_cost = -(1 / m) * np.sum(
-        y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * np.log(
-            1 - calcLogisticRegressionY(theta, x)))
-    return total_cost
+    #To understand the cost function, see https://towardsdatascience.com/understanding-logistic-regression-9b02c2aec102
+    #Recall that all data is in the form of 0s and 1s, so the cost function is just calculating the likelihood
+    # of a either a 1 (the first part of the expression) or a 0 (the second part of the expression, the 1-y part, which yields 1)
+    # And the probability of a 1 is just the predicted value, and the probability of a 0 is 1 - the predicted value
+    # Then you take the log of those probabilities, for convenience so you don't have to multiply them which yields ridiculously small values, and average them
+    total_cost = ( -(1 / m) * 
+        np.sum(
+                y * np.log(calcLogisticRegressionY(theta, x)) + (1 - y) * 
+                np.log(   1 - calcLogisticRegressionY(theta, x)  )
+            ) )
+    
+    #Understanding the gradient:
+    #The gradient is the derivative of the cost function with respect to the parameters.
+    #So, how does the cost function change as you change the parameters?
+    #The prediction error is
+    #ChatGPT explains this multiplication by the x as "the larger the error and the larger the feature value, the larger the adjustment to the corresponding weight"
+    #I think that's because when x=0, the slope parameter(s) don't matter. But when x is large, the slope parameter(s) matter a lot.
+    #The ".T" transposes x, 
+    gradient = (1 / m) * np.dot(x.T, 
+                                calcLogisticRegressionY(theta, x) - y
+                                )
 
-def gradient(theta, x, y):
-    m = x.shape[0]
-    return (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
+    return total_cost, gradient
+
+# def gradient(theta, x, y):
+#     m = x.shape[0]
+#     return (1 / m) * np.dot(x.T, my_logistic(usual_regression_part(theta, x)) - y)
 
 def fit(x, y, initialParametersGuess):
     x = pd.DataFrame(x) #If don't do this, dims difference can occur and screw up hstack
@@ -43,8 +66,7 @@ def fit(x, y, initialParametersGuess):
     initialParams = np.array([  [initialParametersGuess[0]], 
                                  [initialParametersGuess[1]]  ])
 
-    result = fmin_tnc(func=cost_function, x0=initialParams,
-                  fprime=gradient,
+    result = fmin_tnc( func=cost_and_gradient, x0=initialParams,
                   args=(X, y.flatten()),
                   disp=0  )   # 1=output final results, 2=additional info
     optimized_weights = result[0]
@@ -65,10 +87,12 @@ def predict(x,params):
     theta = params[:, np.newaxis]
     return calcLogisticRegressionY(theta, X)
 
+
 if __name__ == "__main__":  #executeable example of using these functions
 
     # load your data using pandas
-    file = os.path.join('dataExamples','some_data.tsv')
+    file = os.path.join('dataExamples', 
+                        'auto_14Mar2024_15-38trialHandler10trialsPerCond.tsv') #'some_data.tsv')
     data = pd.read_table(file)
 
     # assuming the last column is the target and the rest are features
@@ -97,6 +121,8 @@ if __name__ == "__main__":  #executeable example of using these functions
     )
     grouped_df = grouped_df.reset_index()
 
+    plt.subplot(121)
+
     #plt.plot(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], marker='o')
     #plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
@@ -109,23 +135,22 @@ if __name__ == "__main__":  #executeable example of using these functions
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
     # set up plot
-    #plt.subplot(111)
     plt.xlabel("speed (rps)")
-    plt.ylabel("Percent correct")
+    plt.ylabel("Proportion correct")
 
     threshVal = 0.794
 
     maxSpeed = data['speedThisTrial'].max()
-    plt.plot([0, maxSpeed], [threshVal, threshVal], 'k--')  # horizontal dashed line
+    plt.plot([0, 1.5*maxSpeed], [threshVal, threshVal], 'k--')  # horizontal dashed line
     #plt.plot([0, max(x)], [threshVal, threshVal], 'k--')  # Error! because max(x) returns string:"speedThisTrial"
 
-    plt.show()
-    
+    plt.subplot(122)
+
     # plot points
     pointSizes = np.array(grouped_df['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(grouped_df['speedThisTrial'], grouped_df['pctCorrect'], s=pointSizes,
-        edgecolors=(0, 0, 0), facecolor=(1, 1, 1), linewidths=1,
-        zorder=10,  # make sure the points plot on top of the line
+        linewidths=1, c='k',
+        zorder=1,  # make sure the lines plot on top of the points
         )
     plt.plot( grouped_df['speedThisTrial'],grouped_df['predicted'], 'k'+'-' )
 
@@ -133,7 +158,7 @@ if __name__ == "__main__":  #executeable example of using these functions
     
     #Show the effect on the predictions of doubling the first parameter
     #fix so doesnt have to be numpy array
-    xForCurve = np.arange(0,5,.02)
+    xForCurve = np.arange(0,1.5*maxSpeed,.02)
     xForCurve = pd.DataFrame(xForCurve)
     predictedDoubleA = predict(xForCurve, paramsDoubleA) # np.array(paramsDoubleA) )
     predictedDoubleA = predictedDoubleA.flatten()
