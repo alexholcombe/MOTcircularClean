@@ -1514,7 +1514,7 @@ for condi, cond in mainCondsDf.iterrows():
     #print('y=',y, 'type(y)=',type(y))
 
     parametersGuess = [1,-2]
-    chanceRate = 1/ cond['numObjects'])
+    chanceRate = 1/ cond['numObjects']
     #fit data with logistic regression
     fitSucceeded = False
     if len(x) > 4: #don't even try unless have a bunch of trials for this condition
