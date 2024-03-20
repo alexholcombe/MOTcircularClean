@@ -133,9 +133,9 @@ for index, cond in mainCondsDf.iterrows():
 
         #Make and plot an entire smooth curve for this condition
         xForCurve = np.arange(0,1.7,.02)
-        xForCurve = pd.DataFrame(xForCurve)
+        xForCurve = pd.DataFrame(xForCurve).to_numpy() #otherwise plot gives error on Windows
         predicted = logisticR.predict(xForCurve, chanceRate, parameters) # np.array(paramsDoubleA) )
-        predicted = predicted.flatten()
+        predicted = (pd.DataFrame(predicted)).to_numpy() #otherwise plot gives error on Windows
         plt.plot( xForCurve, predicted, colors[index]+'-' )
     plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
     plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)
