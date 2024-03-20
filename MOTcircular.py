@@ -1514,14 +1514,14 @@ for condi, cond in mainCondsDf.iterrows():
     #print('y=',y, 'type(y)=',type(y))
 
     parametersGuess = [1,-2]
-
+    chanceRate = 1/ cond['numObjects'])
     #fit data with logistic regression
     fitSucceeded = False
-    if len(x) > 20: #don't even try unless have a bunch of trials for this conditino
+    if len(x) > 4: #don't even try unless have a bunch of trials for this condition
         with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
             warnings.filterwarnings('error')
             try:
-                parameters = logisticR.fit(x, y, parametersGuess)
+                parameters = logisticR.fit(x, y, chanceRate, parametersGuess)
                 fitSucceeded = True
             except Warning as e:
                 print('error when doing logistic fit:', e)
@@ -1530,16 +1530,16 @@ for condi, cond in mainCondsDf.iterrows():
     #predict psychometric curve from logistic regression
     if fitSucceeded:
         paramsEachCond.append(parameters)
-        mypredicted = logisticR.predict(x,parameters)
+        mypredicted = logisticR.predict(x,chanceRate,parameters)
         #print('logistic regression-predicted values=', mypredicted)
         # Create a new column 'predicted' and assign the values from mypredicted
         # to the rows matching the condition
         df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
 
         xForCurve = np.arange(0,1.6,.02)
-        xForCurve = pd.DataFrame(xForCurve)
-        predicted = logisticR.predict(xForCurve, parameters)
-        predicted = predicted.flatten()
+        xForCurve = pd.DataFrame(xForCurve).to_numpy() #otherwise plot gives error on Windows
+        predicted = logisticR.predict(xForCurve,chanceRate,parameters)
+        predicted = (pd.DataFrame(predicted)).to_numpy() #otherwise plot gives error on Windows
         plt.plot( xForCurve, predicted, colors[condi]+'-' )
 
 plt.legend()

@@ -148,11 +148,16 @@ if __name__ == "__main__":  #executeable example of using these functions
     xForCurve = np.arange(0,2.1,.02)
     xForCurve = pd.DataFrame(xForCurve)
     predicted = predict(xForCurve, chanceRate, parameters) # np.array(paramsDoubleA) )
-    predicted = predicted.flatten()
-    plt.plot( xForCurve, predicted, 'k'+'-' )
+    predicted = pd.DataFrame(predicted)
+    
+    xForCurve = xForCurve.to_numpy() #If don't do this, it won't work on Windows
+    predicted = predicted.to_numpy() #If don't do this, it won't work on Windows
+    print(xForCurve.shape, 'type=',type(xForCurve))
+    print(predicted.shape, 'type=',type(predicted))
+    
+    plt.plot( xForCurve, predicted, 'k'+'-' ) #This line yields an error on Josh's and Stella's Windows machine if xForCurve and predicted are not numpy arrays
     plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
     plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)
-
 
     plt.subplot(122) #For showing effect of doubling slope and of doubling bias
     # plot points
@@ -168,10 +173,9 @@ if __name__ == "__main__":  #executeable example of using these functions
     #Show the effect on the predictions of doubling the first parameter
     #fix so doesnt have to be numpy array
     xForCurve = np.arange(0,1.5*maxSpeed,.02)
-    xForCurve = pd.DataFrame(xForCurve)
+    xForCurve = (pd.DataFrame(xForCurve)).to_numpy()
     predictedDoubleA = predict(xForCurve, chanceRate, paramsDoubleA) # np.array(paramsDoubleA) )
-    predictedDoubleA = predictedDoubleA.flatten()
-    #print('predictedDoubleA=',predictedDoubleA, 'type=',type(predictedDoubleA))
+    predictedDoubleA = (pd.DataFrame(predictedDoubleA)).to_numpy() #otherwise plot gives error on Windows
     plt.plot( xForCurve, predictedDoubleA, 'g'+'-', label='double the bias' )
     plt.plot([0, 2.1], [chanceRate, chanceRate], 'k:')  # horizontal dashed line
     plt.text(-.2, chanceRate-.01, 'chanceRate', fontsize = 10)

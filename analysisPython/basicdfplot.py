@@ -14,7 +14,7 @@ grouped_df = df.groupby(['x']).agg(
 grouped_df = grouped_df.reset_index()
 
 # Plot it using matplotlib
-plt.plot(grouped_df['x'], grouped_df['meanY'], marker='o')
+plt.plot(grouped_df['x'].T, grouped_df['meanY'], marker='o')
 plt.xlabel('x')
 plt.ylabel('y')
 
