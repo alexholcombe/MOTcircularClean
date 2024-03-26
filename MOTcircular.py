@@ -1,4 +1,5 @@
 ############################################################
+### Hm, haven't tried waitBlank = True for a while
 ###For set-up on a new machine, some variables to consider
 ###
 ### useClock
@@ -18,8 +19,8 @@ from helpersAOH import openMyStimWindow
 try:
     import pylink #to turn off eyetracker graphics environment after eyetracker calibration. pylink comes from Eyelink Developers Kit download
 except Exception as e:
-    print("An exception occurred:",str(e))
-    print('Could not import pylink. pylink does not come with standard PsychoPy download, you have to download and install the Eyelink Developers Kit.')
+    print("When trying to import Eyelink's pylink library, an exception occurred:",str(e))
+    print('pylink is not included in PsychoPy download, you have to download and install the Eyelink Developers Kit from the SR Research Forum website.')
 try: 
     from analysisPython import logisticRegression as logisticR
 except Exception as e:
@@ -61,7 +62,7 @@ autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = True
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
-screenshot= False; screenshotDone = False;allowGUI = False;waitBlank = False
+screenshot= False; screenshotDone = False;allowGUI = False; waitBlank = False
 trackAllIdenticalColors = True#with tracking, can either use same colors as other task (e.g. 6 blobs but only 3 colors so have to track one of 2) or set all blobs identical color
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
@@ -319,7 +320,7 @@ if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 fixatnNoise = True
-fixSizePix = 60#6 #20 make fixation big so flicker more conspicuous
+fixSizePix = 6 #20 make fixation big so flicker more conspicuous
 if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2

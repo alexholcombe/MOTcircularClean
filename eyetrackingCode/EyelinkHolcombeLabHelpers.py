@@ -9,8 +9,15 @@ import pylink
 try: #This only works if the code executing is one folder up, making eyetrackingCode a sub-folder
     from eyetrackingCode import EyeLinkCoreGraphicsPsychoPy #imports from eyetrackingCode subfolder the file provided by Eyelink
 except Exception as e:
-    print("An exception occurred in EyelinkHolcombeLabHelpers.py:",str(e))
-    print('Could not import EyeLinkCoreGraphicsPsychoPy.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+    print("An exception occurred in EyelinkHolcombeLabHelpers.py when trying to import EyeLinkCoreGraphicsPsychoPy.py:",str(e))
+    #In case being called by a script in the same directory, try importing from the current directory
+    try:
+        import EyeLinkCoreGraphicsPsychoPy
+        print('Successfully imported EyeLinkCoreGraphicsPsychoPy.py from the current directory')
+    except:
+        print('Could not import EyeLinkCoreGraphicsPsychoPy.py from the current directory either')
+        print('Could not import EyeLinkCoreGraphicsPsychoPy.py (that file should be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+
 import sys, os, gc, string
 from psychopy import visual, info, misc, monitors, event, core
 from numpy import array, hstack
