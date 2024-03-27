@@ -16,6 +16,10 @@ if (length(gaze)) {
   cat('Success!')
 } #Worked 31 Aug 2023
 
+#March 2023, somehow the path is slightly screwed so library(eyelinkReader) fails, with redundant path attempt, e.g.
+#tried: '/Library/Frameworks/edfapi.framework/edfapi.framework/Versions/A/edfapi' (no such file),
+#Just need to drop one of the edfapi.frameworks
+
 #View(gaze$saccades)
 
 plot(gaze, trial = 1, show_fixations = TRUE, show_saccades = TRUE)

@@ -58,7 +58,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = True
+autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -206,7 +206,7 @@ if not autopilot:
     dlgLabelsOrdered.append('subject')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
-pctCompletedBreaks = np.array([20,50])
+pctCompletedBreaks = np.array([20,60])
 myDlg.addText(refreshMsg1, color='Black')
 if refreshRateWrong:
     myDlg.addText(refreshMsg2, color='Red')
