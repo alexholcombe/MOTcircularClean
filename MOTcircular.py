@@ -489,7 +489,7 @@ for numObjs in numObjsInRing: #set up experiment design
                                 'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
 
 trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
-print('len(stimList), which lis the list of conditions, is =',len(stimList))
+print('len(stimList), which is the list of conditions, is =',len(stimList))
 #print('stimList = ',stimList)
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
@@ -1358,7 +1358,6 @@ msg = 'Finishing now, at ' + timeAndDateStr
 logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')
 logging.flush(); dataFile.close();
-myWin.close()
 
 if eyetracking:
   logging.info('eyetracking = ' + str(eyetracking))
@@ -1379,6 +1378,7 @@ if eyetracking:
 else:
   logging.info('Didnt try to eyetrack because "eyetracking" was set to ' + str(eyetracking))
 logging.flush();
+myWin.close()
 
 if doStaircase: #report staircase results
     meanReversalsEachStaircase = np.zeros( len(staircases) )
