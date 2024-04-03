@@ -236,7 +236,7 @@ else:
     print('"dataRaw" directory does not exist, so saving data in present working directory')
     dataDir='.'
 expname = ''
-datafileName = dataDir+'/'+subject+ '_' + expname+timeAndDateStr
+datafileName = dataDir+'/'+subject+ 'PRACTICE' + '_' + expname+timeAndDateStr
 if not demo and not exportImages:
     dataFile = open(datafileName+'.tsv', 'w')  # sys.stdout
     import shutil
@@ -265,8 +265,7 @@ logging.info("computer platform="+sys.platform)
 #save a copy of the code as it was when that subject was run
 logging.info('File that generated this = sys.argv[0]= '+sys.argv[0])
 logging.info("has_retina_scrn="+str(has_retina_scrn))
-logging.info('trialsPerCondition =' + str(trialsPerCondition))
-logging.info('random number seed =' + str(rng_seed))
+
 #Not a test - the final window opening
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 
@@ -349,148 +348,44 @@ if useSound:
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
     corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
 
+######################################
+# Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
+practice_numTargets =     [2,    3] 
+practice_numObjsInRing =  [4,    8]       
+practice_speed =         [.02, .02]
+#################################################################
+
+numPresetPracticeTrials = len(practice_numTargets)
+practiceList = []
+for i in range(numPresetPracticeTrials):
+    thisPracticeTrial ={'numTargets':practice_numTargets[i], 
+                        'numObjectsInRing':practice_numObjsInRing[i], 
+                        'speed':practice_speeds[i]      }
+    practiceList.append( thisPracticeTrial )
+
+print('practiceList=', practiceList)
+
+ringNums = np.arange(numRings)
+basicShape = 'circle'
 stimList = []
-doStaircase = True
-# temporalfrequency limit test
-numTargets =        [2,                 3] #[2]
-numObjsInRing =     [4,                 8] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
+for cond in practiceList:
+    numObjs = cond['numObjectsInRing']
+    numTargets = cond['numTargets']
+    speed = cond['speed']                
 
-# Get all combinations of those two main factors
-#mainCondsInfo = {
-#    'numTargets':    [2, 2, 3, 3],
-#    'numObjects':    [4, 8, 4, 8],
-#}
-combinations = list(itertools.product(numTargets, numObjsInRing))
-# Create the DataFrame with all combinations
-mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
-mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
+    initialDirRing0 = random.choice([-1,1])
+    #will randomly at time of trial choose which rings have targets and which one querying.
+    whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
+    ringToQuery = 999 #this is the signal to choose the ring randomly
+    stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
+                                'numTargets':numTargets,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
 
-publishedThreshes = publishedEmpiricalThreshes.getAvgMidpointThreshes()
-publishedThreshes = publishedThreshes[['numTargets', 'HzAvgPreviousLit']] #only want average of previous literature
 
-mainCondsDf = pd.DataFrame( mainCondsInfo )
-mainCondsDf = pd.merge(mainCondsDf, publishedThreshes, on='numTargets', how='left')
-mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCondsDf['numObjects']
-mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)
-print('mainCondsDf')
-print(mainCondsDf) #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
-                        
-#From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   # Preliminary list of thresholds for each condition.
-if not doStaircase: #If not staircase, seeds will try to bracket threshold estimated from preliminary trials
-    factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
-    #these are the factors to multiply by each preliminarily-tested threshold
-    speedsEachNumTargetsNumObjects = []
-    for i in range(0, len(speedsPrelimiExp), 2):
-        sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
-        sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
-        speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
-    #Old way of setting all speeds manually:
-    #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-    #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
-
-#don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
-
-maxTrialsPerStaircase = 500 #Just an unreasonably large number so that the experiment won't stop before the number of trials set by the trialHandler is finished
-staircases = []
-#Need to create a different staircase for each condition because chanceRate will be different and want to estimate midpoint threshold to match previous work
-if doStaircase: #create the staircases
-    for stairI in range(len(mainCondsDf)): #one staircase for each main condition
-        descendingPsychometricCurve = True
-        #give them all the same starting value of 50% of the average threshold speed across conditions found by previous literature
-        startVal = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
-        startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
-        print('staircase startVal=',startVal,' startValInternal=',startValInternal)
-
-        this_row = mainCondsDf.iloc[stairI]
-        condition = this_row.to_dict() # {'numTargets': 2, 'numObjects': 4}
-        
-        nUp = 1; nDown=3 #1-up 3-down homes in on the 79.4% threshold. Make it easier if get one wrong. Make it harder when get 3 right in a row
-        if nUp==1 and nDown==3:
-            staircaseConvergePct = 0.794
-        else:
-            print('WARNING: dont know what staircaseConvergePct is')    
-        minSpeed = .03# -999 #0.05
-        maxSpeed= 1.8 #1.8    #1.8
-        minSpeedForStaircase = staircaseAndNoiseHelpers.toStaircase(minSpeed, descendingPsychometricCurve)
-        maxSpeedForStaircase = staircaseAndNoiseHelpers.toStaircase(maxSpeed, descendingPsychometricCurve)
-        #if descendingPsychometricCurve
-        if minSpeedForStaircase > maxSpeedForStaircase:
-            #Swap values of the two variables
-            minSpeedForStaircase, maxSpeedForStaircase = maxSpeedForStaircase, minSpeedForStaircase
-        #print('for internals, minSpeedForStaircase=',minSpeedForStaircase, 'maxSpeedForStaircase=',maxSpeedForStaircase)
-        staircase = data.StairHandler(
-            extraInfo = condition,
-            startVal=startValInternal,
-            stepType='lin',
-            stepSizes= [.3,.3,.2,.1,.1,.05],
-            minVal = minSpeedForStaircase, 
-            maxVal= maxSpeedForStaircase,
-            nUp=nUp, nDown=nDown,  
-            nTrials = maxTrialsPerStaircase)
-    
-        numPreStaircaseTrials = 0
-        #staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
-        print('Adding this staircase to list')
-        staircases.append(staircase)
-
-#phasesMsg = ('Doing '+str(numPreStaircaseTrials)+'trials with speeds= TO BE DETERMINED'+' then doing a max '+ \
-#              str(maxTrialsPerStaircase)+'-trial staircase for each condition:')
-queryEachRingEquallyOften = False
-#To query each ring equally often, the combinatorics are complicated because have different numbers of target conditions.
-if queryEachRingEquallyOften:
-    leastCommonMultipleSubsets = int( helpersAOH.calcCondsPerNumTargets(numRings,numTargets) )
-    leastCommonMultipleTargetNums = int( helpersAOH.LCM( numTargets ) )  #have to use this to choose ringToQuery.
-    #for each subset, need to counterbalance which target is queried. Because each element occurs equally often, which one queried can be an independent factor. But need as many repetitions as largest number of target numbers.
-    # 3 targets . 3 subsets maximum. Least common multiple is 3. 3 rings that could be post-cued. That means counterbalancing requires 3 x 3 x 3 = 27 trials. NO! doesn't work
-    # But what do you do when 2 targets, which one do you pick in the 3 different situations? Can't counterbalance it evenly, because when draw 3rd situation, half of time should pick one and half the time the other. Therefore have to use least common multiple of all the possible set sizes. Unless you just want to throw away that possibility. But then have different number of trials in 2 targets than in 3 targets.
-    #		-  Is that last sentence true? Because always seem to be running leastCommonMultipleSubsets/numSubsetsThis for each numTargets
-    #	 Check counterbalancing of numObjectsInRing*speed*numTargets*ringToQuery.  Leaving out whichIsTargetEachRing which is a list of which of those numTargets is the target.
-    print('leastCommonMultipleSubsets=',leastCommonMultipleSubsets, ' leastCommonMultipleTargetNums= ', leastCommonMultipleTargetNums)
-                    
-for numObjs in numObjsInRing: #set up experiment design
-    for nt in numTargets: #for each num targets condition,
-      numObjectsIdx = numObjsInRing.index(numObjs)
-      numTargetsIdx = numTargets.index(nt)
-      if doStaircase: #Speeds will be determined trial-by-trial by the staircases. However, to estimate lapse rate,
-        #we need occasional trials with a slow speed.
-        speeds = [[.02,.1],'staircase','staircase','staircase']  #speeds = [0.02, 0.1, -99, -99, -99]
-      else: 
-        speeds= speedsEachNumTargetsNumObjects[  numTargetsIdx ][ numObjectsIdx ]
-      for speed in speeds:
-        ringNums = np.arange(numRings)
-        if queryEachRingEquallyOften:
-            #In case of 3 rings and 2 targets, 3 choose 2 = 3 possible ring combinations
-            #If 3 concentric rings involved, have to consider 3 choose 2 targets, 3 choose 1 targets, have to have as many conditions as the maximum
-            subsetsThis = list(itertools.combinations(ringNums,nt)) #all subsets of length nt from the rings. E.g. if 3 rings and nt=2 targets
-            numSubsetsThis = len( subsetsThis );   print('numSubsetsThis=',numSubsetsThis, ' subsetsThis = ',subsetsThis)
-            repsNeeded = leastCommonMultipleSubsets / numSubsetsThis #that's the number of repetitions needed to make up for number of subsets of rings
-            for r in range( int(repsNeeded) ): #Balance different nt conditions. For nt with largest number of subsets, need no repetitions
-              for s in subsetsThis: #to equate ring usage, balance by going through all subsets. E.g. 3 rings with 2 targets is 1,2; 1,3; 2,3
-                  whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring.
-                  for ring in s:
-                      whichIsTargetEachRing[ring] = np.random.randint(0,numObjs-1,size=1)
-                  print('numTargets=',nt,' whichIsTargetEachRing=',whichIsTargetEachRing,' and that is one of ',numSubsetsThis,' possibilities and we are doing ',repsNeeded,'repetitions')
-                  for whichToQuery in range( leastCommonMultipleTargetNums ):  #for each subset, have to query one. This is dealed out to  the current subset by using modulus. It's assumed that this will result in equal total number of queried rings
-                      whichSubsetEntry = whichToQuery % nt  #e.g. if nt=2 and whichToQuery can be 0,1,or2 then modulus result is 0,1,0. This implies that whichToQuery won't be totally counterbalanced with which subset, which is bad because
-                                      #might give more resources to one that's queried more often. Therefore for whichToQuery need to use least common multiple.
-                      ringToQuery = s[whichSubsetEntry];  #print('ringToQuery=',ringToQuery,'subset=',s)
-                      for basicShape in ['circle']: #'diamond'
-                        for initialDirRing0 in [-1,1]:
-                                stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
-                                        'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )
-        else: # not queryEachRingEquallyOften, because that requires too many trials for a quick session. Instead
-            #will randomly at time of trial choose which rings have targets and which one querying.
-            whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
-            ringToQuery = 999 #this is the signal to choose the ring randomly
-            for basicShape in ['circle']: #'diamond'
-                for initialDirRing0 in [-1,1]:
-                    stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
-                                'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
-
-trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
+trials = data.TrialHandler(stimList,trialsPerCondition, method ='sequential') #method ‘sequential’ presents the conditions in the order they appear in the list
 print('len(stimList), which is the list of conditions, is =',len(stimList))
 #print('stimList = ',stimList)
+
+
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
 msg = 'numtrials='+ str(trials.nTotal)+', trialDurMin= '+str(trialDurMin)+ ' trackVariableIntervMax= '+ str(trackVariableIntervMax) + 'refreshRate=' +str(refreshRate)     
@@ -769,6 +664,8 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   global angleIniEachRing, correctAnswers
   angleIniEachRingRad = angleIniEachRing
 
+  print('initialDirectionEachRing=',initialDirectionEachRing,' speed=',speed)
+
   #Determine what frame we are on
   if useClock: #Don't count on not missing frames. Use actual time.
     t = clock.getTime()
@@ -1041,20 +938,19 @@ while trialNum < trials.nTotal and expStop==False:
     if not OK.OK:
         print('User cancelled from dialog box'); core.quit()
     
-    if not queryEachRingEquallyOften: #then need to randomly set ringToQuery and whichIsTargetEachRing
-        #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
-        rings = list(range(numRings) )
-        random.shuffle(rings)
-        whichRingsHaveTargets = rings[ 0:thisTrial['numTargets'] ]
-        #print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
-        #Randomly assign a target object for each ring that is meant to have a target
-        for r in whichRingsHaveTargets:
-            thisTrial['whichIsTargetEachRing'][r] = np.random.randint(0,thisTrial['numObjectsInRing'])
-        #Randomly pick ring to query. 
-        random.shuffle(whichRingsHaveTargets)
-        thisTrial['ringToQuery'] = whichRingsHaveTargets[0]
-        #print("thisTrial['numTargets']=",thisTrial['numTargets'], " thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'], " thisTrial['ringToQuery']",thisTrial['ringToQuery'])
-        
+    #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
+    rings = list(range(numRings) )
+    random.shuffle(rings)
+    whichRingsHaveTargets = rings[ 0:thisTrial['numTargets'] ]
+    #print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
+    #Randomly assign a target object for each ring that is meant to have a target
+    for r in whichRingsHaveTargets:
+        thisTrial['whichIsTargetEachRing'][r] = np.random.randint(0,thisTrial['numObjectsInRing'])
+    #Randomly pick ring to query. 
+    random.shuffle(whichRingsHaveTargets)
+    thisTrial['ringToQuery'] = whichRingsHaveTargets[0]
+    #print("thisTrial['numTargets']=",thisTrial['numTargets'], " thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'], " thisTrial['ringToQuery']",thisTrial['ringToQuery'])
+    
     colorRings=list();preDrawStimToGreasePipeline = list()
     isReversed= list([1]) * numRings #always takes values of -1 or 1
     reversalNumEachRing = list([0]) * numRings
@@ -1104,40 +1000,21 @@ while trialNum < trials.nTotal and expStop==False:
         gratingObjAngle = 20; #the angle an individual object subtends, of the circle
         increaseRadiusFactorToEquateWithBlobs = 2.1 #Have no idea why, because units seem to be deg for both. Expect it to only be a bit smaller due to mask
         radiiGratings = radii*increaseRadiusFactorToEquateWithBlobs
-        ringRadial,cueRing,currentlyCuedBlob = \
-                constructRingAsGratingSimplified(radiiGratings,thisTrial['numObjectsInRing'],gratingObjAngle,colors_all,
-                                                 stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
+        ringRadial,cueRing,currentlyCuedBlob = constructRingAsGratingSimplified(
+                                radiiGratings,thisTrial['numObjectsInRing'],gratingObjAngle,colors_all,
+                                stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
         preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
     core.wait(.1)
 
-    if not doStaircase and not quickMeasurement:
+    if not quickMeasurement:
         currentSpeed = thisTrial['speed'] #In normal experiment, no speed ramp
+        speedThisTrial = currentSpeed
     elif quickMeasurement: #in quick measurement mode, which uses a speed ramp
         speedThisTrial = maxSpeed
         currentSpeed = 0.01
         speedRampStep = 0.01
         print('ramp currentSpeed =',round(currentSpeed,2))
-    elif doStaircase: #speed will be set by staircase corresponding to this condition, or occasional ultra-slow speed as specified by speeds,
-          #to estimate lapseRate
-        if thisTrial['speed'] == 'staircase':
-            #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
-            rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
-                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
-            condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
-            staircaseThis = staircases[condnum]
-            speedThisInternal = staircaseThis.next()
-            speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
-            #print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
-        else: #manual occasional speed, probably ultra-slow to estimate lapseRate
-            #print('Non-staircase slow speed!, speedThisTrial=',thisTrial['speed'], ' will pick a random one')
-            if len(thisTrial['speed']) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
-                # while also trying to have overwhelming majority be staircase
-                speedThisTrial = random.choice(thisTrial['speed'])
-            else:
-                speedThisTrial = thisTrial['speed']
-        currentSpeed = speedThisTrial #no speed ramp
-        #print('currentSpeed=',round(currentSpeed,2))
-        
+         
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
@@ -1148,9 +1025,7 @@ while trialNum < trials.nTotal and expStop==False:
             perimeter = radii[numRing]*4.0
             circum = 2*pi*radii[numRing]
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
-        print('currentSpeed=',currentSpeed) 
-        print('initialDirectionEachRing=',initialDirectionEachRing) 
-
+        print('currentSpeed=',currentSpeed) #debugAH
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
 
@@ -1272,19 +1147,6 @@ while trialNum < trials.nTotal and expStop==False:
             print('-999\t', end='', file=dataFile)
     print(numCasesInterframeLong, file=dataFile)
 
-    if autopilot and doStaircase and simulateObserver:
-        chanceRate = 1.0 / thisTrial['numObjectsInRing']
-        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
-                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
-        condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
-        staircaseThis = staircases[condnum] #needed to look this up because on some trials, staircase is possibly not used (slow speed to estimate lapserate)
-        threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
-        lapseRate = .05
-        #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'chanceRate=',chanceRate,'lapseRate=',lapseRate,'threshold=',threshold)
-        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,chanceRate,lapseRate,threshold,descendingPsychometricCurve)
-        orderCorrect = correct_sim*3 #3 is fully correct
-        #print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
-        
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
     dataFile.flush(); logging.flush(); 
@@ -1300,11 +1162,9 @@ while trialNum < trials.nTotal and expStop==False:
             if useSound:
                 lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
-    trials.addData('speedThisTrial',speedThisTrial)  #when doStaircase is true, this will often be different than thisTrial['speed]
+    trials.addData('speedThisTrial',speedThisTrial)
     trials.addData('orderCorrect',orderCorrect)
     trials.addData('correctForFeedback',correctForFeedback)
-    if doStaircase and (thisTrial['speed']=='staircase'):
-        staircaseThis.addResponse(correctForFeedback) #add correct/incorrect to the staircase so it can calculate the next speed
 
     if trials.nTotal <= 10:
         breakTrialNums = [] #Only have breaks if more than 10 trials
@@ -1382,57 +1242,6 @@ else:
 logging.flush();
 myWin.close()
 
-if doStaircase: #report staircase results
-    meanReversalsEachStaircase = np.zeros( len(staircases) )
-    # Create a new column and initialize with NaN or some default value
-    mainCondsDf['meanReversal'] = np.nan
-
-    for staircase in staircases: #Calculate staircase results
-        print('condition of this staircase = ', staircase.extraInfo)
-        #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
-        actualThreshold = staircase.extraInfo['midpointThreshPrevLit']
-        print('Staircase should converge on the', str(100*staircaseConvergePct), '% threshold, whose actual value for this condition is', actualThreshold)
-        #Average all the reversals after the first few.
-        numReversals = len(staircase.reversalIntensities)
-        numRevsToUse = max( 1, numReversals-2 ) #To avoid asking for less than 1 reversal
-        finalReversals = staircaseAndNoiseHelpers.outOfStaircase(staircase.reversalIntensities[-numRevsToUse:],staircase,descendingPsychometricCurve)   
-        meanOfFinalReversals = np.average( finalReversals )
-        print('Mean of final', numRevsToUse,'reversals = %.2f' % meanOfFinalReversals)
-        stairI = staircases.index(staircase)
-        meanReversalsEachStaircase[ stairI ] = meanOfFinalReversals
-        # Set the stairI row's 'meanReversal' value
-        mainCondsDf.at[stairI, 'meanReversal'] = meanOfFinalReversals  # Indexing is 0-based in Python, so the 4th row is at index 3
-    
-    print('About to plot staircases')
-    plt.rcParams["figure.figsize"] = (16, 7) #Note this will determine the size of all subsequently created plots.
-    plt.subplot(121) #1 row, 1 column, which panel
-    title = 'circle = mean of final reversals'
-    if autopilot and simulateObserver:
-        title += '\ntriangle = true threshold'
-    plt.title(title)
-    plt.xlabel("staircase trial")
-    plt.ylabel("speed (rps)")
-
-    colors = 'grby'
-    for staircase in staircases:
-        stairI = staircases.index(staircase)
-        colorThis = colors[stairI]
-        #print('About to get intensities this staircase')
-        intensities = staircaseAndNoiseHelpers.outOfStaircase(staircase.intensities,staircase,descendingPsychometricCurve)
-        if len(intensities)>0:
-            plt.plot(intensities, colorThis+'-')
-        #Calculate correct answer, to help visualize if staircase is converging on the right place
-        actualThresh = staircase.extraInfo['midpointThreshPrevLit']
-        if len(staircase.reversalIntensities)>0: #plot mean of last reversals
-            #print('About to plot mean this staircase')
-            lastTrial = len(staircase.intensities)
-            plt.plot( lastTrial, meanReversalsEachStaircase[ stairI ], colorThis+'o' )
-            #plot correct answer
-            plt.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
-    # save a vector-graphics format for future
-    figDir = 'analysisPython'
-    outputFile = os.path.join(figDir, 'lastStaircases.pdf') #Don't know why it saves as empty
-    plt.savefig(outputFile)
 
 #Plot percent correct by condition and speed for all trials, and then try to fit logistic regression.
 trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
@@ -1467,10 +1276,7 @@ df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
 #Finished clean-up of dataframe that results from incomplete session
 
 # set up plot
-if doStaircase:
-    plt.subplot(122) #Because already plotted staircases above
-else:
-    plt.subplot(111)
+plt.subplot(111)
 plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
 threshVal = 0.794
