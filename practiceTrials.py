@@ -46,7 +46,7 @@ except Exception as e:
 eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
-quitFinder = True 
+quitFinder = False 
 if quitFinder and ('Darwin' in platform.system()): #turn Finder off. Only know the command for MacOS (Darwin)
     applescript="\'tell application \"Finder\" to quit\'" #quit Finder.
     shellCmd = 'osascript -e '+applescript
@@ -360,7 +360,7 @@ practiceList = []
 for i in range(numPresetPracticeTrials):
     thisPracticeTrial ={'numTargets':practice_numTargets[i], 
                         'numObjectsInRing':practice_numObjsInRing[i], 
-                        'speed':practice_speeds[i]      }
+                        'speed':practice_speed[i]      }
     practiceList.append( thisPracticeTrial )
 
 print('practiceList=', practiceList)
@@ -384,6 +384,12 @@ for cond in practiceList:
 trials = data.TrialHandler(stimList,trialsPerCondition, method ='sequential') #method ‘sequential’ presents the conditions in the order they appear in the list
 print('len(stimList), which is the list of conditions, is =',len(stimList))
 #print('stimList = ',stimList)
+
+combinations = list(itertools.product(practice_numTargets, practice_numObjsInRing))
+# Create the DataFrame with all combinations, to help plot data at end
+mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
+mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
+mainCondsDf = pd.DataFrame( mainCondsInfo )
 
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
@@ -663,8 +669,6 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   global cueRing,ringRadial, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
   global angleIniEachRing, correctAnswers
   angleIniEachRingRad = angleIniEachRing
-
-  print('initialDirectionEachRing=',initialDirectionEachRing,' speed=',speed)
 
   #Determine what frame we are on
   if useClock: #Don't count on not missing frames. Use actual time.
@@ -1025,7 +1029,7 @@ while trialNum < trials.nTotal and expStop==False:
             perimeter = radii[numRing]*4.0
             circum = 2*pi*radii[numRing]
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
-        print('currentSpeed=',currentSpeed) #debugAH
+        #print('currentSpeed=',currentSpeed)
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
 
@@ -1166,28 +1170,22 @@ while trialNum < trials.nTotal and expStop==False:
     trials.addData('orderCorrect',orderCorrect)
     trials.addData('correctForFeedback',correctForFeedback)
 
-    if trials.nTotal <= 10:
-        breakTrialNums = [] #Only have breaks if more than 10 trials
-    else: 
-        breakTrialNums = np.round( pctCompletedBreaks/100. * trials.nTotal )
-        breakTrialNums = breakTrialNums[breakTrialNums >= 3] #No point having a break before trial 3.
-        #print('breakTrialNums=',breakTrialNums)
+    #Print feedback to experimenter
+    if correctForFeedback:
+        msg1 = "INcorrect"
+    else: msg1 = "CORRECT"
+    print(msg1,end="")
+    msg2 = "numTargets=" + str(thisTrial['numTargets']) + " numObjectsInRing="+ str(thisTrial['numObjectsInRing']) + " speed=" + str(speedThisTrial)
+    print(msg2)
+
     trialNum+=1
     waitForKeyPressBetweenTrials = False
     if trialNum< trials.nTotal:
         pctDone =  (1.0*trialNum) / (1.0*trials.nTotal)*100
         NextRemindPctDoneText.setText( str(round(pctDone)) + '% complete' )
         NextRemindCountText.setText( str(trialNum) + ' of ' + str(trials.nTotal) )
-        if np.isin(trialNum, breakTrialNums): 
-            breakTrial = True
-        else: breakTrial = False
-        if breakTrial:
-            for i in range(5):
-                myWin.flip(clearBuffer=True)
-                NextRemindPctDoneText.draw()
-                NextRemindCountText.draw()
         waitingForKeypress = False
-        if waitForKeyPressBetweenTrials or breakTrial:
+        if waitForKeyPressBetweenTrials:
             waitingForKeypress=True
             NextText.setText('Press "SPACE" to continue')
             NextText.draw()
@@ -1243,7 +1241,7 @@ logging.flush();
 myWin.close()
 
 
-#Plot percent correct by condition and speed for all trials, and then try to fit logistic regression.
+#Plot percent correct by condition and speed for all trials
 trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
 df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
 #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
@@ -1289,9 +1287,7 @@ maxX = speedEachTrial.max()
 plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
 paramsEachCond = list()
 
-#Fit logistic regressions
 for condi, cond in mainCondsDf.iterrows():
-    #actualThreshold = mainCondsDf[ ] #query for this condition. filtered_value = df.query('numTargets == 2 and numObjects == 4')['midpointThreshPrevLit'].item()
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
     condLabelForPlot= str( round(cond['numTargets']) ) + 'targets,' + str( round(cond['numObjects']) ) + 'objs'
@@ -1310,6 +1306,7 @@ for condi, cond in mainCondsDf.iterrows():
     aggregatedDf = grouped_df.reset_index()
 
     # plot points
+    colors = 'grby'
     pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
     points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
         c= colors[condi], label = condLabelForPlot,
@@ -1322,38 +1319,10 @@ for condi, cond in mainCondsDf.iterrows():
     y = y.values #because otherwise y is a Series for some reason
     #print('y=',y, 'type(y)=',type(y))
 
-    parametersGuess = [1,-2]
-    chanceRate = 1/ cond['numObjects']
-    #fit data with logistic regression
-    fitSucceeded = False
-    if len(x) > 4: #don't even try unless have a bunch of trials for this condition
-        with warnings.catch_warnings(): #https://stackoverflow.com/a/36489085/302378
-            warnings.filterwarnings('error')
-            try:
-                parameters = logisticR.fit(x, y, chanceRate, parametersGuess)
-                fitSucceeded = True
-            except Warning as e:
-                print('error when doing logistic fit:', e)
-                fitSucceeded = False
-                
-    #predict psychometric curve from logistic regression
-    if fitSucceeded:
-        paramsEachCond.append(parameters)
-        mypredicted = logisticR.predict(x,chanceRate,parameters)
-        #print('logistic regression-predicted values=', mypredicted)
-        # Create a new column 'predicted' and assign the values from mypredicted
-        # to the rows matching the condition
-        df.loc[maskForThisCond, 'logisticPredicted'] = mypredicted
-
-        xForCurve = np.arange(0,1.6,.02)
-        xForCurve = pd.DataFrame(xForCurve).to_numpy() #otherwise plot gives error on Windows
-        predicted = logisticR.predict(xForCurve,chanceRate,parameters)
-        predicted = (pd.DataFrame(predicted)).to_numpy() #otherwise plot gives error on Windows
-        plt.plot( xForCurve, predicted, colors[condi]+'-' )
 
 plt.legend()
 #print('paramsEachCond=',paramsEachCond)
-title = 'Data and logistic regression fit'
+title = 'Data'
 #if autopilot and simulateObserver:
 #    title += 'triangle = true threshold'
 plt.title(title)
