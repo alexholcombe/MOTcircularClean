@@ -949,16 +949,19 @@ while trialNum < trials.nTotal and expStop==False:
             if trialNum >0:
                 if correctForFeedback:
                     myDlg.addText("Previous trial CORRECT", color='Green')
+                    msgColor = "DimGreen"
                 else:
                     myDlg.addText("Previous trial INCORRECT", color='Red')
-                myDlg.addText( str(prevTrial['speed']) + " = speed", color='Grey')
-                myDlg.addText( str(prevTrial['numTargets']) + " = numTargets", color='Grey')
-                myDlg.addText( str(prevTrial['numObjects']) + " = numObjects", color='Grey')
+                    msgColor = "DimRed"
+                msg =("speed= " + str( round(prevTrial['speed'],1) ) + 
+                     " targets= " + str( prevTrial['numTargets'] ) +
+                     " objects= " + str( prevTrial['numObjects'] )   )
+                myDlg.addText(msg, color=msgColor)
 
-            myDlg.addText("NEXT TRIAL", color='Black')
-            myDlg.addField('numTargets:', thisTrial['numTargets'], tip='')
+            #myDlg.addText("Next TRIAL:", color='Black')
+            myDlg.addField('targets:', thisTrial['numTargets'], tip='')
             dlgLabelsOrdered.append('numTargets')
-            myDlg.addField('numObjects:', thisTrial['numObjectsInRing'], tip='')
+            myDlg.addField('objects per ring:', thisTrial['numObjectsInRing'], tip='')
             dlgLabelsOrdered.append('numObjects')
             myDlg.addField('speed:', thisTrial['speed'], tip='')
             dlgLabelsOrdered.append('speed')
@@ -1275,89 +1278,89 @@ else:
 logging.flush();
 myWin.close()
 
+if plotResults:
 
-#Plot percent correct by condition and speed for all trials
-trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
-df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
-#If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
-# Create a boolean mask for where 'speedThisTrial' is '--'
-dashes_mask = (df['speedThisTrial'] == '--')
-all_false = (~dashes_mask).all()
-if all_false:
-    numLegitTrials = len(df)
-    #print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
-    #print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
-    #But if I run autopilot with 10 trials even though it finishes ,I sometimes get object type, whereas with 1 autopilot trial I don't.
-    #And when I open the file afterward with analyseTrialHandlerOutput.py, it works fine and has type float64
-    #Need to convert from string to number
-else:
-    # Find the first True in the mask, which is the first trial that didn't complete
-    first_row_with_dashes_num = dashes_mask.idxmax()
-    numLegitTrials = first_row_with_dashes_num
-    #print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
-    #Throw away all the non-legitimate trials
-    df = df[:numLegitTrials]
-    #print('Completed portion of session=',df)
-    if numLegitTrials < 2:
-        print('Forget it, I cannot analyze a one-trial experiment')
-        quit()
-# Convert dataframe values from saveAsWideText to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
-print("df['speedThisTrial']=", df['speedThisTrial'])
-df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
-df['numTargets'] = pd.to_numeric(df['numTargets'])
-df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
-df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
-#Finished clean-up of dataframe that results from incomplete session
-
-# set up plot
-plt.subplot(111)
-plt.ylabel("Proportion correct")
-plt.xlabel('speed (rps)')
-speedEachTrial = df['speedThisTrial']
-
-paramsEachCond = list()
-
-for condi, cond in mainCondsDf.iterrows():
-    # Create a mask to reference this specific condition in my df
-    maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
-    condLabelForPlot= str( round(cond['numTargets']) ) + 'targets,' + str( round(cond['numObjects']) ) + 'objs'
-    #print('condLabelForPlot=',condLabelForPlot)
-    all_false = (~maskForThisCond).all()
+    #Plot percent correct by condition and speed for all trials
+    trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
+    df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
+    #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
+    # Create a boolean mask for where 'speedThisTrial' is '--'
+    dashes_mask = (df['speedThisTrial'] == '--')
+    all_false = (~dashes_mask).all()
     if all_false:
-        print('No trials available for condition ',cond, 'so stopping plotting.')
-        break
+        numLegitTrials = len(df)
+        #print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
+        #print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
+        #But if I run autopilot with 10 trials even though it finishes ,I sometimes get object type, whereas with 1 autopilot trial I don't.
+        #And when I open the file afterward with analyseTrialHandlerOutput.py, it works fine and has type float64
+        #Need to convert from string to number
+    else:
+        # Find the first True in the mask, which is the first trial that didn't complete
+        first_row_with_dashes_num = dashes_mask.idxmax()
+        numLegitTrials = first_row_with_dashes_num
+        #print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
+        #Throw away all the non-legitimate trials
+        df = df[:numLegitTrials]
+        #print('Completed portion of session=',df)
+        if numLegitTrials < 2:
+            print('Forget it, I cannot analyze a one-trial experiment')
+            quit()
+    # Convert dataframe values from saveAsWideText to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
+    print("df['speedThisTrial']=", df['speedThisTrial'])
+    df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
+    df['numTargets'] = pd.to_numeric(df['numTargets'])
+    df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
+    df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
+    #Finished clean-up of dataframe that results from incomplete session
 
-    dataThisCond =  df[ maskForThisCond  ]
+    # set up plot
+    plt.subplot(111)
+    plt.ylabel("Proportion correct")
+    plt.xlabel('speed (rps)')
+    speedEachTrial = df['speedThisTrial']
 
-    #Aggregate data into percent correct for plotting actual data
-    grouped_df = dataThisCond.groupby(['speedThisTrial']).agg(
-        pctCorrect=('correctForFeedback', 'mean'),
-        n=('correctForFeedback', 'count')
-    )
-    aggregatedDf = grouped_df.reset_index()
+    paramsEachCond = list()
 
-    # plot points
-    colors = 'kgrbym'
-    pointSizes = np.array(aggregatedDf['n']) * 10  # 5 pixels per trial at each point
-    #print('condi=',condi)
-    #print('colors[condi]=',colors[condi])
-    #print('label=',condLabelForPlot)
-    #print("aggregatedDf['speedThisTrial']",aggregatedDf['speedThisTrial'], "aggregatedDf['pctCorrect']=",aggregatedDf['pctCorrect'])
-    points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
-        c= colors[condi], label = condLabelForPlot,
-        zorder=10,  # make sure the points plot on top of the line
-        )    
+    for condi, cond in mainCondsDf.iterrows():
+        # Create a mask to reference this specific condition in my df
+        maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
+        condLabelForPlot= str( round(cond['numTargets']) ) + 'targets,' + str( round(cond['numObjects']) ) + 'objs'
+        #print('condLabelForPlot=',condLabelForPlot)
+        all_false = (~maskForThisCond).all()
+        if all_false:
+            print('No trials available for condition ',cond, 'so stopping plotting.')
+            break
 
+        dataThisCond =  df[ maskForThisCond  ]
 
-plt.legend()
-#print('paramsEachCond=',paramsEachCond)
-title = 'Data'
-#if autopilot and simulateObserver:
-#    title += 'triangle = true threshold'
-plt.title(title)
-outputFile = datafileName + '.pdf' #os.path.join(fileName, 'last.pdf')
-plt.savefig(outputFile)
-plt.show()
+        #Aggregate data into percent correct for plotting actual data
+        grouped_df = dataThisCond.groupby(['speedThisTrial']).agg(
+            pctCorrect=('correctForFeedback', 'mean'),
+            n=('correctForFeedback', 'count')
+        )
+        aggregatedDf = grouped_df.reset_index()
+
+        # plot points
+        colors = 'kgrbym'
+        pointSizes = np.array(aggregatedDf['n']) * 10  # 5 pixels per trial at each point
+        #print('condi=',condi)
+        #print('colors[condi]=',colors[condi])
+        #print('label=',condLabelForPlot)
+        #print("aggregatedDf['speedThisTrial']",aggregatedDf['speedThisTrial'], "aggregatedDf['pctCorrect']=",aggregatedDf['pctCorrect'])
+        points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
+            c= colors[condi], label = condLabelForPlot,
+            zorder=10,  # make sure the points plot on top of the line
+            )    
+        #end condition loop
+    plt.legend()
+    #print('paramsEachCond=',paramsEachCond)
+    title = 'Data'
+    #if autopilot and simulateObserver:
+    #    title += 'triangle = true threshold'
+    plt.title(title)
+    outputFile = datafileName + '.pdf' #os.path.join(fileName, 'last.pdf')
+    plt.savefig(outputFile)
+    plt.show()
 
 if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
         applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
