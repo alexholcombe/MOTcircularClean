@@ -199,12 +199,10 @@ else: #checkRefreshEtc
 
 myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
-myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
+myDlg = psychopy.gui.Dlg(title="", pos=(200,400))
 if not autopilot:
     myDlg.addField('Subject name :', subject, tip='or subject code')
     dlgLabelsOrdered.append('subject')
-myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
-dlgLabelsOrdered.append('trialsPerCondition')
 pctCompletedBreaks = np.array([])
 myDlg.addText(refreshMsg1, color='Black')
 if refreshRateWrong:
@@ -222,8 +220,6 @@ if myDlg.OK: #unpack information from dialogue box
        name=thisInfo[dlgLabelsOrdered.index('subject')]
        if len(name) > 0: #if entered something
          subject = name #change subject default name to what user entered
-   trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
-   #print('trialsPerCondition from dialog box=',trialsPerCondition)
 else: 
    print('User cancelled from dialog box.')
    logging.flush()
@@ -947,57 +943,37 @@ while trialNum < trials.nTotal and expStop==False:
             if fullscr: #have to close window to show dialog box
                 myWin.close()
             maxSpeed = 1.0; numObjects = 10; numTargets = 3
-            # create a dialog box from dictionary 
-            infoFirst = {'speed':thisTrial['speed'], 
-                         'numObjects':thisTrial['numObjectsInRing'],
-                         'numTargets':thisTrial['numTargets']  }
-            
-            manualParams = psychopy.gui.DlgFromDict(dictionary=infoFirst, title='', 
-                order=['numTargets', 'numObjects', 'speed'], 
-                tip={'speed': 'How many objects','How many targets': 'no more than 3'}
-                )
-            thisTrial['speed'] = infoFirst['speed']
-            thisTrial['numObjectsInRing'] = infoFirst['numObjects']
-            thisTrial['numTargets'] = infoFirst['numTargets']
-            if not manualParams.OK:
-                print('User cancelled from dialog box'); core.quit()
+            # create a dialog box incrementally
+            dlgLabelsOrdered = list() #new dialog box
+            myDlg = psychopy.gui.Dlg(title="object tracking practice trials", pos=(200,400))
+            if trialNum >0:
+                if correctForFeedback:
+                    myDlg.addText("Previous trial CORRECT", color='Green')
+                else:
+                    myDlg.addText("Previous trial INCORRECT", color='Red')
+                myDlg.addText( str(prevTrial['speed']) + " = speed", color='Grey')
+                myDlg.addText( str(prevTrial['numTargets']) + " = numTargets", color='Grey')
+                myDlg.addText( str(prevTrial['numObjects']) + " = numObjects", color='Grey')
+
+            myDlg.addText("NEXT TRIAL", color='Black')
+            myDlg.addField('numTargets:', thisTrial['numTargets'], tip='')
+            dlgLabelsOrdered.append('numTargets')
+            myDlg.addField('numObjects:', thisTrial['numObjectsInRing'], tip='')
+            dlgLabelsOrdered.append('numObjects')
+            myDlg.addField('speed:', thisTrial['speed'], tip='')
+            dlgLabelsOrdered.append('speed')
+            myDlg.show()
+            if myDlg.OK: #unpack information from dialogue box
+                thisInfo = myDlg.data #this will be a list of data returned from each field added in order
+                thisTrial['numTargets']=  thisInfo[dlgLabelsOrdered.index('numTargets')]
+                thisTrial['numObjects']=  thisInfo[dlgLabelsOrdered.index('numObjects')]
+                thisTrial['speed']=  thisInfo[dlgLabelsOrdered.index('speed')]
+            else:
+                print('User cancelled from dialog box'); logging.flush(); core.quit()
             if fullscr:
                 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
                 #Have to create new mouse object otherwise mouse coordinates won't work
-                myMouse = psychopy.event.Mouse(visible = 'true',win=myWin)
-
-
-#    myWin.close() #have to close window to show dialog box
-#    dlgLabelsOrdered = list() #new dialog box
-#    myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
-#    if not autopilot:
-#        myDlg.addField('Subject name :', subject, tip='or subject code')
-#        dlgLabelsOrdered.append('subject')
-#    myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
-#    dlgLabelsOrdered.append('trialsPerCondition')
-#    pctCompletedBreaks = np.array([])
-#    myDlg.addText(refreshMsg1, color='Black')
-#    if refreshRateWrong:
-#        myDlg.addText(refreshMsg2, color='Red')
-#    msgWrongResolution = ''
-#    if checkRefreshEtc and (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
-#        msgWrongResolution = 'Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested)+ ' pixels, screen apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1])
-#        myDlg.addText(msgWrongResolution, color='GoldenRod')
-#        print(msgWrongResolution)
-#    myDlg.addText('Note: to abort, press ESC at a trials response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
-#    myDlg.show()
-#    if myDlg.OK: #unpack information from dialogue box
-#       thisInfo = myDlg.data #this will be a list of data returned from each field added in order
-#       if not autopilot:
-#           name=thisInfo[dlgLabelsOrdered.index('subject')]
-#           if len(name) > 0: #if entered something
-#             subject = name #change subject default name to what user entered
-#       trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
-#       #print('trialsPerCondition from dialog box=',trialsPerCondition)
-#    else: 
-#       print('User cancelled from dialog box.')
-#       logging.flush()
-#       core.quit()
+                myMouse = psychopy.event.Mouse(visible ='true',win=myWin)
 
     #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
     rings = list(range(numRings) )
@@ -1264,6 +1240,7 @@ while trialNum < trials.nTotal and expStop==False:
                     expStop = True
                     waitingForKeypress=False
         myWin.clearBuffer()
+        prevTrial = thisTrial #Need to put previous trial values in practice trials dialog box. Have changed so can't use trialHandler prev trial access
         thisTrial = trials.next()
         
     core.wait(.1); time.sleep(.1)
