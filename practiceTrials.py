@@ -58,7 +58,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = False
+autopilot= True; simulateObserver=False; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -105,7 +105,6 @@ if not OK.OK:
 autopilot = infoFirst['Autopilot']
 checkRefreshEtc = True
 scrn = infoFirst['Screen to use']
-#print('scrn = ',scrn, ' from dialog box')
 fullscr = infoFirst['Fullscreen (timing errors if not)']
 refreshRate = infoFirst['Screen refresh rate']
 
@@ -346,13 +345,13 @@ if useSound:
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
+    corrSound = sound.Sound(corrSoundPathAndFile, volume=.8, autoLog=autoLogging)
 
 ######################################
 # Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
-practice_numTargets =     [2,    3] 
-practice_numObjsInRing =  [4,    8]       
-practice_speed =         [.02, .02]
+practice_speed =          [.1, .1, .2, .2, .2, .2, .1, .1]
+practice_numObjsInRing =  [4,   4,  8,  8,  4,  4,  8,  8]       
+practice_numTargets =     [2,   3,  2,  3,  2,  3,  2,  3] 
 #################################################################
 
 numPresetPracticeTrials = len(practice_numTargets)
@@ -380,17 +379,18 @@ for cond in practiceList:
     stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                 'numTargets':numTargets,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
 
-
 trials = data.TrialHandler(stimList,trialsPerCondition, method ='sequential') #method ‘sequential’ presents the conditions in the order they appear in the list
 print('len(stimList), which is the list of conditions, is =',len(stimList))
 #print('stimList = ',stimList)
 
-combinations = list(itertools.product(practice_numTargets, practice_numObjsInRing))
+unique_numTargets = list(set(practice_numTargets)); unique_numObjects = list(set(practice_numObjsInRing))
+
+combinations = list(itertools.product(unique_numTargets, unique_numObjects))
 # Create the DataFrame with all combinations, to help plot data at end
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
 mainCondsDf = pd.DataFrame( mainCondsInfo )
-
+print('mainCondsDf=',mainCondsDf) #debugAH
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
@@ -939,9 +939,41 @@ while trialNum < trials.nTotal and expStop==False:
         maxSpeed = infoFirst['maxSpeed']
         numObjects = infoFirst['numObjects']
         numTargets = infoFirst['numTargets']
-    if not OK.OK:
-        print('User cancelled from dialog box'); core.quit()
-    
+        if not OK.OK:
+            print('User cancelled from dialog box'); core.quit()
+
+#    myWin.close() #have to close window to show dialog box
+#    dlgLabelsOrdered = list() #new dialog box
+#    myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
+#    if not autopilot:
+#        myDlg.addField('Subject name :', subject, tip='or subject code')
+#        dlgLabelsOrdered.append('subject')
+#    myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
+#    dlgLabelsOrdered.append('trialsPerCondition')
+#    pctCompletedBreaks = np.array([])
+#    myDlg.addText(refreshMsg1, color='Black')
+#    if refreshRateWrong:
+#        myDlg.addText(refreshMsg2, color='Red')
+#    msgWrongResolution = ''
+#    if checkRefreshEtc and (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
+#        msgWrongResolution = 'Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested)+ ' pixels, screen apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1])
+#        myDlg.addText(msgWrongResolution, color='GoldenRod')
+#        print(msgWrongResolution)
+#    myDlg.addText('Note: to abort, press ESC at a trials response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
+#    myDlg.show()
+#    if myDlg.OK: #unpack information from dialogue box
+#       thisInfo = myDlg.data #this will be a list of data returned from each field added in order
+#       if not autopilot:
+#           name=thisInfo[dlgLabelsOrdered.index('subject')]
+#           if len(name) > 0: #if entered something
+#             subject = name #change subject default name to what user entered
+#       trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
+#       #print('trialsPerCondition from dialog box=',trialsPerCondition)
+#    else: 
+#       print('User cancelled from dialog box.')
+#       logging.flush()
+#       core.quit()
+
     #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
     rings = list(range(numRings) )
     random.shuffle(rings)
@@ -1072,7 +1104,7 @@ while trialNum < trials.nTotal and expStop==False:
        if longFramesStr != None:
                 msg= 'trialnum=' + str(trialNum) + ' ' + longFramesStr
                 print(msg, file=logF)
-                print(msg)
+                #print(msg) #Dont print because gets in between practice trial result printout
                 if not demo:
                     flankingAlso=list()
                     for idx in idxsInterframeLong: #also print timing of one before and one after long frame
@@ -1174,8 +1206,8 @@ while trialNum < trials.nTotal and expStop==False:
     if correctForFeedback:
         msg1 = "INcorrect"
     else: msg1 = "CORRECT"
-    print(msg1,end="")
-    msg2 = "numTargets=" + str(thisTrial['numTargets']) + " numObjectsInRing="+ str(thisTrial['numObjectsInRing']) + " speed=" + str(speedThisTrial)
+    print(msg1,end=" ")
+    msg2 = "targets=" + str(thisTrial['numTargets']) + " objectsInRing="+ str(thisTrial['numObjectsInRing']) + " speed=" + str(speedThisTrial)
     print(msg2)
 
     trialNum+=1
@@ -1250,8 +1282,8 @@ dashes_mask = (df['speedThisTrial'] == '--')
 all_false = (~dashes_mask).all()
 if all_false:
     numLegitTrials = len(df)
-    print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
-    print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
+    #print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
+    #print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
     #But if I run autopilot with 10 trials even though it finishes ,I sometimes get object type, whereas with 1 autopilot trial I don't.
     #And when I open the file afterward with analyseTrialHandlerOutput.py, it works fine and has type float64
     #Need to convert from string to number
@@ -1259,7 +1291,7 @@ else:
     # Find the first True in the mask, which is the first trial that didn't complete
     first_row_with_dashes_num = dashes_mask.idxmax()
     numLegitTrials = first_row_with_dashes_num
-    print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
+    #print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
     #Throw away all the non-legitimate trials
     df = df[:numLegitTrials]
     #print('Completed portion of session=',df)
@@ -1277,20 +1309,15 @@ df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
 plt.subplot(111)
 plt.ylabel("Proportion correct")
 plt.xlabel('speed (rps)')
-threshVal = 0.794
 speedEachTrial = df['speedThisTrial']
 
-print('trialNum=',trialNum)
-#maxX = speedEachTrial.nlargest(1).iloc[0]
-#print('maxX with nlargest=',maxX)
-maxX = speedEachTrial.max()
-plt.plot([0, maxX], [threshVal, threshVal], 'k--')  # horizontal dashed line
 paramsEachCond = list()
 
 for condi, cond in mainCondsDf.iterrows():
     # Create a mask to reference this specific condition in my df
     maskForThisCond = (df['numTargets'] == cond['numTargets']) & (df['numObjectsInRing'] == cond['numObjects'])
     condLabelForPlot= str( round(cond['numTargets']) ) + 'targets,' + str( round(cond['numObjects']) ) + 'objs'
+    #print('condLabelForPlot=',condLabelForPlot)
     all_false = (~maskForThisCond).all()
     if all_false:
         print('No trials available for condition ',cond, 'so stopping plotting.')
@@ -1306,18 +1333,16 @@ for condi, cond in mainCondsDf.iterrows():
     aggregatedDf = grouped_df.reset_index()
 
     # plot points
-    colors = 'grby'
+    colors = 'kgrbym'
     pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
+    #print('condi=',condi)
+    #print('colors[condi]=',colors[condi])
+    #print('label=',condLabelForPlot)
+    #print("aggregatedDf['speedThisTrial']",aggregatedDf['speedThisTrial'], "aggregatedDf['pctCorrect']=",aggregatedDf['pctCorrect'])
     points = plt.scatter(aggregatedDf['speedThisTrial'], aggregatedDf['pctCorrect'], s=pointSizes,
         c= colors[condi], label = condLabelForPlot,
         zorder=10,  # make sure the points plot on top of the line
         )    
-
-    #Get variables for logistic regression fit
-    x = dataThisCond[['speedThisTrial' ]] #data[['numObjectsInRing','numTargets','speedThisTrial' ]]
-    y = dataThisCond['correctForFeedback']
-    y = y.values #because otherwise y is a Series for some reason
-    #print('y=',y, 'type(y)=',type(y))
 
 
 plt.legend()
