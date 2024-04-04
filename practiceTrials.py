@@ -945,20 +945,20 @@ while trialNum < trials.nTotal and expStop==False:
             maxSpeed = 1.0; numObjects = 10; numTargets = 3
             # create a dialog box incrementally
             dlgLabelsOrdered = list() #new dialog box
-            myDlg = psychopy.gui.Dlg(title="object tracking practice trials", pos=(200,400))
+            myDlg = psychopy.gui.Dlg(title="", alwaysOnTop=True, pos=(200,400))
             if trialNum >0:
                 if correctForFeedback:
                     myDlg.addText("Previous trial CORRECT", color='Green')
-                    msgColor = "DimGreen"
+                    msgColor =  "#006600"  "DimGreen"
                 else:
                     myDlg.addText("Previous trial INCORRECT", color='Red')
-                    msgColor = "DimRed"
+                    msgColor =   "#660000" # "DimRed"
                 msg =("speed= " + str( round(prevTrial['speed'],1) ) + 
                      " targets= " + str( prevTrial['numTargets'] ) +
                      " objects= " + str( prevTrial['numObjects'] )   )
                 myDlg.addText(msg, color=msgColor)
 
-            #myDlg.addText("Next TRIAL:", color='Black')
+            myDlg.addText("                  Next trial                  ", color='Black')
             myDlg.addField('targets:', thisTrial['numTargets'], tip='')
             dlgLabelsOrdered.append('numTargets')
             myDlg.addField('objects per ring:', thisTrial['numObjectsInRing'], tip='')
