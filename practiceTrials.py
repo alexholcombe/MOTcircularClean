@@ -58,7 +58,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; simulateObserver=False; showOnlyOneFrameOfStimuli = False
+autopilot= False; simulateObserver=False; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -267,6 +267,7 @@ logging.info("has_retina_scrn="+str(has_retina_scrn))
 
 #Not a test - the final window opening
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
+myWin.setRecordFrameIntervals(False)
 
 #Just roll with whatever wrong resolution the screen is set to
 if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
@@ -928,19 +929,43 @@ oppositeInitialDirFirstTwoRings = True
 
 while trialNum < trials.nTotal and expStop==False:
     helpersAOH.accelerateComputer(1,process_priority, disable_gc) #I don't know if this does anything
-    if quickMeasurement:
-        maxSpeed = 1.0; numObjects = 10; numTargets = 3
-        # create a dialog box from dictionary 
-        infoFirst = { 'maxSpeed':maxSpeed, 'numObjects':numObjects, 'numTargets':numTargets  }
-        manualParams = psychopy.gui.DlgFromDict(dictionary=infoFirst, title='Quick speed limit measurement', 
-            order=['maxSpeed','numObjects', 'numTargets'], 
-            tip={'Maximum speed for speed ramp': 'How many objects','How many targets': 'no more than 3'}
-            )
-        maxSpeed = infoFirst['maxSpeed']
-        numObjects = infoFirst['numObjects']
-        numTargets = infoFirst['numTargets']
-        if not OK.OK:
-            print('User cancelled from dialog box'); core.quit()
+    if not autopilot:
+        if quickMeasurement:
+            maxSpeed = 1.0; numObjects = 10; numTargets = 3
+            # create a dialog box from dictionary 
+            infoFirst = { 'maxSpeed':maxSpeed, 'numObjects':numObjects, 'numTargets':numTargets  }
+            manualParams = psychopy.gui.DlgFromDict(dictionary=infoFirst, title='Quick speed limit measurement', 
+                order=['maxSpeed','numObjects', 'numTargets'], 
+                tip={'Maximum speed for speed ramp': 'How many objects','How many targets': 'no more than 3'}
+                )
+            maxSpeed = infoFirst['maxSpeed']
+            numObjects = infoFirst['numObjects']
+            numTargets = infoFirst['numTargets']
+            if not manualParams.OK:
+                print('User cancelled from dialog box'); core.quit()
+        else: #Show default params for this trial in dlg box, allow user to optionally change them
+            if fullscr: #have to close window to show dialog box
+                myWin.close()
+            maxSpeed = 1.0; numObjects = 10; numTargets = 3
+            # create a dialog box from dictionary 
+            infoFirst = {'speed':thisTrial['speed'], 
+                         'numObjects':thisTrial['numObjectsInRing'],
+                         'numTargets':thisTrial['numTargets']  }
+            
+            manualParams = psychopy.gui.DlgFromDict(dictionary=infoFirst, title='', 
+                order=['numTargets', 'numObjects', 'speed'], 
+                tip={'speed': 'How many objects','How many targets': 'no more than 3'}
+                )
+            thisTrial['speed'] = infoFirst['speed']
+            thisTrial['numObjectsInRing'] = infoFirst['numObjects']
+            thisTrial['numTargets'] = infoFirst['numTargets']
+            if not manualParams.OK:
+                print('User cancelled from dialog box'); core.quit()
+            if fullscr:
+                myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
+                #Have to create new mouse object otherwise mouse coordinates won't work
+                myMouse = psychopy.event.Mouse(visible = 'true',win=myWin)
+
 
 #    myWin.close() #have to close window to show dialog box
 #    dlgLabelsOrdered = list() #new dialog box
@@ -1298,7 +1323,8 @@ else:
     if numLegitTrials < 2:
         print('Forget it, I cannot analyze a one-trial experiment')
         quit()
-# Convert to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
+# Convert dataframe values from saveAsWideText to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
+print("df['speedThisTrial']=", df['speedThisTrial'])
 df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
 df['numTargets'] = pd.to_numeric(df['numTargets'])
 df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
@@ -1334,7 +1360,7 @@ for condi, cond in mainCondsDf.iterrows():
 
     # plot points
     colors = 'kgrbym'
-    pointSizes = np.array(aggregatedDf['n']) * 5  # 5 pixels per trial at each point
+    pointSizes = np.array(aggregatedDf['n']) * 10  # 5 pixels per trial at each point
     #print('condi=',condi)
     #print('colors[condi]=',colors[condi])
     #print('label=',condLabelForPlot)

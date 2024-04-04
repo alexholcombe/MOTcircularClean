@@ -269,6 +269,7 @@ logging.info('trialsPerCondition =' + str(trialsPerCondition))
 logging.info('random number seed =' + str(rng_seed))
 #Not a test - the final window opening
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
+myWin.setRecordFrameIntervals(False)
 
 #Just roll with whatever wrong resolution the screen is set to
 if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
