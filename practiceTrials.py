@@ -1,6 +1,6 @@
 ############################################################
 ### Hm, haven't tried waitBlank = True for a while
-###For set-up on a new machine, some variables to consider
+###For setup on a new machine, some variables to consider:
 ###
 ### useClock
 ### For setup of new experiment variant, variables to consider: 
@@ -191,7 +191,7 @@ else: #checkRefreshEtc
     if refreshRateWrong:
         refreshMsg1 += ' BUT'
         refreshMsg1 += ' program assumes ' + str(refreshRate)
-        refreshMsg2 =  'which is off by more than' + str(round(refreshRateTolerancePct,0)) + '%!!'
+        refreshMsg2 =  'which is off by more than ' + str(round(refreshRateTolerancePct,0)) + '%'
     else:
         refreshMsg1 += ', which is close enough to desired val of ' + str( round(refreshRate,1) )
     myWinRes = myWin.size
@@ -201,7 +201,7 @@ myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
 myDlg = psychopy.gui.Dlg(title="", pos=(200,400))
 if not autopilot:
-    myDlg.addField('Subject name :', subject, tip='or subject code')
+    myDlg.addField('Subject name or ID:', subject, tip='or subject code')
     dlgLabelsOrdered.append('subject')
 pctCompletedBreaks = np.array([])
 myDlg.addText(refreshMsg1, color='Black')
@@ -212,7 +212,7 @@ if checkRefreshEtc and (not demo) and (myWinRes != [widthPixRequested,heightPixR
     msgWrongResolution = 'Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested)+ ' pixels, screen apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1])
     myDlg.addText(msgWrongResolution, color='GoldenRod')
     print(msgWrongResolution)
-myDlg.addText('Note: to abort, press ESC at a trials response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
+myDlg.addText('To abort, press ESC at a trial response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
 myDlg.show()
 if myDlg.OK: #unpack information from dialogue box
    thisInfo = myDlg.data #this will be a list of data returned from each field added in order
@@ -346,9 +346,9 @@ if useSound:
 
 ######################################
 # Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
-practice_speed =          [.1, .1, .2, .2, .2, .2, .1, .1]
-practice_numObjsInRing =  [4,   4,  8,  8,  4,  4,  8,  8]       
-practice_numTargets =     [2,   3,  2,  3,  2,  3,  2,  3] 
+practice_speed =          [.1, .1, .2, .2, .2, .2, .1, .1, .05, .05, .05, .05, .03, .03, .03, .03, .02, .02, .02, .01]
+practice_numObjsInRing =  [4,   4,  8,  8,  4,  4,  8,  8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8]       
+practice_numTargets =     [2,   3,  2,  3,  2,  3,  2,  3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3] 
 #################################################################
 
 numPresetPracticeTrials = len(practice_numTargets)
@@ -387,7 +387,6 @@ combinations = list(itertools.product(unique_numTargets, unique_numObjects))
 mainCondsDf = pd.DataFrame(combinations, columns=['numTargets', 'numObjects'])
 mainCondsInfo = mainCondsDf.to_dict('list') #change into a dictionary, in list format
 mainCondsDf = pd.DataFrame( mainCondsInfo )
-print('mainCondsDf=',mainCondsDf) #debugAH
 
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 logging.info(  str('starting exp with name: "'+'TemporalFrequencyLimit'+'" at '+timeAndDateStr)   )
@@ -865,7 +864,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                                 respondedEachToken[optionSet][ncheck] = 1 #register this one has been clicked
                                 responses[optionSet].append(c) #this redundant list also of course encodes the order
                                 respcount += 1  
-                                print('added  ',ncheck,'th response to clicked list')
+                                #print('added  ',ncheck,'th response to clicked list')
                 #print 'response=', response, '  respcount=',respcount, ' lastClickState=',lastClickState, '  after affected by click'
            #end if mouse clicked
            
@@ -942,23 +941,22 @@ while trialNum < trials.nTotal and expStop==False:
         else: #Show default params for this trial in dlg box, allow user to optionally change them
             if fullscr: #have to close window to show dialog box
                 myWin.close()
-            maxSpeed = 1.0; numObjects = 10; numTargets = 3
             # create a dialog box incrementally
             dlgLabelsOrdered = list() #new dialog box
-            myDlg = psychopy.gui.Dlg(title="", alwaysOnTop=True, pos=(200,400))
+            myDlg = psychopy.gui.Dlg(title="Practice trial #" + str(trialNum), pos=(200,400))
             if trialNum >0:
                 if correctForFeedback:
                     myDlg.addText("Previous trial CORRECT", color='Green')
-                    msgColor =  "#006600"  "DimGreen"
+                    msgColor =  "#006600" #"DimGreen"
                 else:
                     myDlg.addText("Previous trial INCORRECT", color='Red')
                     msgColor =   "#660000" # "DimRed"
-                msg =("speed= " + str( round(prevTrial['speed'],1) ) + 
-                     " targets= " + str( prevTrial['numTargets'] ) +
-                     " objects= " + str( prevTrial['numObjects'] )   )
+                msg =("speed was " + str( round(prevTrial['speed'],1) ) + 
+                     ", targets was " + str( prevTrial['numTargets'] ) +
+                     ", objects was " + str( prevTrial['numObjectsInRing'] )   )
                 myDlg.addText(msg, color=msgColor)
 
-            myDlg.addText("                  Next trial                  ", color='Black')
+            myDlg.addText("                                This trial                  ", color='Black')
             myDlg.addField('targets:', thisTrial['numTargets'], tip='')
             dlgLabelsOrdered.append('numTargets')
             myDlg.addField('objects per ring:', thisTrial['numObjectsInRing'], tip='')
@@ -969,7 +967,7 @@ while trialNum < trials.nTotal and expStop==False:
             if myDlg.OK: #unpack information from dialogue box
                 thisInfo = myDlg.data #this will be a list of data returned from each field added in order
                 thisTrial['numTargets']=  thisInfo[dlgLabelsOrdered.index('numTargets')]
-                thisTrial['numObjects']=  thisInfo[dlgLabelsOrdered.index('numObjects')]
+                thisTrial['numObjectsInRing']=  thisInfo[dlgLabelsOrdered.index('numObjects')]
                 thisTrial['speed']=  thisInfo[dlgLabelsOrdered.index('speed')]
             else:
                 print('User cancelled from dialog box'); logging.flush(); core.quit()
@@ -1208,9 +1206,10 @@ while trialNum < trials.nTotal and expStop==False:
     trials.addData('correctForFeedback',correctForFeedback)
 
     #Print feedback to experimenter
+    msg1 = "trial #" + str(trialNum)
     if correctForFeedback:
-        msg1 = "INcorrect"
-    else: msg1 = "CORRECT"
+        msg1 += " INcorrect"
+    else: msg1 += " CORRECT"
     print(msg1,end=" ")
     msg2 = "targets=" + str(thisTrial['numTargets']) + " objectsInRing="+ str(thisTrial['numObjectsInRing']) + " speed=" + str(speedThisTrial)
     print(msg2)
@@ -1278,6 +1277,7 @@ else:
 logging.flush();
 myWin.close()
 
+plotResults = False
 if plotResults:
 
     #Plot percent correct by condition and speed for all trials

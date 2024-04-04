@@ -192,7 +192,7 @@ else: #checkRefreshEtc
     if refreshRateWrong:
         refreshMsg1 += ' BUT'
         refreshMsg1 += ' program assumes ' + str(refreshRate)
-        refreshMsg2 =  'which is off by more than' + str(round(refreshRateTolerancePct,0)) + '%!!'
+        refreshMsg2 =  'which is off by more than ' + str(round(refreshRateTolerancePct,0)) + '%'
     else:
         refreshMsg1 += ', which is close enough to desired val of ' + str( round(refreshRate,1) )
     myWinRes = myWin.size
@@ -202,7 +202,7 @@ myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
 myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
 if not autopilot:
-    myDlg.addField('Subject name :', subject, tip='or subject code')
+    myDlg.addField('Subject name or ID:', subject, tip='')
     dlgLabelsOrdered.append('subject')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
@@ -215,7 +215,7 @@ if checkRefreshEtc and (not demo) and (myWinRes != [widthPixRequested,heightPixR
     msgWrongResolution = 'Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested)+ ' pixels, screen apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1])
     myDlg.addText(msgWrongResolution, color='GoldenRod')
     print(msgWrongResolution)
-myDlg.addText('Note: to abort, press ESC at a trials response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
+myDlg.addText('To abort, press ESC at a trial response screen', color='DimGrey') #color names stopped working along the way, for unknown reason
 myDlg.show()
 if myDlg.OK: #unpack information from dialogue box
    thisInfo = myDlg.data #this will be a list of data returned from each field added in order
