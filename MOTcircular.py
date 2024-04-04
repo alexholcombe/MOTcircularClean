@@ -1084,7 +1084,8 @@ while trialNum < trials.nTotal and expStop==False:
     centerInMiddleOfSegment =360./numObjects/2.0
     blobsToPreCue= thisTrial['whichIsTargetEachRing'] # [0,1,2] #debug 
     core.wait(.1)
-    myMouse.setVisible(False)      
+    myMouse.setVisible(False)  #Doesn't seem to work any longer
+    myMouse.setPos(newPos=(0,-15*3)) #Try to move mouse pointer offscreen. Supposedly it's in the window's units (deg) but that doesn't seem true, at least on Retina    
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
             #and calibrate. It tries to draw on the screen to do the calibration.
