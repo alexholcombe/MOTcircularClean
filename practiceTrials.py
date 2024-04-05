@@ -80,7 +80,8 @@ radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those ex
 respRadius=radii[0] #deg
 refreshRate= 100.0   #160 #set to the framerate of the monitor
 useClock = True #as opposed to using frame count, which assumes no frames are ever missed
-fullscr=1; scrn=0
+fullscr=0 #Seedms like on the "Chris" computer, Window opening crashes if fullscr==1
+scrn=0
 #Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
 has_retina_scrn = False
 import subprocess
@@ -199,7 +200,7 @@ else: #checkRefreshEtc
 
 myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
-myDlg = psychopy.gui.Dlg(title="", pos=(200,400))
+myDlg = psychopy.gui.Dlg(title="")
 if not autopilot:
     myDlg.addField('Subject name or ID:', subject, tip='or subject code')
     dlgLabelsOrdered.append('subject')
