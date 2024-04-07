@@ -312,7 +312,7 @@ clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,
 clickedRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((-.1,.8,-1)) #show in yellow
 
-circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=6,fillColor=None,autoLog=autoLogging) #visual postcue
+circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=8,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
 referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rgb',lineColor=(-1,-1,1),autoLog=autoLogging) #visual postcue
 
@@ -919,6 +919,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
         if visuallyPostCue:
             circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
             circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
+            circlePostCue.lineWidth = 4 * (thisTrial['ringToQuery'] + 1) #line width scales with eccentricity, via ring number
             circlePostCue.draw()
             if drawingAsGrating:
                 circlePostCue.opacity = 0.3
@@ -1168,7 +1169,7 @@ while trialNum < trials.nTotal and expStop==False:
             #But that means that n may not reach trialDurFrames until after have reached end of trial, so need to quit rather than 
             #let the stimuli keep going around and around
             if t > trialDurTotal:
-                msg="Must not have kept up with some frames, breaking out of loop"; print(msg)
+                msg="Current time is already past trial duration, must not have kept up with some frames, breaking out of loop"; print(msg)
                 break
         if showOnlyOneFrameOfStimuli: #abort after just one frame
             break

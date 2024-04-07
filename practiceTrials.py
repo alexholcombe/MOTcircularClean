@@ -307,7 +307,7 @@ clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,
 clickedRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',lineColor=None,fillColor=(-.5,-.1,-1),autoLog=autoLogging) #to show clickable zones
 clickedRegion.setColor((-.1,.8,-1)) #show in yellow
 
-circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=6,fillColor=None,autoLog=autoLogging) #visual postcue
+circlePostCue = visual.Circle(myWin, radius=2*radii[0], edges=96, colorSpace='rgb',lineColor=(.5,.5,-.6),lineWidth=8,fillColor=None,autoLog=autoLogging) #visual postcue
 #referenceCircle allows optional visualisation of trajectory
 referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rgb',lineColor=(-1,-1,1),autoLog=autoLogging) #visual postcue
 
@@ -816,6 +816,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
         if visuallyPostCue:
             circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
             circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
+            circlePostCue.lineWidth = 4 * (thisTrial['ringToQuery'] + 1) #line width scales with eccentricity, via ring number
             circlePostCue.draw()
             if drawingAsGrating:
                 circlePostCue.opacity = 0.3
@@ -944,7 +945,7 @@ while trialNum < trials.nTotal and expStop==False:
                 myWin.close()
             # create a dialog box incrementally
             dlgLabelsOrdered = list() #new dialog box
-            myDlg = psychopy.gui.Dlg(title="Practice trial #" + str(trialNum), pos=(200,400))
+            myDlg = psychopy.gui.Dlg(title="Practice trial #" + str(trialNum), labelButtonCancel='Quit after next trial')
             if trialNum >0:
                 if correctForFeedback:
                     myDlg.addText("Previous trial CORRECT", color='Green')
@@ -971,7 +972,7 @@ while trialNum < trials.nTotal and expStop==False:
                 thisTrial['numObjectsInRing']=  thisInfo[dlgLabelsOrdered.index('numObjects')]
                 thisTrial['speed']=  thisInfo[dlgLabelsOrdered.index('speed')]
             else:
-                print('User cancelled from dialog box'); logging.flush(); core.quit()
+                print('User cancelled from dialog box'); expStop = True
             if fullscr:
                 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
                 #Have to create new mouse object otherwise mouse coordinates won't work
@@ -1081,7 +1082,7 @@ while trialNum < trials.nTotal and expStop==False:
             #But that means that n may not reach trialDurFrames until after have reached end of trial, so need to quit rather than 
             #let the stimuli keep going around and around
             if t > trialDurTotal:
-                msg="Must not have kept up with some frames, breaking out of loop"; print(msg)
+                msg="Current time is already past trial duration, must not have kept up with some frames, breaking out of loop"; print(msg)
                 break
         if showOnlyOneFrameOfStimuli: #abort after just one frame
             break
@@ -1278,19 +1279,27 @@ else:
 logging.flush();
 myWin.close()
 
-plotResults = False
-if plotResults:
-
+plotResults = False; summarizeResults = False
+if plotResults or summarizeResults:
     #Plot percent correct by condition and speed for all trials
     trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
     df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
     #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
     # Create a boolean mask for where 'speedThisTrial' is '--'
-    dashes_mask = (df['speedThisTrial'] == '--')
+    #Sometimes saveAsWideText uses double dashes flanked by spaces but sometimes not it seems, to indicate a blank value because the trial wasn't run.
+    df['speedThisTrial'] = df['speedThisTrial'].str.strip() #remove leading and trailing spaces
+    #For some reason the previous line converts all the non-numbers to NaN
+    print("prior to conversion to numeric df['speedThisTrial']=", df['speedThisTrial'])
+    dashes_mask = df['speedThisTrial'].isna()    
+    #dashes_mask = (df['speedThisTrial'] == '--') # | (df['speedThisTrial'] == ' -- ') | (df['speedThisTrial'] == ' --') 
+    print('dashes_mask=',dashes_mask) #Why doesnt it work to detect dashes
+    lastRow = df.iloc[-1]
+    lastRow = lastRow['speedThisTrial'] #.values[0] #values[0] is to prevent returning the row number
+    print('last row speedThisTrial="', lastRow, '"')
     all_false = (~dashes_mask).all()
     if all_false:
         numLegitTrials = len(df)
-        #print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
+        print('Session appears to have completed all (',len(df),'trials), because no double-dashes ("--") appear in the file')
         #print('\ndtype=',df['speedThisTrial'].dtypes) #'object' means it probably includes strings, which probably happened because didn't complete all trials
         #But if I run autopilot with 10 trials even though it finishes ,I sometimes get object type, whereas with 1 autopilot trial I don't.
         #And when I open the file afterward with analyseTrialHandlerOutput.py, it works fine and has type float64
@@ -1299,21 +1308,24 @@ if plotResults:
         # Find the first True in the mask, which is the first trial that didn't complete
         first_row_with_dashes_num = dashes_mask.idxmax()
         numLegitTrials = first_row_with_dashes_num
-        #print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
+        print('Num trials in dataframe (num rows)=',len(df), '. Num trials that experiment got through=', numLegitTrials)
         #Throw away all the non-legitimate trials
         df = df[:numLegitTrials]
-        #print('Completed portion of session=',df)
-        if numLegitTrials < 2:
-            print('Forget it, I cannot analyze a one-trial experiment')
-            quit()
+        print('Completed portion of session=',df)
+
     # Convert dataframe values from saveAsWideText to numeric. Shouldn't need this if session completes but because of psychopy bug (see above), do.
-    print("df['speedThisTrial']=", df['speedThisTrial'])
     df['speedThisTrial'] = pd.to_numeric(df['speedThisTrial'])
     df['numTargets'] = pd.to_numeric(df['numTargets'])
     df['numObjectsInRing'] = pd.to_numeric(df['numObjectsInRing'])
     df['correctForFeedback'] = pd.to_numeric(df['correctForFeedback'])
+    dfEssential = df[['speedThisTrial','numTargets','numObjectsInRing','correctForFeedback']]
+    print('dfEssential=',dfEssential)
     #Finished clean-up of dataframe that results from incomplete session
 
+if plotResults:
+    if numLegitTrials < 3:
+        print('Forget it, I cannot analyze a one-trial experiment')
+        quit()
     # set up plot
     plt.subplot(111)
     plt.ylabel("Proportion correct")
