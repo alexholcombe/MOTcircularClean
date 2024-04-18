@@ -7,6 +7,7 @@ threshHzPrevLit = { 'numTargets': [2,3],
                     'HzHolcombeChenE1': [4.45, None],
                     'HzHolcombeChenE2': [4.05,2.7]       }
 	#ADD  1 target including MARINOVIC finding of 7.2 Hz for one target, and Verstraten
+	#If add old people findings, make sure adjust code in MOTcircular.py that uses for starting point of staircase
 
 def getAvgMidpointThreshes():
 	# Create DataFrame

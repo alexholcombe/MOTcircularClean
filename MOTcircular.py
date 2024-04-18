@@ -378,23 +378,12 @@ publishedThreshes = publishedThreshes[['numTargets', 'HzAvgPreviousLit']] #only 
 mainCondsDf = pd.DataFrame( mainCondsInfo )
 mainCondsDf = pd.merge(mainCondsDf, publishedThreshes, on='numTargets', how='left')
 mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCondsDf['numObjects']
-mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)
-print('mainCondsDf')
-print(mainCondsDf) #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
+mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)  #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
                         
-#From preliminary test, record estimated thresholds below. Then use those to decide the speeds testsed
-speedsPrelimiExp = np.array([0.02,0.02,0.02,0.02]) # np.array([0.96, 0.7, 0.72, 0.5])   # Preliminary list of thresholds for each condition.
-if not doStaircase: #If not staircase, seeds will try to bracket threshold estimated from preliminary trials
-    factors = np.array([0.4, 0.7, 1, 1.3,1.6]) #Need to test speeds slower and fast than each threshold, 
-    #these are the factors to multiply by each preliminarily-tested threshold
-    speedsEachNumTargetsNumObjects = []
-    for i in range(0, len(speedsPrelimiExp), 2):
-        sub_matrix1 = np.round(speedsPrelimiExp[i] * factors, 2).tolist()
-        sub_matrix2 = np.round(speedsPrelimiExp[i+1] * factors, 2).tolist()
-        speedsEachNumTargetsNumObjects.append([sub_matrix1, sub_matrix2])
-    #Old way of setting all speeds manually:
-    #speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-    #                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
+
+#Old way of setting all speeds manually:
+#speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
+#                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
 
 #don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
@@ -404,8 +393,15 @@ staircases = []
 if doStaircase: #create the staircases
     for stairI in range(len(mainCondsDf)): #one staircase for each main condition
         descendingPsychometricCurve = True
-        #give them all the same starting value of 50% of the average threshold speed across conditions found by previous literature
-        startVal = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
+        #the average threshold speed across conditions found by previous literature for young people
+        avgAcrossCondsFromPrevLit = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
+        if session <= 1:  #give all the staircases the same starting value of 50% of that found by previous literature
+            startVal = 1.1 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
+        elif session == 2:
+            startVal = avgAcrossCondsFromPrevLit
+        elif session >= 3:
+            startVal = 0.75 * avgAcrossCondsFromPrevLit
+
         startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
         print('staircase startVal=',startVal,' startValInternal=',startValInternal)
 
