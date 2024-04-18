@@ -200,10 +200,13 @@ else: #checkRefreshEtc
 
 myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
+session=0
 myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
 if not autopilot:
     myDlg.addField('Subject name or ID:', subject, tip='')
     dlgLabelsOrdered.append('subject')
+    myDlg.addField('session number:',session, tip='1,2,3,')
+    dlgLabelsOrdered.append('session')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
 pctCompletedBreaks = np.array([])
@@ -223,8 +226,11 @@ if myDlg.OK: #unpack information from dialogue box
        name=thisInfo[dlgLabelsOrdered.index('subject')]
        if len(name) > 0: #if entered something
          subject = name #change subject default name to what user entered
+       sessionEntered =thisInfo[dlgLabelsOrdered.index('session')] #it comes from dlg as an integer rather than a string, which is good
+       if not isinstance(session, int):
+         print('Error! session must be integer'); core.quit()
+       session = sessionEntered       
    trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
-   #print('trialsPerCondition from dialog box=',trialsPerCondition)
 else: 
    print('User cancelled from dialog box.')
    logging.flush()
@@ -236,7 +242,7 @@ else:
     print('"dataRaw" directory does not exist, so saving data in present working directory')
     dataDir='.'
 expname = ''
-datafileName = dataDir+'/'+subject+ '_' + expname+timeAndDateStr
+datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDateStr
 if not demo and not exportImages:
     dataFile = open(datafileName+'.tsv', 'w')  # sys.stdout
     import shutil
@@ -455,7 +461,7 @@ for numObjs in numObjsInRing: #set up experiment design
       numTargetsIdx = numTargets.index(nt)
       if doStaircase: #Speeds will be determined trial-by-trial by the staircases. However, to estimate lapse rate,
         #we need occasional trials with a slow speed.
-        speeds = [[.02,.1],'staircase','staircase','staircase']  #speeds = [0.02, 0.1, -99, -99, -99]
+        speeds = [[.02,.1],'staircase','staircase','staircase','staircase']  #speeds = [0.02, 0.1, -99, -99, -99]
       else: 
         speeds= speedsEachNumTargetsNumObjects[  numTargetsIdx ][ numObjectsIdx ]
       for speed in speeds:
@@ -999,7 +1005,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
     
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
-print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
+print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
 print('orderCorrect\ttrialDurTotal\tnumTargets', end= '\t', file=dataFile) 
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
@@ -1020,7 +1026,7 @@ trialDurTotal=0;
 ts = list();
 
 if eyetracking:
-    EDF_fname_local=('EyeTrack_'+subject+'_'+timeAndDateStr+'.EDF')
+    EDF_fname_local=('EyeTrack_'+subject+'_' + str(session) + '_' + timeAndDateStr+'.EDF')
     my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,subject,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
 
 randomStartAngleEachRing = True
@@ -1259,8 +1265,8 @@ while trialNum < trials.nTotal and expStop==False:
 
     if passThisTrial:   orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
 
-    #header print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
-    print(trialNum,subject,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
+    #header print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
+    print(trialNum,subject,session,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
             speedThisTrial, #could be different than thisTrial['speed'] because staircase
             thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
     print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) 
@@ -1359,6 +1365,7 @@ if expStop == True:
     logging.info('User aborted experiment by keypress with trialNum=' + str(trialNum))
     print('User aborted experiment by keypress with trialNum=', trialNum)
 
+timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 msg = 'Finishing now, at ' + timeAndDateStr
 logging.info(msg); print(msg)
 #print('%correct order = ', round( numTrialsOrderCorrect*1.0/trialNum*100., 2)  , '% of ',trialNum,' trials', end=' ')

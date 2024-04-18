@@ -52,16 +52,19 @@ class EyeLinkTrack_Holcombe():
             One of: BLACK, WHITE, GRAY
         calibrationSounds:
             True: enable feedback sounds when calibrating'''
-        self.edfFileName = str(sj)+".EDF"   # EDF filename on tracker machine can only be 8 characters!
-        # check if the filename is valid (length <= 8 & no special char)
+        sj = str(sj)
+        # EDF filename on tracker machine can only be 8 characters
+        if len(sj) > 4:
+            print('ERROR: stem of EDF eyetracker machine filename should not exceed 4 characters, because need four more for ".EDF", therefore shortening it to first four:',
+                  sj[0:4])
+            sj = sj[0:4] 
         allowed_char = string.ascii_letters + string.digits + '_' + '.'
-        if not all([c in allowed_char for c in self.edfFileName]):
-            print('ERROR: Invalid EDF filename characters in',self.edfFileName)
-        if len(self.edfFileName) > 8:
-            print('ERROR: EDF eyetracker machine filename should not exceed 8 characters, shortening it to first eight:',self.edfFileName[0:8])
-            self.edfFileName = self.edfFileName[0:8]
-        print("Eyetracker PC filename will be (shortened to 8 characters if you entered more than 8):",self.edfFileName)
-        
+        # check if the name is valid (no special char)
+        if not all([c in allowed_char for c in sj]):
+            print('ERROR: Invalid EDF filename characters in',sj)
+            core.quit()       
+        self.edfFileName = str(sj)+".EDF" 
+        print("Eyetracker PC filename (shortened to 8 characters total if what you entered led to more than 8):",self.edfFileName)
         print("Connecting to eyetracker.")
         try:
             self.tracker = pylink.EyeLink() #pylink.EyeLink('100.1.1.1')
