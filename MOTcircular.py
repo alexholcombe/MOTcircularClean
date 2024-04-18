@@ -58,7 +58,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = False
+autopilot= True; simulateObserver=True; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -1145,8 +1145,7 @@ while trialNum < trials.nTotal and expStop==False:
             else:
                 speedThisTrial = thisTrial['speed']
         currentSpeed = speedThisTrial #no speed ramp
-        #print('currentSpeed=',round(currentSpeed,2))
-        
+           
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
@@ -1157,8 +1156,7 @@ while trialNum < trials.nTotal and expStop==False:
             perimeter = radii[numRing]*4.0
             circum = 2*pi*radii[numRing]
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
-        print('currentSpeed=',currentSpeed) 
-        print('initialDirectionEachRing=',initialDirectionEachRing) 
+        #print('currentSpeed=',currentSpeed) 
 
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
