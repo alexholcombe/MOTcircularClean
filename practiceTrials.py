@@ -218,9 +218,15 @@ myDlg.show()
 if myDlg.OK: #unpack information from dialogue box
    thisInfo = myDlg.data #this will be a list of data returned from each field added in order
    if not autopilot:
-       name=thisInfo[dlgLabelsOrdered.index('subject')]
-       if len(name) > 0: #if entered something
-         subject = name #change subject default name to what user entered
+    failedToCaptureSubjectName = False
+    try:
+        name=thisInfo[dlgLabelsOrdered.index('subject')]
+    except Exception as e:
+        print("Warning: failed to capture subject name")   #This seemed to happen on Adam Reeves' Windows 10 machine
+        failedToCaptureSubjectName = True
+    if failedToCaptureSubjectName == False:
+        if len(name) > 0: #if entered something
+            subject = name #change subject default name to what user entered
 else: 
    print('User cancelled from dialog box.')
    logging.flush()
