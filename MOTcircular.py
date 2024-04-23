@@ -138,7 +138,7 @@ trialDurFrames=int(trialDurMin*refreshRate)+int( trackingExtraTime*refreshRate )
 rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampDownDur;
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
-ballStdDev = 1.8
+ballStdDev = 1.8 * 3 
 mouseChoiceArea = ballStdDev*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
