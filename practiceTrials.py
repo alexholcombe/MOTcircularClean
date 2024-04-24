@@ -353,9 +353,9 @@ if useSound:
 
 ######################################
 # Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
-practice_speed =          [.1, .1, .2, .2, .2, .2, .1, .1, .05, .05, .05, .05, .03, .03, .03, .03, .02, .02, .02, .01]
-practice_numObjsInRing =  [4,   4,  8,  8,  4,  4,  8,  8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8]       
-practice_numTargets =     [2,   3,  2,  3,  2,  3,  2,  3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3] 
+practice_speed =          [.1, .1, .2, .2, .2, .2, .1, .1, .05, .05, .05, .05, .03, .03, .03, .03, .02, .02, .02, .01, .02, .02, .02, .01, .01, .02, .02, .01, .02, .02, .02, .01, .01, .02, .02, .01]
+practice_numObjsInRing =  [4,   4,  8,  8,  4,  4,  8,  8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8,   4,   4,   8,   8]       
+practice_numTargets =     [2,   3,  2,  3,  2,  3,  2,  3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3,   2,   3,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1] 
 #################################################################
 
 numPresetPracticeTrials = len(practice_numTargets)
