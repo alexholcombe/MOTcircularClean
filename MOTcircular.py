@@ -70,11 +70,11 @@ respTypes=['order']; respType=respTypes[0]
 rng_seed = int(time.time())
 np.random.seed(seed=rng_seed); random.seed(rng_seed)
 
-drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
+drawingAsGrating =False;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
-numRings=3
+numRings=2
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
@@ -326,6 +326,9 @@ blindspotFill = 0 #a way for people to know if they move their eyes
 if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
+
+centerPoint = [15,0] #pixels. Other things that are drawn might use units of degrees, but fixation is drawn with units='pix'
+
 fixatnNoise = True
 fixSizePix = 6 #20 make fixation big so flicker more conspicuous
 if fixatnNoise:
@@ -334,11 +337,14 @@ if fixatnNoise:
     fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
     fixation= visual.PatchStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+    fixationBlank.setPos(centerPoint)
 else:
     fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+fixation.setPos(centerPoint)
 fixationPoint = visual.PatchStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
-
+fixationPoint.setPos(centerPoint)
+                     
 #respText = visual.TextStim(myWin,pos=(0, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextRemindPctDoneText = visual.TextStim(myWin,pos=(-.1, -.4),colorSpace='rgb',color= (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
@@ -1112,7 +1118,8 @@ while trialNum < trials.nTotal and expStop==False:
         ringRadial,cueRing,currentlyCuedBlob = \
                 constructRingAsGratingSimplified(radiiGratings,thisTrial['numObjectsInRing'],gratingObjAngle,colors_all,
                                                  stimColorIdxsOrder,gratingTexPix,blobsToPreCue)
-        preDrawStimToGreasePipeline.extend([ringRadial[0],ringRadial[1],ringRadial[2]])
+        for ringI in range(numRings):
+            preDrawStimToGreasePipeline.extend([ ringRadial[ringI] ])  
     core.wait(.1)
 
     if not doStaircase and not quickMeasurement:
