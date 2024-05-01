@@ -168,7 +168,7 @@ mon.setSizePix( (widthPixRequested,heightPixRequested) )
 myWin = openMyStimWindow(mon,widthPixRequested,heightPixRequested,bgColor,allowGUI,units,fullscr,scrn,waitBlank,autoLogging)
 myWin.setRecordFrameIntervals(False)
 
-trialsPerCondition = 1
+trialsPerCondition = 3
 
 refreshMsg2 = ''
 if not checkRefreshEtc:
