@@ -400,7 +400,7 @@ if doStaircase: #create the staircases
     for stairI in range(len(mainCondsDf)): #one staircase for each main condition
         descendingPsychometricCurve = True
         #the average threshold speed across conditions found by previous literature for young people
-        avgAcrossCondsFromPrevLit = 0.5* mainCondsDf['midpointThreshPrevLit'].mean()
+        avgAcrossCondsFromPrevLit = mainCondsDf['midpointThreshPrevLit'].mean()
         if session <= 1:  #give all the staircases the same starting value of 50% of that found by previous literature
             startVal = 1.1 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
         elif session == 2:
