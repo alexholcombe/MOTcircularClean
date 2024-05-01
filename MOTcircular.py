@@ -327,7 +327,7 @@ if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 
-centerPoint = [15,0] #pixels. Other things that are drawn might use units of degrees, but fixation is drawn with units='pix'
+fixatnCenterPoint = [15,0] #pixels. Other things that are drawn might use units of degrees, but fixation is drawn with units='pix'
 
 fixatnNoise = True
 fixSizePix = 6 #20 make fixation big so flicker more conspicuous
@@ -337,13 +337,13 @@ if fixatnNoise:
     fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
     fixation= visual.PatchStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
-    fixationBlank.setPos(centerPoint)
+    fixationBlank.setPos(fixatnCenterPoint)
 else:
     fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
     fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
-fixation.setPos(centerPoint)
+fixation.setPos(fixatnCenterPoint)
 fixationPoint = visual.PatchStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
-fixationPoint.setPos(centerPoint)
+fixationPoint.setPos(fixatnCenterPoint)
                      
 #respText = visual.TextStim(myWin,pos=(0, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
@@ -1152,7 +1152,7 @@ while trialNum < trials.nTotal and expStop==False:
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
-        offsetXYeachRing=[ [0,0],[0,0],[0,0] ]
+        offsetXYeachRing=[ [0,15],[0,-15],[0,0] ]
         if currentSpeed < speedThisTrial:
             currentSpeed = currentSpeed + speedRampStep
         if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
