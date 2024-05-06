@@ -74,7 +74,7 @@ drawingAsGrating =False;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
-numRings=2
+numRings=1
 radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
@@ -484,7 +484,7 @@ for numObjs in numObjsInRing: #set up experiment design
                       whichSubsetEntry = whichToQuery % nt  #e.g. if nt=2 and whichToQuery can be 0,1,or2 then modulus result is 0,1,0. This implies that whichToQuery won't be totally counterbalanced with which subset, which is bad because
                                       #might give more resources to one that's queried more often. Therefore for whichToQuery need to use least common multiple.
                       ringToQuery = s[whichSubsetEntry];  #print('ringToQuery=',ringToQuery,'subset=',s)
-                      for basicShape in ['circle']: #'diamond'
+                      for basicShape in ['diamond']: #'diamond'
                         for initialDirRing0 in [-1,1]:
                                 stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                         'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )
@@ -492,7 +492,7 @@ for numObjs in numObjsInRing: #set up experiment design
             #will randomly at time of trial choose which rings have targets and which one querying.
             whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
             ringToQuery = 999 #this is the signal to choose the ring randomly
-            for basicShape in ['circle']: #'diamond'
+            for basicShape in ['diamond']: #'diamond'
                 for initialDirRing0 in [-1,1]:
                     stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                 'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
@@ -1156,8 +1156,11 @@ while trialNum < trials.nTotal and expStop==False:
         if currentSpeed < speedThisTrial:
             currentSpeed = currentSpeed + speedRampStep
         if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
-            perimeter = radii[numRing]*4.0
-            circum = 2*pi*radii[numRing]
+            perimeter = radii[0]*4.0  #Will only work if numRings==1, otherwise it won't do the speed compensation right for other rings
+            circum = 2*pi*radii[0]
+            if numRings > 1:
+                msg = 'Diamond shape only works for numRings==1'
+                logging.warning(msg); print(msg)
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
         #print('currentSpeed=',currentSpeed) 
 
