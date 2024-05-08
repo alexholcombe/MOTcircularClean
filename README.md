@@ -11,9 +11,9 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 
 ## Eyetracking
 
-For fixation report analysis from EDF files, see https://github.com/alexholcombe/MOTcircular/tree/master/dataPreprocess file
+For [Fixation Report](https://docs.google.com/document/d/1o3IirKJTU_yfOrlNHWl6cmx1fj1j6vFzhXw-UFje_jw/edit) analysis from EDF files, see [this code](https://github.com/alexholcombe/MOTcircular/tree/master/dataPreprocess)
 
-Drift correction: will need to be done at the analysis stage because we are not able to re-calibrate the eyetracker.
+Drift correction: will need to be done at the analysis stage because we are not able to re-calibrate the eyetracker due to it not being able to draw to the same graphicsEnvironment even though it's supposed to be able to. So we'd have to close Psychopy grahpics environment and open an eyetracker one for each calibration.
 
 ### Eyetracking problems Nov 2023 - Jan 2024
 
