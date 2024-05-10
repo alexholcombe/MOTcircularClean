@@ -845,7 +845,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                     #check whether mouse click was close to any of the colors
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/12.#deg visual angle?
+                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4.#deg visual angle?
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
                         clickedRegion.setRadius(mouseToler) #/4 Dividing by 4 simply for visual aesthetic reasons
