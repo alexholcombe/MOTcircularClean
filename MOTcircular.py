@@ -139,7 +139,7 @@ rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampD
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8 * 3 
-mouseChoiceArea = ballStdDev*0.8 # origin =1.3
+mouseChoiceArea = ballStdDev * 0.2 #debugAH #*0.8  # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 2.0# 1.3 #2.9
@@ -944,7 +944,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                     #check whether mouse click was close to any of the colors
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
+                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/12 #6.  #deg visual angle?
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
                         clickedRegion.setRadius(mouseToler/4.) #Dividing by 4 simply for visual aesthetic reasons
@@ -1048,14 +1048,14 @@ while trialNum < trials.nTotal and expStop==False:
     if not queryEachRingEquallyOften: #then need to randomly set ringToQuery and whichIsTargetEachRing
         #To determine whichRingsHaveTargets, sample from 0,1,...,numRings by permuting that list
         rings = list(range(numRings) )
-        random.shuffle(rings)
+        random.shuffle(rings) 
         whichRingsHaveTargets = rings[ 0:thisTrial['numTargets'] ]
         #print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
         #Randomly assign a target object for each ring that is meant to have a target
         for r in whichRingsHaveTargets:
             thisTrial['whichIsTargetEachRing'][r] = np.random.randint(0,thisTrial['numObjectsInRing'])
         #Randomly pick ring to query. 
-        random.shuffle(whichRingsHaveTargets)
+        random.shuffle(whichRingsHaveTargets) 
         thisTrial['ringToQuery'] = whichRingsHaveTargets[0]
         #print("thisTrial['numTargets']=",thisTrial['numTargets'], " thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'], " thisTrial['ringToQuery']",thisTrial['ringToQuery'])
         
