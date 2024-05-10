@@ -902,7 +902,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                 x = x+ offsetXYeachRing[optionSet][0]
                 y = y+ offsetXYeachRing[optionSet][1]            
                 if not drawingAsGrating and not debugDrawBothAsGratingAndAsBlobs:
-                    blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
+                    blob.setColor(  colors_all[0], log=autoLogging )
                     blob.setPos([x,y])
                     blob.draw()
 
@@ -917,7 +917,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             ringRadial[optionSet].draw()
         #end loop through rings
 
-        #Draw visual response cue, usually ring to indicate which ring to query
+        #Draw visual response cue, usually ring to indicate which ring is queried
         if visuallyPostCue:
             circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
             circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
@@ -936,24 +936,24 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             mouseX = mouseX * mouseFactor 
             mouseY = mouseY * mouseFactor 
             for optionSet in range(optionSets):
-              for ncheck in range( numOptionsEachSet[optionSet] ): 
+                mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4 #6.  #deg visual angle?
+                if showClickedRegion:
+                    clickedRegion.setPos([mouseX,mouseY])
+                    clickedRegion.setRadius(mouseToler)
+                    clickedRegion.draw()
+                for ncheck in range( numOptionsEachSet[optionSet] ): 
                     angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi #radians
                     x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
                     x = x+ offsetXYeachRing[optionSet][0]
                     y = y+ offsetXYeachRing[optionSet][1]
                     #check whether mouse click was close to any of the colors
-                    #Colors were drawn in order they're in in optionsIdxs
-                    distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4 #6.  #deg visual angle?
-                    if showClickedRegion:
-                        clickedRegion.setPos([mouseX,mouseY])
-                        clickedRegion.setRadius(mouseToler) #/4 #Dividing by 4 simply for visual aesthetic reasons
-                        clickedRegion.draw()
                     if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
                         clickableRegion.setRadius(mouseToler) 
                         clickableRegion.draw()
-                        #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseToler=',mouseToler)
+                    #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseToler=',mouseToler)
+                    #Colors were drawn in order they're in in optionsIdxs
+                    distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
                     if distance<mouseToler:
                         c = opts[optionSet][ncheck] #idx of color that this option num corresponds to
                         if respondedEachToken[optionSet][ncheck]:  #clicked one that already clicked on
