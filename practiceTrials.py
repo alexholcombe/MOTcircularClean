@@ -139,7 +139,7 @@ rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampD
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8
-mouseChoiceArea = ballStdDev*0.8 # origin =1.3
+mouseChoiceArea = ballStdDev* 0.2 #0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 2.0# 1.3 #2.9
@@ -845,10 +845,10 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                     #check whether mouse click was close to any of the colors
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
+                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/12.#deg visual angle?
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
-                        clickedRegion.setRadius(mouseToler/4.) #Dividing by 4 simply for visual aesthetic reasons
+                        clickedRegion.setRadius(mouseToler) #/4 Dividing by 4 simply for visual aesthetic reasons
                         clickedRegion.draw()
                     if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
