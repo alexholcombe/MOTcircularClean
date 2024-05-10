@@ -773,13 +773,14 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
         timesRespPromptSoundPlayed +=1
     #respText.draw()
 
-    respondedEachToken = np.zeros([numRings,numObjects])  #potentially two sets of responses, one for each ring
+    respondedEachToken = np.zeros([numRings,numObjects])  
     optionIdexs=list();baseSeq=list();numOptionsEachSet=list();numRespsNeeded=list()
-    numRespsNeeded = np.zeros(numRings) 
+    numRespsNeeded = np.zeros(numRings) #potentially one response for each ring
     for ring in range(numRings):
         optionIdexs.append([])
         noArray=list()
-        for k in range(numObjects):noArray.append(colors_all[0])
+        for k in range(numObjects):
+            noArray.append(colors_all[0])
         baseSeq.append(np.array(noArray))
         for i in range(numObjects):
             optionIdexs[ring].append(baseSeq[ring][i % len(baseSeq[ring])] )
@@ -803,7 +804,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                 x = x+ offsetXYeachRing[optionSet][0]
                 y = y+ offsetXYeachRing[optionSet][1]            
                 if not drawingAsGrating and not debugDrawBothAsGratingAndAsBlobs:
-                    blob.setColor(  colors_all[0], log=autoLogging )  #draw blob
+                    blob.setColor(  colors_all[0], log=autoLogging )
                     blob.setPos([x,y])
                     blob.draw()
 
@@ -818,7 +819,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             ringRadial[optionSet].draw()
         #end loop through rings
 
-        #Draw visual response cue, usually ring to indicate which ring to query
+        #Draw visual response cue, usually ring to indicate which ring is queried
         if visuallyPostCue:
             circlePostCue.setPos( offsetXYeachRing[ thisTrial['ringToQuery'] ] )
             circlePostCue.setRadius( radii[ thisTrial['ringToQuery'] ] )
@@ -837,24 +838,24 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             mouseX = mouseX * mouseFactor 
             mouseY = mouseY * mouseFactor 
             for optionSet in range(optionSets):
-              for ncheck in range( numOptionsEachSet[optionSet] ): 
+                mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4 #6.  #deg visual angle?
+                if showClickedRegion:
+                    clickedRegion.setPos([mouseX,mouseY])
+                    clickedRegion.setRadius(mouseToler)
+                    clickedRegion.draw()
+                for ncheck in range( numOptionsEachSet[optionSet] ): 
                     angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi #radians
                     x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
                     x = x+ offsetXYeachRing[optionSet][0]
                     y = y+ offsetXYeachRing[optionSet][1]
                     #check whether mouse click was close to any of the colors
-                    #Colors were drawn in order they're in in optionsIdxs
-                    distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4.#deg visual angle?
-                    if showClickedRegion:
-                        clickedRegion.setPos([mouseX,mouseY])
-                        clickedRegion.setRadius(mouseToler) #/4 Dividing by 4 simply for visual aesthetic reasons
-                        clickedRegion.draw()
                     if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
                         clickableRegion.setRadius(mouseToler) 
                         clickableRegion.draw()
-                        #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseToler=',mouseToler)
+                    #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseToler=',mouseToler)
+                    #Colors were drawn in order they're in in optionsIdxs
+                    distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
                     if distance<mouseToler:
                         c = opts[optionSet][ncheck] #idx of color that this option num corresponds to
                         if respondedEachToken[optionSet][ncheck]:  #clicked one that already clicked on
@@ -872,7 +873,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                                 respondedEachToken[optionSet][ncheck] = 1 #register this one has been clicked
                                 responses[optionSet].append(c) #this redundant list also of course encodes the order
                                 respcount += 1  
-                                #print('added  ',ncheck,'th response to clicked list')
+                                print('added  ',ncheck,'th response to clicked list')
                 #print 'response=', response, '  respcount=',respcount, ' lastClickState=',lastClickState, '  after affected by click'
            #end if mouse clicked
            
@@ -899,7 +900,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
     #if [] in responses: responses.remove([]) #this is for case of tracking with click response, when only want one response but draw both rings. One of responses to optionset will then be blank. Need to get rid of it
     return responses,responsesAutopilot,respondedEachToken, expStop
     ####### #End of function definition that collects responses!!!! #################################################
-    
+        
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)

@@ -872,13 +872,14 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
         timesRespPromptSoundPlayed +=1
     #respText.draw()
 
-    respondedEachToken = np.zeros([numRings,numObjects])  #potentially two sets of responses, one for each ring
+    respondedEachToken = np.zeros([numRings,numObjects])  
     optionIdexs=list();baseSeq=list();numOptionsEachSet=list();numRespsNeeded=list()
-    numRespsNeeded = np.zeros(numRings) 
+    numRespsNeeded = np.zeros(numRings) #potentially one response for each ring
     for ring in range(numRings):
         optionIdexs.append([])
         noArray=list()
-        for k in range(numObjects):noArray.append(colors_all[0])
+        for k in range(numObjects):
+            noArray.append(colors_all[0])
         baseSeq.append(np.array(noArray))
         for i in range(numObjects):
             optionIdexs[ring].append(baseSeq[ring][i % len(baseSeq[ring])] )
