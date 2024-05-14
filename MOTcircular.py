@@ -139,7 +139,7 @@ rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampD
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8 * 3 
-mouseChoiceArea = ballStdDev * 0.2 #debugAH #*0.8  # origin =1.3
+#mouseChoiceArea = ballStdDev * 0.2 #debugAH #*0.8  # origin =1.3  #Now use a function for this,
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 2.0# 1.3 #2.9
@@ -311,7 +311,7 @@ if labelBlobs:
         blobText = visual.TextStim(myWin,text=label,colorSpace='rgb',color = (-1,-.2,-1),autoLog=False)
         blobLabels.append(blobText)
 
-optionChosenCircle = visual.Circle(myWin, radius=mouseChoiceArea, edges=32, colorSpace='rgb',fillColor = (1,0,1),autoLog=autoLogging) #to outline chosen options
+optionChosenCircle = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor = (1,0,1),autoLog=autoLogging) #to outline chosen options
 #Optionally show zones around objects that will count as a click for that object
 clickableRegion = visual.Circle(myWin, edges=32, colorSpace='rgb',fillColor=(-1,-.7,-1),autoLog=autoLogging) #to show clickable zones
 #Optionally show location of most recent click
@@ -758,6 +758,7 @@ def angleChangeThisFrame(speed,initialDirectionEachRing, numRing, thisFrameN, la
     angleMoveRad = initialDirectionEachRing[numRing] * speed*2*pi*(thisFrameN-lastFrameN) / refreshRate
     return angleMoveRad
 
+
 def alignAngleWithBlobs(angleOrigRad):
     centerInMiddleOfSegment = 0 #360./numObjects/2.0  #if don't add this factor, won't center segment on angle and so won't match up with blobs of response screen
     angleDeg = angleOrigRad/pi*180
@@ -860,8 +861,49 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 # #######End of function that displays the stimuli #####################################
 ########################################################################################
 
-showclickableRegions = True
-showClickedRegion = True
+showClickableRegions = False #Every time you click, show every disc's clickable region 
+showClickedRegion = False #Problem with code is it shows the largest ring's region always, even if the smaller ring is clicked
+showClickedRegionFinal = True #Show the last click, that's actually on the cued ring
+def calcMouseChoiceRadiusForRing(ring):
+    #For ring, need to calculate the smallest distance to another object, 
+    # and set mouseChoiceRadius for that ring to smaller than that
+    #Determine the max number of objects that ever occur in a ring, because that determines how big the mouse click radius can be
+    # together with how far apart the rings are.
+    maxNumObjects = max(numObjsInRing)
+
+    #Calculate for all rings even though just want to know one
+    mouseChoiceRadiusEachRing = np.zeros(numRings)
+    minAngleBetweenObjectsOnRing = 2*pi / maxNumObjects #angle between objects on a ring
+
+    #ring0
+    ring0distToNextRing = radii[1] - radii[0] #distance between centers of rings 0 and 1
+    #Find distance between objects using the formula for a chord of a circle, 2r*sin(theta/2)
+    distBetweenObjectsInRing0 = 2*radii[0]*sin(minAngleBetweenObjectsOnRing/2)
+    mouseChoiceRadius = min(ring0distToNextRing/2, distBetweenObjectsInRing0/2)
+    mouseChoiceRadiusEachRing[0] = mouseChoiceRadius
+
+    #ring1
+    if numRings > 1:
+        if numRings > 2:
+            ring2distToRing1 = radii[2] - radii[1] #distance between centers of rings 2 and 1
+            ring1closestRingDist = min(ring0distToNextRing,ring2distToRing1)
+        else:
+            ring1closestRingDist = ring0distToNextRing
+        distBetweenObjectsInRing1 = 2*radii[1]*sin(minAngleBetweenObjectsOnRing/2) #formula for chord of a circle
+        mouseChoiceRadius = min(ring1closestRingDist/2, distBetweenObjectsInRing1/2)
+        mouseChoiceRadiusEachRing[1] = mouseChoiceRadius
+
+    #ring2
+    if numRings > 2: #Calculate closest distance from ring2 to the other two rings
+        ring2distToRing1 = radii[2] - radii[1] #distance between centers of rings 2 and 1
+        distBetweenObjectsInRing2 = 2*radii[2]*sin(minAngleBetweenObjectsOnRing/2) #formula for chord of a circle
+        mouseChoiceRadius = min(ring2distToRing1,distBetweenObjectsInRing2/2)
+        mouseChoiceRadiusEachRing[2] = mouseChoiceRadius
+    
+    #print('Closest distance to another object, for each ring: ',mouseChoiceRadiusEachRing)
+    return mouseChoiceRadiusEachRing[ring]
+        
+
 def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop):
     optionSets=numRings
     #Draw/play response cues
@@ -937,10 +979,12 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             mouseX = mouseX * mouseFactor 
             mouseY = mouseY * mouseFactor 
             for optionSet in range(optionSets):
-                mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/4 #6.  #deg visual angle?
+                mouseChoiceRadius = 0.9 * calcMouseChoiceRadiusForRing(optionSet) 
+                #print('mouseChoiceRadius=',round(mouseChoiceRadius,1), 'for optionSet=',optionSet)
+                #Need to determine which ring the click was closest to, because that determines the radius of the click visualisation circle
                 if showClickedRegion:
                     clickedRegion.setPos([mouseX,mouseY])
-                    clickedRegion.setRadius(mouseToler)
+                    clickedRegion.setRadius(mouseChoiceRadius)
                     clickedRegion.draw()
                 for ncheck in range( numOptionsEachSet[optionSet] ): 
                     angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi #radians
@@ -948,14 +992,14 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                     x = x+ offsetXYeachRing[optionSet][0]
                     y = y+ offsetXYeachRing[optionSet][1]
                     #check whether mouse click was close to any of the colors
-                    if showclickableRegions: #revealed every time you click
+                    if showClickableRegions: #every disc's region revealed every time you click
                         clickableRegion.setPos([x,y]) 
-                        clickableRegion.setRadius(mouseToler) 
+                        clickableRegion.setRadius(mouseChoiceRadius) 
                         clickableRegion.draw()
-                    #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseToler=',mouseToler)
+                    #print('mouseXY=',round(mouseX,2),',',round(mouseY,2),'xy=',round(x,2),',',round(y,2), ' distance=',distance, ' mouseChoiceRadius=',mouseChoiceRadius)
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    if distance<mouseToler:
+                    if distance < mouseChoiceRadius:
                         c = opts[optionSet][ncheck] #idx of color that this option num corresponds to
                         if respondedEachToken[optionSet][ncheck]:  #clicked one that already clicked on
                             if lastClickState ==0: #only count this event if is a distinct click from the one that selected the blob!
@@ -963,7 +1007,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                                 responses[optionSet].remove(c) #this redundant list also of course encodes the order
                                 respcount -= 1
                                 #print('removed number ',ncheck, ' from clicked list')
-                        else:         #clicked on new one, need to add to response    
+                        else: #clicked on new one, need to add to response    
                             numRespsAlready = len(  np.where(respondedEachToken[optionSet])[0]  )
                             #print('numRespsAlready=',numRespsAlready,' numRespsNeeded= ',numRespsNeeded,'  responses=',responses)   
                             if numRespsAlready >= numRespsNeeded[optionSet]:
@@ -973,6 +1017,10 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                                 responses[optionSet].append(c) #this redundant list also of course encodes the order
                                 respcount += 1  
                                 print('added  ',ncheck,'th response to clicked list')
+                            if showClickedRegionFinal: #Selected something from the correct ring, now show its region
+                                clickableRegion.setPos([x,y]) 
+                                clickableRegion.setRadius(mouseChoiceRadius) 
+                                clickableRegion.draw()                                
                 #print 'response=', response, '  respcount=',respcount, ' lastClickState=',lastClickState, '  after affected by click'
            #end if mouse clicked
            
