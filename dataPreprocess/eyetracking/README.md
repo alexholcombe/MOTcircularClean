@@ -19,10 +19,14 @@ We had that working in 2023 in [TessHons](https://github.com/alexholcombe/TessHo
 
 ## Preprocessing of the Eyelink (EDF) file
 
-Eyelink now recommends [Pastukhov's eylinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files and also has a [longer list](https://www.sr-research.com/support/thread-7769.html). https://github.com/dahtah/eyelinker 
-I got that working now for TessHons and trying to get it working for MOT
+Eyelink now recommends [Pastukhov's eylinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files.
 
 See [EDF_file_processing_with_R_eyelinkReader.md](EDF_file_processing_with_R_eyelinkReader.md).
+
+There are other older packages in this [longer list](https://www.sr-research.com/support/thread-7769.html) including https://github.com/dahtah/eyelinker. 
+
+I got that working for TessHons? and trying to get it working for MOT
+
 
 # OLD pre-eyelinkReader WORKFLOW
 
