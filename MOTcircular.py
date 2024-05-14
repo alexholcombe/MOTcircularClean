@@ -862,8 +862,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
 ########################################################################################
 
 showClickableRegions = False #Every time you click, show every disc's clickable region 
-showClickedRegion = False #Problem with code is it shows the largest ring's region always, even if the smaller ring is clicked
+showClickedRegion = True #Problem with code is it shows the largest ring's region always, even if the smaller ring is clicked
 showClickedRegionFinal = True #Show the last click, that's actually on the cued ring
+mouseClickAreaFractionOfSpaceAvailable = 0.9 #0.9 means 90% of the space available to the object is clickable
 def calcMouseChoiceRadiusForRing(ring):
     #For ring, need to calculate the smallest distance to another object, 
     # and set mouseChoiceRadius for that ring to smaller than that
@@ -901,8 +902,7 @@ def calcMouseChoiceRadiusForRing(ring):
         mouseChoiceRadiusEachRing[2] = mouseChoiceRadius
     
     #print('Closest distance to another object, for each ring: ',mouseChoiceRadiusEachRing)
-    return mouseChoiceRadiusEachRing[ring]
-        
+    return mouseClickAreaFractionOfSpaceAvailable * mouseChoiceRadiusEachRing[ring]
 
 def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptSoundFileNum, offsetXYeachRing,respRadius,currAngle,expStop):
     optionSets=numRings
@@ -978,14 +978,15 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                 mouseFactor = 0.5
             mouseX = mouseX * mouseFactor 
             mouseY = mouseY * mouseFactor 
+            if showClickedRegion:
+                #Determine choiceRadius for the ring the person needs to respond to
+                mouseChoiceRadius = calcMouseChoiceRadiusForRing( thisTrial['ringToQuery'] )
+                clickedRegion.setPos([mouseX,mouseY])
+                clickedRegion.setRadius(mouseChoiceRadius)
+                clickedRegion.draw()
             for optionSet in range(optionSets):
-                mouseChoiceRadius = 0.9 * calcMouseChoiceRadiusForRing(optionSet) 
+                mouseChoiceRadius = calcMouseChoiceRadiusForRing(optionSet) 
                 #print('mouseChoiceRadius=',round(mouseChoiceRadius,1), 'for optionSet=',optionSet)
-                #Need to determine which ring the click was closest to, because that determines the radius of the click visualisation circle
-                if showClickedRegion:
-                    clickedRegion.setPos([mouseX,mouseY])
-                    clickedRegion.setRadius(mouseChoiceRadius)
-                    clickedRegion.draw()
                 for ncheck in range( numOptionsEachSet[optionSet] ): 
                     angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi #radians
                     x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
