@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -139,7 +139,7 @@ rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampD
 cueFrames = int( refreshRate*cueDur )
 rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8 * 3 
-mouseChoiceArea = ballStdDev*0.8 # origin =1.3
+mouseChoiceArea = ballStdDev*0.3 #*0.8 # origin =1.3
 units='deg' #'cm'
 timeTillReversalMin = 0.5 #0.5; 
 timeTillReversalMax = 2.0# 1.3 #2.9
@@ -852,7 +852,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
             if useSound: respPromptSounds[respPromptSoundFileNum].play()
         timesRespPromptSoundPlayed +=1
     #respText.draw()
-
+    print('thisTrial basicShape=',thisTrial['basicShape'])
     respondedEachToken = np.zeros([numRings,numObjects])  #potentially two sets of responses, one for each ring
     optionIdexs=list();baseSeq=list();numOptionsEachSet=list();numRespsNeeded=list()
     numRespsNeeded = np.zeros(numRings) 
@@ -878,7 +878,6 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
         for optionSet in range(optionSets):  #draw this group (ring) of options
           for ncheck in range( numOptionsEachSet[optionSet] ):  #draw each available to click on in this ring
                 angle =  (angleIniEachRing[optionSet]+currAngle[optionSet]) + ncheck*1.0/numOptionsEachSet[optionSet] *2.*pi
-                stretchOutwardRingsFactor = 1
                 x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,optionSet,angle,n,speed)
                 x = x+ offsetXYeachRing[optionSet][0]
                 y = y+ offsetXYeachRing[optionSet][1]            
@@ -925,10 +924,10 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
                     #check whether mouse click was close to any of the colors
                     #Colors were drawn in order they're in in optionsIdxs
                     distance = sqrt(pow((x-mouseX),2)+pow((y-mouseY),2))
-                    mouseToler = mouseChoiceArea + optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
+                    mouseToler = mouseChoiceArea #+ optionSet*mouseChoiceArea/6.#deg visual angle?  origin=2
                     if showClickedRegion:
                         clickedRegion.setPos([mouseX,mouseY])
-                        clickedRegion.setRadius(mouseToler/4.) #Dividing by 4 simply for visual aesthetic reasons
+                        clickedRegion.setRadius(mouseToler) #Dividing by 4 simply for visual aesthetic reasons
                         clickedRegion.draw()
                     if showclickableRegions: #revealed every time you click
                         clickableRegion.setPos([x,y]) 
