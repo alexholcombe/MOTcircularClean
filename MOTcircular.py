@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -75,7 +75,7 @@ antialiasGrating = False; #True makes the mask not work perfectly at the center,
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=1
-radii=np.array([2.5,7,15]) #[2.5,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
+radii=np.array([15,7,15]) #[10,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 100.0   #160 #set to the framerate of the monitor
@@ -366,7 +366,7 @@ stimList = []
 doStaircase = True
 # temporalfrequency limit test
 numTargets =        [2,                 3] #[2]
-numObjsInRing =     [4,                 8] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
+numObjsInRing =     [4,                 6] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
 
 # Get all combinations of those two main factors
 #mainCondsInfo = {
@@ -402,7 +402,7 @@ if doStaircase: #create the staircases
         #the average threshold speed across conditions found by previous literature for young people
         avgAcrossCondsFromPrevLit = mainCondsDf['midpointThreshPrevLit'].mean()
         if session <= 1:  #give all the staircases the same starting value of 50% of that found by previous literature
-            startVal = 1.1 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
+            startVal = 0.4 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
         elif session == 2:
             startVal = avgAcrossCondsFromPrevLit
         elif session >= 3:
@@ -432,7 +432,7 @@ if doStaircase: #create the staircases
             extraInfo = condition,
             startVal=startValInternal,
             stepType='lin',
-            stepSizes= [.3,.3,.2,.1,.1,.05],
+            stepSizes=[.001], #[.3,.3,.2,.1,.1,.05], #use stepSizes=0.001 for practice, and stepSizes = [.3,.3,.2,.1,.1,.05]
             minVal = minSpeedForStaircase, 
             maxVal= maxSpeedForStaircase,
             nUp=nUp, nDown=nDown,  
@@ -458,7 +458,8 @@ if queryEachRingEquallyOften:
     print('leastCommonMultipleSubsets=',leastCommonMultipleSubsets, ' leastCommonMultipleTargetNums= ', leastCommonMultipleTargetNums)
                     
 for numObjs in numObjsInRing: #set up experiment design
-    for nt in numTargets: #for each num targets condition,
+  for nt in numTargets: #for each num targets condition,
+    for offset in [ [-10,0],[10,0] ]: #for Momo experiment left vs right visual field
       numObjectsIdx = numObjsInRing.index(numObjs)
       numTargetsIdx = numTargets.index(nt)
       if doStaircase: #Speeds will be determined trial-by-trial by the staircases. However, to estimate lapse rate,
@@ -484,18 +485,18 @@ for numObjs in numObjsInRing: #set up experiment design
                       whichSubsetEntry = whichToQuery % nt  #e.g. if nt=2 and whichToQuery can be 0,1,or2 then modulus result is 0,1,0. This implies that whichToQuery won't be totally counterbalanced with which subset, which is bad because
                                       #might give more resources to one that's queried more often. Therefore for whichToQuery need to use least common multiple.
                       ringToQuery = s[whichSubsetEntry];  #print('ringToQuery=',ringToQuery,'subset=',s)
-                      for basicShape in ['diamond']: #'diamond'
+                      for basicShape in ['ellipse']: #'diamond'
                         for initialDirRing0 in [-1,1]:
                                 stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
-                                        'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )
+                                        'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery, 'offset':offset} )
         else: # not queryEachRingEquallyOften, because that requires too many trials for a quick session. Instead
             #will randomly at time of trial choose which rings have targets and which one querying.
             whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring. '1' will indicate which is the target
             ringToQuery = 999 #this is the signal to choose the ring randomly
-            for basicShape in ['diamond']: #'diamond'
+            for basicShape in ['ellipse']: #'diamond'
                 for initialDirRing0 in [-1,1]:
                     stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
-                                'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery} )            
+                                'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery,'offset':offset} )            
 
 trials = data.TrialHandler(stimList,trialsPerCondition) #constant stimuli method
 print('len(stimList), which is the list of conditions, is =',len(stimList))
@@ -682,49 +683,23 @@ def RFcontourCalcModulation(angle,freq,phase):
     modulation = sin(angle*freq + phase) #radial frequency contour equation, e.g. http://www.journalofvision.org/content/14/11/12.full from Wilkinson et al. 1998
     return modulation
     
-def diamondShape(constSpeedOrConstRps,angle):
-    def triangleWave(period, phase):
-           #triangle wave is in sine phase (starts at 0)
-           y = -abs(phase % (2*period) - period) # http://stackoverflow.com/questions/1073606/is-there-a-one-line-function-that-generates-a-triangle-wave
-           #y goes from -period to 0.  Need to rescale to -1 to 1 to match sine wave etc.
-           y = y/period*2 + 1
-           #Now goes from -1 to 1
-           return y
-           
-    if constSpeedOrConstRps: #maintain constant rps. So, draw the blob at the prescribed theta. But change the radius to correspond to a square.
-        #As a consequence, will travel faster the more the direction differs from the circle, like around the corners
-        #Theta varies from 0 to 2pi. Taking its cosine, gives x coordinate on circle.
-        #Instead of taking cosine, I should just make it a linear ramp of x back and forth. That is, turn it into a triangle wave
-        #Want 0 to pi to be -1 to 1
-        x = triangleWave(pi,angle)
-        y = triangleWave(pi, (angle-pi/2)%(2*pi ))
-        #This will always describe a diamond. To change the shape would have to use vector rotation formula
-    else: #constant speed, so
-        #take theta not as the angle wanted, but what proportion (after being divided by 2pi) along the trajectory you want to go
-        angle = angle % (2*pi) #modulus
-        proportnTraj = angle/(2*pi)
+from scipy.special import ellipeinc
+
+def ellipseShape(constSpeedOrConstRps, angle, a=0.7):
+    b=1-a
+    if constSpeedOrConstRps: 
+        x = b * np.sin(angle)
+        y = a * np.cos(angle)
+    else: 
+        angle = angle % (2*np.pi) # modulus
+        proportnTraj = angle/(2*np.pi)
         if (proportnTraj < 0) or (proportnTraj>1):
             print("Unexpected angle below 0!"); logging.error("Unexpected angle below 0!")
-        #how do I go from proportnTraj either to x,y or to theta?
-        #Analytic method is that as increase theta deviates from 4 points that touches circle, theta change is smaller for equal change in proportnTraj
-        #Brute force method is to divide into 4 segments, below.
-        zeroToFour = proportnTraj*4
-        if zeroToFour < 1: #headed NW up the first quadrant
-            x = 1 - (zeroToFour-0)
-            y = (zeroToFour-0)
-        elif zeroToFour < 2: #SW
-            x = - (zeroToFour - 1)
-            y = 1- (zeroToFour - 1)
-        elif zeroToFour < 3: #SE
-            x = -1+(zeroToFour - 2)
-            y = - (zeroToFour - 2)
-        elif zeroToFour < 4: #NE
-            x = (zeroToFour-3)
-            y = -1+(zeroToFour-3)
-        else: logging.error("Unexpected zeroToFour="+ str(zeroToFour))
-        #Max x is 1, meaning that it will be the diamond that circumscribes the unit circle.
-        #Otherwise need to adjust by calculating the average eccentricity of such a diamond and compensating, which I never did.
-        return x,y
+        e = np.sqrt(1 - (b**2/a**2))  # eccentricity of the ellipse
+        theta = ellipeinc(2*np.pi*proportnTraj, e)  # calculate the angle based on the arc length
+        x = b * np.sin(theta)
+        y = a * np.cos(theta) 
+    return x, y
 
 ampTemporalRadiusModulation = 0.0 # 1.0/3.0
 ampModulatnEachRingTemporalPhase = np.random.rand(numRings) * 2*np.pi
@@ -751,8 +726,8 @@ def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN,
         rThis += r * RFcontourAmp * RFcontourCalcModulation(angle,RFcontourFreq,RFcontourPhase)
         x = rThis*cos(angle)
         y = rThis*sin(angle)
-    elif basicShape == 'diamond': #actual square-shaped trajectory. Could also add all the modulations to this, later
-        x,y = diamondShape(constSpeedOrConstRps = False, angle=angle)
+    elif basicShape == 'ellipse': #actual square-shaped trajectory. Could also add all the modulations to this, later
+        x,y = ellipseShape(constSpeedOrConstRps = True, angle=angle)
         x*=r
         y*=r
     else: 
@@ -1008,7 +983,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
-print('orderCorrect\ttrialDurTotal\tnumTargets', end= '\t', file=dataFile) 
+print('orderCorrect\ttrialDurTotal\tnumTargets\toffset', end= '\t', file=dataFile) 
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
 print('ringToQuery',end='\t',file=dataFile)
@@ -1148,18 +1123,20 @@ while trialNum < trials.nTotal and expStop==False:
             else:
                 speedThisTrial = thisTrial['speed']
         currentSpeed = speedThisTrial #no speed ramp
-           
+
+    offsetRing0 = thisTrial['offset'] #Momo left/right
+    offsetXYeachRing=[ offsetRing0,[-10,0],[0,0] ]
+
     t0=trialClock.getTime(); #t=trialClock.getTime()-t0         
     #the loop for this trial's stimulus!
     for n in range(trialDurFrames): 
-        offsetXYeachRing=[ [0,15],[0,-15],[0,0] ]
         if currentSpeed < speedThisTrial:
             currentSpeed = currentSpeed + speedRampStep
-        if basicShape == 'diamond':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
+        if basicShape == 'ellipse':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
             perimeter = radii[0]*4.0  #Will only work if numRings==1, otherwise it won't do the speed compensation right for other rings
             circum = 2*pi*radii[0]
             if numRings > 1:
-                msg = 'Diamond shape only works for numRings==1'
+                msg = 'Ellipse shape only works for numRings==1'
                 logging.warning(msg); print(msg)
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
         #print('currentSpeed=',currentSpeed) 
@@ -1273,7 +1250,7 @@ while trialNum < trials.nTotal and expStop==False:
     print(trialNum,subject,session,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
             speedThisTrial, #could be different than thisTrial['speed'] because staircase
             thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
-    print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) 
+    print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t',thisTrial['offset'],'\t', end=' ', file=dataFile) 
     for i in range(numRings):  print( thisTrial['whichIsTargetEachRing'][i], end='\t', file=dataFile  )
     print( thisTrial['ringToQuery'],end='\t',file=dataFile )
     for i in range(numRings):dataFile.write(str(round(initialDirectionEachRing[i],4))+'\t') 
