@@ -75,7 +75,7 @@ antialiasGrating = False; #True makes the mask not work perfectly at the center,
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
 numRings=1
-radii=np.array([15,7,15]) #[10,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
+radii=np.array([15,4,4]) #[10,9.5,15]   #Need to encode as array for those experiments where more than one ring presented 
 
 respRadius=radii[0] #deg
 refreshRate= 100.0   #160 #set to the framerate of the monitor
@@ -365,8 +365,8 @@ if useSound:
 stimList = []
 doStaircase = True
 # temporalfrequency limit test
-numTargets =        [2,                 3] #[2]
-numObjsInRing =     [4,                 6] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
+numTargets =        [1] #[2]
+numObjsInRing =   [6] #  [4,                 6] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
 
 # Get all combinations of those two main factors
 #mainCondsInfo = {
@@ -386,11 +386,6 @@ mainCondsDf = pd.merge(mainCondsDf, publishedThreshes, on='numTargets', how='lef
 mainCondsDf['midpointThreshPrevLit'] = mainCondsDf['HzAvgPreviousLit'] / mainCondsDf['numObjects']
 mainCondsDf = mainCondsDf.drop('HzAvgPreviousLit', axis=1)  #Use this Dataframe to choose the starting speed for the staircase and the behavior of the autopilot observer
                         
-
-#Old way of setting all speeds manually:
-#speedsEachNumTargetsNumObjects =   [ [ [0.5,1.0,1.4,1.7], [0.5,1.0,1.4,1.7] ],     #For the first numTargets condition
-#                                     [ [0.2,0.5,0.7,1.0], [0.5,1.0,1.4,1.7] ]  ]  #For the second numTargets condition
-
 #don't go faster than 2 rps at 120 Hz because of temporal blur/aliasing
 
 maxTrialsPerStaircase = 500 #Just an unreasonably large number so that the experiment won't stop before the number of trials set by the trialHandler is finished
@@ -485,7 +480,7 @@ for numObjs in numObjsInRing: #set up experiment design
                       whichSubsetEntry = whichToQuery % nt  #e.g. if nt=2 and whichToQuery can be 0,1,or2 then modulus result is 0,1,0. This implies that whichToQuery won't be totally counterbalanced with which subset, which is bad because
                                       #might give more resources to one that's queried more often. Therefore for whichToQuery need to use least common multiple.
                       ringToQuery = s[whichSubsetEntry];  #print('ringToQuery=',ringToQuery,'subset=',s)
-                      for basicShape in ['ellipse']: #'diamond'
+                      for basicShape in ['circle']: #'diamond'
                         for initialDirRing0 in [-1,1]:
                                 stimList.append( {'basicShape':basicShape, 'numObjectsInRing':numObjs,'speed':speed,'initialDirRing0':initialDirRing0,
                                         'numTargets':nt,'whichIsTargetEachRing':whichIsTargetEachRing,'ringToQuery':ringToQuery, 'offset':offset} )
@@ -710,9 +705,10 @@ def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN,
     def waveForm(type,speed,timeSeconds,numRing):
         if speed==0 and ampTemporalRadiusModulation==0:
             return 0 #this way don't get division by zero error when speed=0
-        else:
+        else:                
             periodOfRadiusModulation = 1.0/speed#so if speed=2 rps, radius modulation period = 0.5 s
             modulatnPhaseRadians = timeSeconds/periodOfRadiusModulation * 2*pi + ampModulatnEachRingTemporalPhase[numRing]
+            #print('timeSeconds=',timeSeconds,'periodOfRadiusModulation=',periodOfRadiusModulation,'ampModulatnEachRingTemporalPhase=',ampModulatnEachRingTemporalPhase,'speed=',speed,'type=',type)
             if type=='sin':
                 return sin(modulatnPhaseRadians)
             elif type == 'sqrWave':
@@ -723,9 +719,11 @@ def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN,
         
     if basicShape == 'circle':
         rThis =  r + waveForm('sin',speed,timeSeconds,numRing) * r * ampTemporalRadiusModulation
+        #print('at first, rThis=',rThis, 'r=',r,'numRing=',numRing, ' waveForm output=',waveForm('sin',speed,timeSeconds,numRing))
         rThis += r * RFcontourAmp * RFcontourCalcModulation(angle,RFcontourFreq,RFcontourPhase)
         x = rThis*cos(angle)
         y = rThis*sin(angle)
+        #print('numRing=',numRing,'r=',r,'x=',x,'y=',y, 'angle=',angle,'rThis=',rThis,'RFcontourAmp=',RFcontourAmp,'ampTemporalRadiusModulation=',ampTemporalRadiusModulation)
     elif basicShape == 'ellipse': #actual square-shaped trajectory. Could also add all the modulations to this, later
         x,y = ellipseShape(constSpeedOrConstRps = True, angle=angle)
         x*=r
@@ -752,7 +750,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   global cueRing,ringRadial, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
   global angleIniEachRing, correctAnswers
   angleIniEachRingRad = angleIniEachRing
-
+  #print('speed in oneFrameOfStim=',speed)
   #Determine what frame we are on
   if useClock: #Don't count on not missing frames. Use actual time.
     t = clock.getTime()
@@ -770,6 +768,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
     angleMoveRad = angleChangeThisFrame(speed,initialDirectionEachRing, numRing, n, n-1)
     currAngleRad[numRing] = currAngleRad[numRing]+angleMoveRad*(isReversed[numRing])
     angleObject0Rad = angleIniEachRingRad[numRing] + currAngleRad[numRing]
+    #print('angleObject0Rad=',angleObject0Rad)
     #Handle reversal if time for reversal
     if reversalNumEachRing[numRing] <= len(reversalTimesEachRing[numRing]): #haven't exceeded reversals assigned
         reversalNum = int(reversalNumEachRing[numRing])
@@ -806,8 +805,9 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
         #so create a second grating which is all transparent except for one white sector. Then, rotate sector to be on top of target
     if (not drawingAsGrating) or debugDrawBothAsGratingAndAsBlobs: #drawing objects individually, not as grating. This just means can't keep up with refresh rate if more than 4 objects or so
         #Calculate position of each object for this frame and draw them                
-        for nobject in range(numObjects):
-            angleThisObjectRad = angleObject0Rad + (2*pi)/numObjects*nobject
+        for nobject in range(thisTrial['numObjectsInRing']):
+            angleThisObjectRad = angleObject0Rad + (2*pi)/thisTrial['numObjectsInRing']*nobject
+
             x,y = xyThisFrameThisAngle(thisTrial['basicShape'],radii,numRing,angleThisObjectRad,n,speed)
             x += offsetXYeachRing[numRing][0]
             y += offsetXYeachRing[numRing][1]
@@ -1107,13 +1107,25 @@ while trialNum < trials.nTotal and expStop==False:
           #to estimate lapseRate
         if thisTrial['speed'] == 'staircase':
             #Work out which staircase this is, by finding out which row of mainCondsDf this condition is
+            numObjects = thisTrial['numObjectsInRing']
+            print('looking up in published literature numObjects=',numObjects,'numTargets=',thisTrial['numTargets'])
+            #if numObjects ==6:
+            #    numObjects=8
             rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
-                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
+                                  (mainCondsDf['numObjects'] == numObjects )       ].index
+            print('mainCondsDf=',mainCondsDf)
+            print('rownum=',rownum)
+            #if isinstance(rownum, pd.RangeIndex):
+            #    print("rownum is a RangeIndex, which means it didn't find this condition in the publishe dliterature")
+            #    print('Actually there is something screwed up with the mainCondsDf, because it should have found it')
+            #    print('setting rownum = 0 manually')
+            #    rownum = 0
             condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
             staircaseThis = staircases[condnum]
+            print('condnum=',condnum, 'staircaseThis=',staircaseThis)
             speedThisInternal = staircaseThis.next()
             speedThisTrial = staircaseAndNoiseHelpers.outOfStaircase(speedThisInternal, staircaseThis, descendingPsychometricCurve) 
-            #print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
+            print('speedThisInternal from staircase=',round(speedThisInternal,2),'speedThisTrial=',round(speedThisTrial,2))
         else: #manual occasional speed, probably ultra-slow to estimate lapseRate
             #print('Non-staircase slow speed!, speedThisTrial=',thisTrial['speed'], ' will pick a random one')
             if len(thisTrial['speed']) >1: #randomly pick from speeds specified, not deterministic to avoid having too many trials 
@@ -1121,8 +1133,10 @@ while trialNum < trials.nTotal and expStop==False:
                 speedThisTrial = random.choice(thisTrial['speed'])
             else:
                 speedThisTrial = thisTrial['speed']
+            print('speedThisTrial when manual occasional speed=',speedThisTrial)
         currentSpeed = speedThisTrial #no speed ramp
-
+        
+    print('speedThisTrial=',speedThisTrial)
     offsetRing0 = thisTrial['offset'] #Momo left/right
     offsetXYeachRing=[ offsetRing0,[-10,0],[0,0] ]
 
@@ -1131,14 +1145,14 @@ while trialNum < trials.nTotal and expStop==False:
     for n in range(trialDurFrames): 
         if currentSpeed < speedThisTrial:
             currentSpeed = currentSpeed + speedRampStep
-        if basicShape == 'ellipse':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
+        if thisTrial['basicShape'] == 'ellipse':  #scale up speed so that it achieves that speed in rps even though it has farther to travel
             perimeter = radii[0]*4.0  #Will only work if numRings==1, otherwise it won't do the speed compensation right for other rings
             circum = 2*pi*radii[0]
             if numRings > 1:
                 msg = 'Ellipse shape only works for numRings==1'
                 logging.warning(msg); print(msg)
             finalspeed = speedThisTrial * perimeter/circum #Have to go this much faster to get all the way around in same amount of time as for circle
-        #print('currentSpeed=',currentSpeed) 
+        #print('sent to oneFrameOfStim currentSpeed=',currentSpeed) 
 
         (angleIni,currAngle,isReversed,reversalNumEachRing) = \
             oneFrameOfStim(thisTrial,currentSpeed,n,stimClock,useClock,offsetXYeachRing,initialDirectionEachRing,currAngle,blobsToPreCue,isReversed,reversalNumEachRing,cueFrames) #da big function
