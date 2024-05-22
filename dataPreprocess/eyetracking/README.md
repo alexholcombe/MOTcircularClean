@@ -7,7 +7,7 @@ Call functions in `EyelinkEyetrackerForPsychopySUPA3.py` to open communication w
 
 - See https://www.sr-research.com/support/thread-8713.html for explanation of location of Eyelink commands.
 
-### Avoid going through EDF decoding
+### Can one get real-time data from the eyetracker? Yes but not at end of each trial
 
 Long term, instead of using separate machine, communicate directly with eyetracker via pylink, which is part of Psychopy. Actually we are already using modified pylink code to start and stop the eyetracker.
 http://www.psychopy.org/api/hardware/pylink.html
@@ -15,12 +15,23 @@ http://www.psychopy.org/api/hardware/pylink.html
 A simple example of getting individual data from the eyetracker and a gaze-contingent experiment is [here](https://github.com/ryancotterell/WilsonLab/blob/master/WilsonLab/pylink/eyeTracker.py)
 but preferably you'd use ioHub built in Psychopy eye_tracker/run.py which is accessed via Demos->Select Tracker
 
+I asked on SR Forum about pulling all the data from the most recent trial using python but they said one can't do that
+
+### Can one pull the whole EDF file from the host computer using the python code? Sometimes
+
 We had that working in 2023 in [TessHons](https://github.com/alexholcombe/TessHons), but then the student said it wasn't working so she went with getting the EDF file manually off the host PC.
+
+It doesn't always work, for example usually doesn't with MOTyoungOld, possibly because it's a lot of data.
 
 ## Preprocessing of the Eyelink (EDF) file
 
-Eyelink now recommends [Pastukhov's R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files and also has a [longer list](https://www.sr-research.com/support/thread-7769.html). https://github.com/dahtah/eyelinker 
-I got that working now for TessHons and trying to get it working for MOT
+### Using R to read EDF directly
+
+Pastukhov's [EyelinkReader package for R](https://cran.r-project.org/package=eyelinkReader) is recommended by Eyelink. See our [detailed notes here, including installation problems](eyelinkReaderNotes.md) on some computers. I got that working now for TessHons and trying to get it working for MOT. 
+
+Eyelink also has a [longer list](https://www.sr-research.com/support/thread-7769.html). https://github.com/dahtah/eyelinker 
+ 
+
 
 # OLD pre-eyelinkReader WORKFLOW
 
