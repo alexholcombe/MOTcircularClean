@@ -30,3 +30,41 @@ Tried commenting those out (adding “#” at the beginning of the line but that
 
 It's probably that line of code that gets concatenated with another edfapi.framework for some reason. But I don't know why it doesn't reset when I quit R and reload, maybe I need to reinstall the package and then we'll see that the EDFAPI_LIB or _INC has an effect.
 
+### 22 May on Alex's Mac
+
+    1. Uninstall R first, both the app and the framework, [using](https://stackoverflow.com/questions/24981581/uninstall-r-from-mac-osx-10-9-2):
+
+'''
+sudo rm -Rf /Library/Frameworks/R.framework /Applications/R.app \
+   /usr/local/bin/R /usr/local/bin/Rscript
+'''
+
+    2. I deleted RStudio
+    3. I didn't delete ~/.Renviron but everything in it is commented out from my session with STeve
+    3. I downloaded R 4.0 
+    3. I created an ~.Renviron with the contents recommended by Pastukhov for MacOS
+    3. install.packages("eyelinkReader").
+    3. library('eyelinkReader') gives the usual error, and also on Jye's machine, and also with install_github method instead of CRAN
+
+I confirmed that the EDFIAPI_LIB and EDFAPI_INC paths recommended by eyelinkReader github page
+
+I can see where zzz.R, for Darwin systems uses EDFAPI_INC but never uses EDFAPI_LIB, even though it adds that as a possible path in Windows!
+
+Changing line 70 of zzz.R to eliminate the terminal edfapi.framework and will recompile using install.packages(path_to_file, repos = NULL, type="source")
+
+install.packages('/Users/alex/Downloads/eyelinkReader-master', repos = NULL, type="source")
+
+That claimed to work but when loading library gave this error:
+
+Error: package or namespace load failed for ‘eyelinkReader’ in get(Info[i, 1], envir = env):
+ lazy-load database '/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/eyelinkReader/R/eyelinkReader.rdb' is corrupt
+
+I found [this example](https://stackoverflow.com/questions/63855025/cant-load-r-packages-after-installation) of when that error occurs, which claims that R and Rstudio were using different versions. And indeed, when I exeuctied 'library('eyelinkReader')' from R.app, it works!  
+
+So then if I do what the StackOverflow says and "uninstall R and then install the latest version, after uninstall R studio and reinstall it" make it then work in RStudio?
+
+### environment variables can they trump to fix the problem?
+
+EDFAPI_INC needs to be the path to C header files edf.h, edf_data.h, and edftypes.h
+
+EDF_LIB is path to EDF API framework, which might be the problem, that zzz.R has /Library/Frameworks/edfapi.framework/ instead of omitting that final directory, so if we do that it might work
