@@ -4,6 +4,8 @@ eyelinkReader
 Eyelink now recommends [Pastukhov's R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files and also has a [longer list](https://www.sr-research.com/support/thread-7769.html). https://github.com/dahtah/eyelinker 
 I got that working now for TessHons and trying to get it working for MOT
 
+On Josh's Windows computer, it kept saying edfapi was not installed or something like that but re-installing never fixed that. It did work on Tess' computer, which was a Mac
+
 ## Problem on Alex’s machine with eyelinkReader
 
 Executing library(eyelinkReader) after installation give the error that failed to load edfapi, because of a paths problem when a Cpp compilation tries to compile edfapi with eyelinkReader in some way:
