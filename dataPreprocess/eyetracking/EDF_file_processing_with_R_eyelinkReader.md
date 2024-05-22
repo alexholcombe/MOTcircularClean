@@ -6,7 +6,7 @@ I got that working now for TessHons and trying to get it working for MOT
 
 On Josh's Windows computer, it kept saying edfapi was not installed or something like that but re-installing never fixed that. It did work on Tess' computer, which was a Mac
 
-## Problem on Alex’s machine with eyelinkReader
+## Problem on Alex’s Mac and Jye's Mac with eyelinkReader
 
 Executing library(eyelinkReader) after installation give the error that failed to load edfapi, because of a paths problem when a Cpp compilation tries to compile edfapi with eyelinkReader in some way:
 
@@ -23,12 +23,25 @@ EDFAPI_INC="/Library/Frameworks/edfapi.framework/Headers"
 
 Not sure if those are added when installing edfapi from SR Forum
 
-Tried commenting those out (adding “#” at the beginning of the line but that didn't work even when we restarted R. Not sure when the offending path is getting created.
+Tried commenting those out (adding “#” at the beginning of the line but that didn't work even when we restarted R. I realized later that those aren't used in the offending line or its associates:
 
-* In the source code for eyelinkReader, namely eyelinkReader/R/zzz.R, one can see lines like 
+* In the source code for eyelinkReader on line 70 of eyelinkReader/R/zzz.R, one can see: 
     library_path <-'/Library/Frameworks/edfapi.framework/'
 
-It's probably that line of code that gets concatenated with another edfapi.framework for some reason. But I don't know why it doesn't reset when I quit R and reload, maybe I need to reinstall the package and then we'll see that the EDFAPI_LIB or _INC has an effect.
+It's that line of code that gets concatenated with another edfapi.framework somewhere. 
+
+### Fixing it on a Github fork of my one
+
+Created a fork of Pastukhov's github repo, then change the zzz.R file.
+Change line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
+
+Now can install from my fork using devtools: 
+
+devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE)
+
+Test it with:
+
+gaze <- eyelinkReader::read_edf('dataForTestingOfCode/A20b.EDF')
 
 ### 22 May on Alex's Mac
 
@@ -52,7 +65,7 @@ I can see where zzz.R, for Darwin systems uses EDFAPI_INC but never uses EDFAPI_
 
 Changing line 70 of zzz.R to eliminate the terminal edfapi.framework and will recompile using install.packages(path_to_file, repos = NULL, type="source")
 
-install.packages('/Users/alex/Downloads/eyelinkReader-master', repos = NULL, type="source")
+install.packages('/Users/alex/Downloads/eyelinkReader-master', repos = NULL, type="source", build_vignettes = TRUE))
 
 That claimed to work but when loading library gave this error:
 
@@ -61,7 +74,9 @@ Error: package or namespace load failed for ‘eyelinkReader’ in get(Info[i, 1
 
 I found [this example](https://stackoverflow.com/questions/63855025/cant-load-r-packages-after-installation) of when that error occurs, which claims that R and Rstudio were using different versions. And indeed, when I exeuctied 'library('eyelinkReader')' from R.app, it works!  
 
-So then if I do what the StackOverflow says and "uninstall R and then install the latest version, after uninstall R studio and reinstall it" make it then work in RStudio?
+So then if I do part of what the StackOverflow says and uninstall R from the Terminal and then re-download it and install all the necessary packages, it now works in RStudio!
+
+Only thing is that vignettes are not working
 
 ### environment variables can they trump to fix the problem?
 
