@@ -1,11 +1,15 @@
 #To get the eyetracking file that this file processes,
 
-#To get eyelinkReader to work, did following:
+#To get eyelinkReader to work in 2023, did following:
 #library("devtools")
 #install_github("alexander-pastukhov/eyelinkReader", dependencies=TRUE)
 #Executed usethis::edit_r_environ() to edit the .Renviron file and add the two lines on the eyelinkReader github page:
 #EDFAPI_LIB="/Library/Frameworks"
 #EDFAPI_INC="/Library/Frameworks/edfapi.framework/Headers"
+
+#To get eyelinkReader to work in 2024 on Mac, we did
+# devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE)
+# See EDF_file_processing_with_R_eyelinkReader.md
 
 library(eyelinkReader)
 

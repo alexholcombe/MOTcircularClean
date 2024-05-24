@@ -26,7 +26,7 @@ ioHub generic Psychopy eyetracker commands are not recommened but built into Psy
 
 Eyelink now recommends [Pastukhov's eylinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files.
 
-See our detailed notes: [EDF_file_processing_with_R_eyelinkReader.md](EDF_file_processing_with_R_eyelinkReader.md). I got that working for TessHons, and trying to get it working for MOT.
+See our detailed notes: [EDF_file_processing_with_R_eyelinkReader.md](EDF_file_processing_with_R_eyelinkReader.md). It was working for TessHons, but changes to Macs may have broken the package, but I created a working version now.
 
 
 There are other older packages in this [longer list](https://www.sr-research.com/support/thread-7769.html) including https://github.com/dahtah/eyelinker. 

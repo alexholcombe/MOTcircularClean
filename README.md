@@ -13,7 +13,7 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 
 ### Eyetracking data analysis 
 
-New way: Use eyelinkReader R package
+New way: Use eyelinkReader R package, see [notes](dataPreprocess/eyetracking/EDF_file_processing_with_R_eyelinkReader.md)
 
 Old way: For [Fixation Report](https://docs.google.com/document/d/1o3IirKJTU_yfOrlNHWl6cmx1fj1j6vFzhXw-UFje_jw/edit) analysis from EDF files (instructions about making the fixation report [here](https://github.com/alexholcombe/MOTcircularClean/tree/master/dataPreprocess/eyetracking)), see [this code](https://github.com/alexholcombe/MOTcircular/tree/master/dataPreprocess)
 

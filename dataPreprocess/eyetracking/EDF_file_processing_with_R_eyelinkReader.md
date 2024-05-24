@@ -30,7 +30,7 @@ Tried commenting those out (adding “#” at the beginning of the line but that
 
 It's that line of code that gets concatenated with another edfapi.framework somewhere. 
 
-### Fixing it on a Github fork of my one
+### Fixed it on my fork on Github of eyelinkReader
 
 Created a fork of Pastukhov's github repo, then change the zzz.R file.
 Change line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
