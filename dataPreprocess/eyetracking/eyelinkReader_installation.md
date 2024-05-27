@@ -52,12 +52,12 @@ and
 
 ### 22 May on Alex's Mac
 
-    1. Uninstall R first, both the app and the framework, [using](https://stackoverflow.com/questions/24981581/uninstall-r-from-mac-osx-10-9-2):
+1. Uninstall R first, both the app and the framework, [using](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#Uninstalling-under-macOS):
 
-'''
+```
 sudo rm -Rf /Library/Frameworks/R.framework /Applications/R.app \
    /usr/local/bin/R /usr/local/bin/Rscript
-'''
+```
 
     2. I deleted RStudio
     3. I didn't delete ~/.Renviron but everything in it is commented out from my session with STeve

@@ -19,7 +19,7 @@ gaze <- read_edf(EDF_example)
 
 if (length(gaze)) {
   cat('Success!')
-} #Worked 31 Aug 2023
+} #Worked 31 Aug 2023, then broke until Alex's fix May 2024
 
 #View(gaze$saccades)
 
