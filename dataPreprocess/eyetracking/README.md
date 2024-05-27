@@ -22,14 +22,15 @@ A simple example of getting individual data from the eyetracker and a gaze-conti
 ioHub generic Psychopy eyetracker commands are not recommened but built into Psychopy eye_tracker/run.py which is accessed via Demos->Select Tracker
 
 
-## Preprocessing of the Eyelink (EDF) file
+## Preprocessing of the Eyelink (EDF) file with eyelinkReader for R
 
-Eyelink now recommends [Pastukhov's eylinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files.
+Eyelink recommends [Pastukhov's eyelinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files.
 
-See our detailed notes: [EDF_file_processing_with_R_eyelinkReader.md](EDF_file_processing_with_R_eyelinkReader.md). It was working for TessHons, but changes to Macs may have broken the package, but I created a working version now.
+Our [installation notes](eyelinkReader_installation.md). 
 
+Our [usage notes](eyelinkReader_usage.md)
 
-There are other older packages in this [longer list](https://www.sr-research.com/support/thread-7769.html) including https://github.com/dahtah/eyelinker. 
+There are other, older packages in this [longer list](https://www.sr-research.com/support/thread-7769.html), including https://github.com/dahtah/eyelinker. 
 
 
 # OLD pre-eyelinkReader WORKFLOW of generating Fixation Report

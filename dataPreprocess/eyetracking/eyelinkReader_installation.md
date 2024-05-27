@@ -2,11 +2,12 @@ eyelinkReader
 ==============
 
 Eyelink now recommends [Pastukhov's R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files and also has a [longer list](https://www.sr-research.com/support/thread-7769.html). https://github.com/dahtah/eyelinker 
-I got that working now for TessHons and trying to get it working for MOT
 
-On Josh's Windows computer, it kept saying edfapi was not installed or something like that but re-installing never fixed that. It did work on Tess' computer, which was a Mac
+As-is was working for Tess' Mac, but changes to Macs may have broken the package, but I created a working fork.
 
-## Problem on Alex’s Mac and Jye's Mac with eyelinkReader
+On Josh's Windows computer, it kept saying edfapi was not installed or something like that but re-installing never fixed that.
+
+## Fixing problem on Alex’s Mac and Jye's Mac with eyelinkReader
 
 Executing library(eyelinkReader) after installation give the error that failed to load edfapi, because of a paths problem when a Cpp compilation tries to compile edfapi with eyelinkReader in some way:
 
@@ -37,11 +38,17 @@ Change line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
 
 Now can install from my fork using devtools: 
 
-devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE)
+devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE, build_vignettes=TRUE)
+
+May need to re-install R (but not RStudio) to prevent lazy-loading error within RStudio.
 
 Test it with:
 
-gaze <- eyelinkReader::read_edf('dataForTestingOfCode/A20b.EDF')
+``` gaze <- eyelinkReader::read_edf('dataForTestingOfCode/A20b.EDF') ```
+
+and
+
+``` browseVignettes('eyelinkReader') ```
 
 ### 22 May on Alex's Mac
 

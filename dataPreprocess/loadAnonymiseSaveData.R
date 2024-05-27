@@ -4,7 +4,7 @@
 #Expects eyetracking file name to be paste0(withoutSuffix,"EyetrackingReport.txt")
 #Expects in the eyetracking file that there should be a column called Exclusion
 setwd("/Users/alexh/Documents/attention_tempresltn/multiple object tracking/newTraj/newTraj_repo")
-source('dataPreprocess/eyetracking/summariseEyelinkData.R')
+source('dataPreprocess/eyetracking/summariseEyelinkReport.R')
 expFoldersPrefix= "dataRaw/"
 expFolders <- c("offCenter","circleOrSquare_twoTargets")
 expFoldersPostfix = "" #"/rawdata"
