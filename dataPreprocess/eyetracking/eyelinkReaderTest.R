@@ -13,7 +13,8 @@
 
 library(eyelinkReader)
 
-EDF_example <- file.path("dataForTestingOfCode", "A20b.EDF") # "/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
+
+EDF_example <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
 gaze <- read_edf(EDF_example)
 
 if (length(gaze)) {
@@ -51,4 +52,5 @@ ggplot() +
 
 #To do this, I could either set up an area of interest maybe, or manually
 
-#Look at EDF events, see if there are blinks and saccades in there
+
+
