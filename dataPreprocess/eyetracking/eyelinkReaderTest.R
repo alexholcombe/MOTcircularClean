@@ -13,7 +13,7 @@
 
 library(eyelinkReader)
 
-
+#data(gaze) #to use built-in dataset
 EDF_example <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
 gaze <- read_edf(EDF_example)
 

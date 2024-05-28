@@ -50,7 +50,9 @@ and
 
 ``` browseVignettes('eyelinkReader') ```
 
-### 22 May on Alex's Mac
+
+
+### 22 May on Alex's Mac problem with redundant paths
 
 1. Uninstall R first, both the app and the framework, [using](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#Uninstalling-under-macOS):
 
@@ -62,7 +64,7 @@ sudo rm -Rf /Library/Frameworks/R.framework /Applications/R.app \
     2. I deleted RStudio
     3. I didn't delete ~/.Renviron but everything in it is commented out from my session with STeve
     3. I downloaded R 4.0 
-    3. I created an ~.Renviron with the contents recommended by Pastukhov for MacOS
+    3. I created an ~/.Renviron with the contents recommended by Pastukhov for MacOS
     3. install.packages("eyelinkReader").
     3. library('eyelinkReader') gives the usual error, and also on Jye's machine, and also with install_github method instead of CRAN
 
@@ -79,14 +81,24 @@ That claimed to work but when loading library gave this error:
 Error: package or namespace load failed for ‘eyelinkReader’ in get(Info[i, 1], envir = env):
  lazy-load database '/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/eyelinkReader/R/eyelinkReader.rdb' is corrupt
 
-I found [this example](https://stackoverflow.com/questions/63855025/cant-load-r-packages-after-installation) of when that error occurs, which claims that R and Rstudio were using different versions. And indeed, when I exeuctied 'library('eyelinkReader')' from R.app, it works!  
+I found [this example](https://stackoverflow.com/questions/63855025/cant-load-r-packages-after-installation) of when that error occurs, which claims that R and Rstudio were using different versions. And indeed, when I executed 'library('eyelinkReader')' from R.app, it works!  
 
 So then if I do part of what the StackOverflow says and uninstall R from the Terminal and then re-download it and install all the necessary packages, it now works in RStudio!
 
 Only thing is that vignettes are not working
 
-### environment variables can they trump to fix the problem?
+### environment variables can they trump to fix the problem? NO
 
 EDFAPI_INC needs to be the path to C header files edf.h, edf_data.h, and edftypes.h
 
 EDF_LIB is path to EDF API framework, which might be the problem, that zzz.R has /Library/Frameworks/edfapi.framework/ instead of omitting that final directory, so if we do that it might work
+
+### 28 May on Alex's Mac problem that eyelinkReader::plot function is not installed, "Error: object 'plot' not found"
+
+Workaround is to instead of using plot, use `eyelinkReader:::plot.eyelinkRecording` (access it via three colons private function)
+
+Abandoed attempt at fixing below:
+
+Modify my fork to change the name of the plot function to eyeplot
+
+` remove.packages("eyelinkReader") `
