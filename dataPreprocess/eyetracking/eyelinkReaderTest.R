@@ -23,7 +23,9 @@ if (length(gaze)) {
 
 #View(gaze$saccades)
 
-eyelinkReader::plot(gaze, trial = 1, show_fixations = TRUE, show_saccades = TRUE)
+eyelinkReader:::plot.eyelinkRecording(gaze)
+
+#eyelinkReader::plot(gaze, trial = 1, show_fixations = TRUE, show_saccades = TRUE)
 #Need to go through all trials and check largest fixation deviation from center,
 # and merge with PsychoPy data file.
 
