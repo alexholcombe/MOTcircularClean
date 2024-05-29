@@ -7,6 +7,26 @@ As-is was working for Tess' Mac, but changes to Macs may have broken the package
 
 On Josh's Windows computer, it kept saying edfapi was not installed or something like that but re-installing never fixed that.
 
+## Fixed below problem with paths on my fork on Github of eyelinkReader
+
+Created a fork of Pastukhov's github repo, then change the zzz.R file.
+Change line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
+
+Now can install from my fork using devtools: 
+
+devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE, build_vignettes=TRUE)
+
+May need to re-install R (but not RStudio) to prevent lazy-loading error within RStudio.
+
+Test it with:
+
+``` gaze <- eyelinkReader::read_edf('dataForTestingOfCode/A20b.EDF') ```
+
+and
+
+``` browseVignettes('eyelinkReader') ```
+
+
 ## Fixing problem on Alex’s Mac and Jye's Mac with eyelinkReader
 
 Executing library(eyelinkReader) after installation give the error that failed to load edfapi, because of a paths problem when a Cpp compilation tries to compile edfapi with eyelinkReader in some way:
@@ -31,24 +51,6 @@ Tried commenting those out (adding “#” at the beginning of the line but that
 
 It's that line of code that gets concatenated with another edfapi.framework somewhere. 
 
-### Fixed it on my fork on Github of eyelinkReader
-
-Created a fork of Pastukhov's github repo, then change the zzz.R file.
-Change line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
-
-Now can install from my fork using devtools: 
-
-devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE, build_vignettes=TRUE)
-
-May need to re-install R (but not RStudio) to prevent lazy-loading error within RStudio.
-
-Test it with:
-
-``` gaze <- eyelinkReader::read_edf('dataForTestingOfCode/A20b.EDF') ```
-
-and
-
-``` browseVignettes('eyelinkReader') ```
 
 
 
