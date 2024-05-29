@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -58,7 +58,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; simulateObserver=True; showOnlyOneFrameOfStimuli = False
+autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -200,12 +200,12 @@ else: #checkRefreshEtc
 
 myWin.close() #have to close window to show dialog box
 dlgLabelsOrdered = list() #new dialog box
-session=0
+session='a'
 myDlg = psychopy.gui.Dlg(title="object tracking experiment", pos=(200,400))
 if not autopilot:
     myDlg.addField('Subject name or ID:', subject, tip='')
     dlgLabelsOrdered.append('subject')
-    myDlg.addField('session number:',session, tip='1,2,3,')
+    myDlg.addField('session:',session, tip='a,b,c,')
     dlgLabelsOrdered.append('session')
 myDlg.addField('Trials per condition (default=' + str(trialsPerCondition) + '):', trialsPerCondition, tip=str(trialsPerCondition))
 dlgLabelsOrdered.append('trialsPerCondition')
@@ -226,10 +226,8 @@ if myDlg.OK: #unpack information from dialogue box
        name=thisInfo[dlgLabelsOrdered.index('subject')]
        if len(name) > 0: #if entered something
          subject = name #change subject default name to what user entered
-       sessionEntered =thisInfo[dlgLabelsOrdered.index('session')] #it comes from dlg as an integer rather than a string, which is good
-       if not isinstance(session, int):
-         print('Error! session must be integer'); core.quit()
-       session = sessionEntered       
+       sessionEntered =thisInfo[dlgLabelsOrdered.index('session')]
+       session = str(sessionEntered) #cast as str in case person entered a number
    trialsPerCondition = int( thisInfo[ dlgLabelsOrdered.index('trialsPerCondition') ] ) #convert string to integer
 else: 
    print('User cancelled from dialog box.')
@@ -395,11 +393,13 @@ if doStaircase: #create the staircases
         descendingPsychometricCurve = True
         #the average threshold speed across conditions found by previous literature for young people
         avgAcrossCondsFromPrevLit = mainCondsDf['midpointThreshPrevLit'].mean()
-        if session <= 1:  #give all the staircases the same starting value 
+        #Assume that first session is 'a', second session is 'b', etc.
+        sessionNum = ord(session) - ord('a') + 1
+        if sessionNum <= 1:  #give all the staircases the same starting value 
             startVal = 0.6 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
-        elif session == 2:
+        elif sessionNum == 2:
             startVal = avgAcrossCondsFromPrevLit
-        elif session >= 3:
+        elif sessionNum >= 3:
             startVal = 0.75 * avgAcrossCondsFromPrevLit
 
         startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
@@ -1073,7 +1073,13 @@ ts = list();
 
 if eyetracking:
     EDF_fname_local=('EyeTrack_'+subject+'_' + str(session) + '_' + timeAndDateStr+'.EDF')
-    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,subject,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
+    nameForRemoteEDF4charsMax = subject + str(session)
+    if len(nameForRemoteEDF4charsMax) > 4:
+        print('ERROR: stem of EDF eyetracker machine filename should not exceed 4 characters, because need four more for ".EDF", but yours is currently:',
+                nameForRemoteEDF4charsMax, ' so I am sorry but I will now QUIT!')
+        core.quit()
+
+    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,nameForRemoteEDF4charsMax,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
 
 randomStartAngleEachRing = True
 randomInitialDirExceptRing0 = True
