@@ -16,7 +16,7 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
     stop( paste0("ERROR no file ",fname," exists") )
   }
 
-  gaze <- eyelinkReader::read_edf(inputEDF,
+  EDFstuff <- eyelinkReader::read_edf(inputEDF,
                                   import_samples = TRUE,
                                   sample_attributes = c('time', 'gx', 'gy'))
 
@@ -28,24 +28,47 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   bottomLimitPixel = heightPix/2 + centralZoneHeightPix/2
   topLimitPixel = heightPix/2 - centralZoneHeightPix/2
   
- gaze <- eyelinkReader::read_edf(inputEDF,
+  EDFstuff <- eyelinkReader::read_edf(inputEDF,
                                   import_samples = TRUE,
                                   sample_attributes = c('time', 'gx', 'gy'))
   
-  if (length(gaze)==0) {
+  if (length(EDFstuff)==0) {
     cat('Failure to read EDF file with eyelinkReader!')
   }
   # gaze$samples contains the x,y locations
   
+  #Check what proportion of the time the eye was lost completely
+  #Can check this by looking at rate of samples being NA, or by ?
+  table(is.na(EDFstuff$samples$gxR))
+  
   #Go through every sample for all trials and indicate whether each event falls within the designated limits
-  gazeLocatn <- gaze$samples %>% 
-    mutate(outOfCentralArea = (gxL < leftLimitPixel) | (gxL > rightLimitPixel)  ) %>%
+  gazeLocatn <- EDFstuff$samples %>% 
+    mutate(outOfCentralArea = (gxR < leftLimitPixel) | (gxR > rightLimitPixel)  ) %>%
     mutate(outOfCentralArea = as.numeric(outOfCentralArea)) #Change boolean to 0/1
+  
+  #Check for events$type=='LOST_DATA_EVENT'
+  #Add a column for lostData event
+  myEvents<- EDFstuff$events %>% mutate(lostData = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
+  if (any(myEvents$lostData)) { #Check whether lost data ever occurred
+    warning( "data was lost! A LOST_DATA_EVENT occurred somewhere in this EDF file")
+  }
+  
+  #For each trial, need to go through all the events and calculate
+  # number of blinks
+  # total duration of blinks
+  # total time outside the designated area
+  # number of fixations outside the designated area
+  
+  
+  #Can I merge the events with the samples to know 
+  
+  #Should probably use gavx and gavy
   
   proportnOutside = gazeLocatn %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T)) #HAve to ignore NAs, which might be blinks
   proportnOutside = proportnOutside$outOfCentralArea
   #cat("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
   
+  #
   eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
   proportnTrialsOutside = as.numeric( (eachTrial$outOfCentralArea > 0) )
   msg = paste("Proportion of trials for this participant that are outside the central zone =", mean(proportnTrialsOutside))
@@ -67,8 +90,8 @@ if (TESTME) {
 
   widthPix = 800
   heightPix = 600
-  centralZoneHeightPix = 77.8
-  centralZoneWidthPix = 77.8
+  centralZoneHeightPix = 10
+  centralZoneWidthPix = 10
 
   eachT <- EDFsummarise(EDF_exampleYoungOld, widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
 
@@ -77,7 +100,7 @@ if (TESTME) {
 VISUALIZE=FALSE
 if (VISUALIZE) {
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
-  gaze <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
+  EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
 
   # extracting fixations and saccades for the first trial
   fixations <- gaze$fixations[gaze$fixations$trial == 1, ]
@@ -93,14 +116,11 @@ if (VISUALIZE) {
     scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
     
     # draw fixations as circles
-    geom_point(data = fixations, aes_string(x = "gavx", y = "gavy", size = "duration"), alpha=0.3) +
-    
+    geom_point(data = fixations, aes(x = gavx, y = gavy, size = duration), alpha=0.3) +
+
     # draw saccades as line segments
-    geom_segment(data = saccades, aes_string(x = "gstx", y = "gsty", xend = "genx", yend = "geny", color = "sttime_rel")) +
+    geom_segment(data = saccades, aes(x = gstx, y = gsty, xend = genx, yend = geny, color = sttime_rel)) +
     
     # better legend titles
-    labs(size = "Fixation duration [ms]",
-         color = "Saccade onset [ms]")
-  
-  
+    labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]")
 }
