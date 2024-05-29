@@ -12,11 +12,16 @@ On Josh's Windows computer, it kept saying edfapi was not installed or something
 Created a fork of Pastukhov's github repo, then changed the zzz.R file.
 Changed line 70 of zzz.R  to   library_path <-'/Library/Frameworks/'
 
-Now can install from my fork using devtools: 
+Now can install from my fork using devtools (after `install.packages("devtools")` ): 
 
 ```
 
 devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE) #, build_vignettes=TRUE)
+
+```
+
+```
+library(eyelinkReader)
 
 ```
 
