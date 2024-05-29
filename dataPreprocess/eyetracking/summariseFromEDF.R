@@ -1,18 +1,26 @@
 
-
-#When I used to use fixation report (summariseEyelinkReport.R), it would examine each fixation event designated by Eyelink
+#When I used to use fixation report (summariseEyelinkReport.R) instead of EDF, it would examine each fixation event designated by Eyelink
 # and check whether all the fixations for each trial is within the desired fixation zone.
 #It also outputs whether the subject blinked on each trial.
 library(stringr)
 library(plyr); library(dplyr) #must be done in this order
+library(eyelinkReader)
 
-EDFsummarise<- function(inputFilename,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix) {
+EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix) {
   #
-  
   #gaze$fixations$trial
   #gaze$fixations$
   #When the eye cannot be tracked (for example during blinks) null values (".") are returned for the gaze X,Y data, and the Pupil Size data is zero
-  
+
+  if (!file.exists(inputEDF)) {
+    stop( paste0("ERROR no file ",fname," exists") )
+  }
+
+  gaze <- eyelinkReader::read_edf(inputEDF,
+                                  import_samples = TRUE,
+                                  sample_attributes = c('time', 'gx', 'gy'))
+
+
   #widthPix is width of screen. Used to calculate center of screen 
   #Eyelink reports eye position in pixels
   leftLimitPixel = widthPix/2 - centralZoneWidthPix/2
@@ -20,109 +28,79 @@ EDFsummarise<- function(inputFilename,widthPix,heightPix,centralZoneWidthPix,cen
   bottomLimitPixel = heightPix/2 + centralZoneHeightPix/2
   topLimitPixel = heightPix/2 - centralZoneHeightPix/2
   
-  if ("TRIAL_LABEL" %in% colnames(df)) {
-    #TRIAL_LABEL column contents are printed as as "Trial:1", "Trial:2". Let's delete "Trial:"
-    df$TRIAL_LABEL<-gsub("Trial:", "", df$TRIAL_LABEL)
-    #Converts Trial number in to numeric form  
-    df<-transform(df, TRIAL_LABEL=as.numeric(TRIAL_LABEL))
-    names(df)[names(df) == 'TRIAL_LABEL'] <- 'trial' #rename column
-  } else if ("TRIAL_INDEX" %in% colnames(df)){
-    names(df)[names(df) == 'TRIAL_INDEX'] <- 'trial' #rename column
-  } else { 
-    print("Neither TRIAL_LABEL nor TRIAL_INDEX present, need one!") 
+ gaze <- eyelinkReader::read_edf(inputEDF,
+                                  import_samples = TRUE,
+                                  sample_attributes = c('time', 'gx', 'gy'))
+  
+  if (length(gaze)==0) {
+    cat('Failure to read EDF file with eyelinkReader!')
   }
+  # gaze$samples contains the x,y locations
   
-  colsExpected = c("RECORDING_SESSION_LABEL","trial","CURRENT_FIX_BLINK_AROUND",
-                   "CURRENT_FIX_X","CURRENT_FIX_Y")
-  colsExpectedNotPresent <- setdiff( colsExpected,colnames(df) )
-  if (length(colsExpectedNotPresent) >0) {
-    if (length(colsExpectedNotPresent)==1 && colsExpectedNotPresent[1]=="CURRENT_FIX_Y") {
-      print("Chris early output did not include CURRENT_FIX_Y, that's ok for now")
-    } else {
-      stop( paste0("The file ",inputFilename," does not have the expected columns  :",colsExpectedNotPresent) )
-    }
-  }
-  colsKindaExpected <- c(colsExpected,"TRIAL_INDEX")
-  colsPresentNotExpected<- setdiff( colnames(df), colsKindaExpected )
-  if (length(colsPresentNotExpected) >0) {
-    cat("These columns are in the file",inputFilename," but were not expected:")
-    cat( paste(colsPresentNotExpected,collapse=',') )
-  }
+  #Go through every sample for all trials and indicate whether each event falls within the designated limits
+  gazeLocatn <- gaze$samples %>% 
+    mutate(outOfCentralArea = (gxL < leftLimitPixel) | (gxL > rightLimitPixel)  ) %>%
+    mutate(outOfCentralArea = as.numeric(outOfCentralArea)) #Change boolean to 0/1
   
-  #File is formatted with potentially many rows for each trial. Multiple events in each trial according to Eyelink
-  #Code whether a blink occurred around the time of every event
-  dg<-mutate(df,blink=(CURRENT_FIX_BLINK_AROUND!="NONE")) #"NONE", "AFTER", or "BEFORE"
+  proportnOutside = gazeLocatn %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T)) #HAve to ignore NAs, which might be blinks
+  proportnOutside = proportnOutside$outOfCentralArea
+  #cat("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
   
-  #Go through every event for all trials and indicate whether each event falls within the designated limits
-  cat(paste0("leftLimitPixel=",leftLimitPixel,"\n"))
-  dg<-mutate(dg, outOfCentralArea= 
-               (CURRENT_FIX_X<leftLimitPixel) | (CURRENT_FIX_X>rightLimitPixel) )
+  eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
+  proportnTrialsOutside = as.numeric( (eachTrial$outOfCentralArea > 0) )
+  msg = paste("Proportion of trials for this participant that are outside the central zone =", mean(proportnTrialsOutside))
+  print(msg)
   
-  if ("CURRENT_FIX_Y" %in% colnames(dg)) {
-    dg<-mutate(dg, outOfCentralArea= 
-                 (CURRENT_FIX_Y>=bottomLimitPixel) | (CURRENT_FIX_X<topLimitPixel) )  
-  }
+  #Save as a CSV file the variable of whether in each trial the person's eyes were ever outside the central zone
+  library(readr)
+  outputFilename = paste0( inputEDF, ".csv" )
+  readr::write_excel_csv( eachTrial, outputFilename )
   
-  #Change names of columns to something more readable
-  #colnames(mydata)<- c("Subject", "Trial", "Blink", "Position")
-  
-  #Break apart by trial number, then find max deviation and whether any fell out of desired area, etc
-  by_trial <- group_by(dg, trial)
-  oneRowPerTrial <- dplyr::summarise(
-                              by_trial,
-                              outOfCentralArea = max(outOfCentralArea),
-                              maxXdev = max( abs(CURRENT_FIX_X-widthPix/2) ),
-                              blinks = sum( blink ),
-                              meanX = mean(CURRENT_FIX_X) )
-  
-  if ("CURRENT_FIX_Y" %in% colnames(dg)) {
-    oneRowPerTrialExtra <- dplyr::summarise(  #avoid confusion with plyr::summarise
-                                     by_trial, 
-                                     maxYdev = max( abs(CURRENT_FIX_Y-heightPix/2) ),
-                                     meanY = mean(CURRENT_FIX_Y) )
-    oneRowPerTrial<- merge(oneRowPerTrial, oneRowPerTrialExtra, by=c("trial"))
-  }
-  
-  return (oneRowPerTrial)
+  return( eachTrial )
 }
 
-TESTME = FALSE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
+TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
 if (TESTME) {
-  setwd(
-    "/Users/alexh/Documents/attention_tempresltn/multiple\ object\ tracking/newTraj/newTraj_repo/dataPreprocess/eyetracking"
-  )
-  inputFilename<-"ANON_26May2015_13-44Eyetracking.txt"
-  inputFilename<- "CF_10Jun2015_12-14EyetrackingReport.txt"
-  inputDir<-"./dataForTestingOfCode/"
-  files <- dir(path=inputDir)  #find all data files in this directory
-  if (!(inputFilename %in% files)) {
-    stop("test file not found")
-  }
-  inputFilenameWithPath<-paste0(inputDir,inputFilename)
-  outputFilename<-paste0(inputDir,inputFilename,"_eachTrialSummary")
-  df <- tryCatch( 
-    read.table(inputFilenameWithPath, header = TRUE, sep ="\t"), 
-    error=function(e) { 
-      stop( paste0('EyeLink Report file exists: ',inputFilenameWithPath,"but ERROR reading the file :",e) )
-    } )
 
-  #Calculating the exclusion zone numbers
-  exclusionDeg = 1.0 #if participant's eye is ever more than exclusionDeg away from fixation, Exclusion=1
+  #data(gaze) #to use built-in dataset
+  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
+
   widthPix = 800
   heightPix = 600
-  monitorWidth = 39.5 #cm
-  viewdist = 57 #cm
-  widthScreenDeg =  2*(atan((monitorWidth/2)/viewdist) /pi*180)
-  pixelsPerDegree = widthPix / widthScreenDeg
-  exclusionPixels = exclusionDeg * pixelsPerDegree
-  centralZoneWidthPix = exclusionPixels*2
-  centralZoneHeightPix = exclusionPixels*2
+  centralZoneHeightPix = 77.8
+  centralZoneWidthPix = 77.8
+
+  eachT <- EDFsummarise(EDF_exampleYoungOld, widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
+
+}
+
+VISUALIZE=FALSE
+if (VISUALIZE) {
+  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
+  gaze <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
+
+  # extracting fixations and saccades for the first trial
+  fixations <- gaze$fixations[gaze$fixations$trial == 1, ]
+  saccades <- gaze$saccades[gaze$saccades$trial == 1, ]
+  
+  #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
+  library(ggplot2)
+  ggplot() +
+    coord_equal( xlim=c(0,widthPix), ylim=c(0,heightPix) ) +
     
-  whatIwantToKnowEachTrial<- 
-     eyelinkReportSummarise(inputFilename,df,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
-  head(whatIwantToKnowEachTrial)
-  proportnTrialsOutOfCentralArea = sum(whatIwantToKnowEachTrial$outOfCentralArea != 0) / nrow(whatIwantToKnowEachTrial)
-  msg=paste0(" fixation broken on ",as.character(round(proportnTrialsOutOfCentralArea*100,1)), "% of trials")
-  print(msg)
-  #write.table(whatIwantToKnowEachTrialAboutEye, paste0(inputDir, outputFilename,".txt"), sep="\t", row.names=FALSE)
+    # define screen limits and INVERSE y-axis to match Eyelink
+    scale_x_continuous(name = "x", limits = gaze$display_coords[c(1, 3)]) +
+    scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
+    
+    # draw fixations as circles
+    geom_point(data = fixations, aes_string(x = "gavx", y = "gavy", size = "duration"), alpha=0.3) +
+    
+    # draw saccades as line segments
+    geom_segment(data = saccades, aes_string(x = "gstx", y = "gsty", xend = "genx", yend = "geny", color = "sttime_rel")) +
+    
+    # better legend titles
+    labs(size = "Fixation duration [ms]",
+         color = "Saccade onset [ms]")
+  
+  
 }
