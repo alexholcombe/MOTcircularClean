@@ -342,14 +342,14 @@ speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,
 if useSound: 
     ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
     soundDir = 'sounds'
-    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9, autoLog=autoLogging)
+    lowSound = sound.Sound('E',octave=4, stereo = False, sampleRate = 44100, secs=.8, volume=1.0, autoLog=autoLogging)
     respPromptSounds = [-99] * len(ringQuerySoundFileNames)
     for i in range(len(ringQuerySoundFileNames)):
         soundFileName = ringQuerySoundFileNames[i]
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile, volume=.1, autoLog=autoLogging)
+    corrSound = sound.Sound(corrSoundPathAndFile, volume=.3, autoLog=autoLogging)
 
 ######################################
 # Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
@@ -1206,7 +1206,6 @@ while trialNum < trials.nTotal and expStop==False:
             corrSound.play()
         else: #incorrect
             if useSound:
-                lowSound = sound.Sound('E',octave=3, secs=.8, volume=1.0)
                 lowSound.play()
     trials.addData('speedThisTrial',speedThisTrial)
     trials.addData('orderCorrect',orderCorrect)
