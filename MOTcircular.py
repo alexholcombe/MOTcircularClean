@@ -345,14 +345,14 @@ speedText = visual.TextStim(myWin,pos=(-0.5, 0.5),colorSpace='rgb',color = (1,1,
 if useSound: 
     ringQuerySoundFileNames = [ 'innerring.wav', 'middlering.wav', 'outerring.wav' ]
     soundDir = 'sounds'
-    lowSound = sound.Sound('E',octave=3, stereo = False, sampleRate = 44100, secs=.8, volume=0.9, autoLog=autoLogging)
+    lowSound = sound.Sound('E',octave=4, stereo = False, sampleRate = 44100, secs=.8, volume=1.0, autoLog=autoLogging)
     respPromptSounds = [-99] * len(ringQuerySoundFileNames)
     for i in range(len(ringQuerySoundFileNames)):
         soundFileName = ringQuerySoundFileNames[i]
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
+    corrSound = sound.Sound(corrSoundPathAndFile, volume=0.3, autoLog=autoLogging)
 
 stimList = []
 doStaircase = True
@@ -1279,8 +1279,6 @@ while trialNum < trials.nTotal and expStop==False:
     if useSound:
         respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ respPromptSoundFileNum ])
         respPromptSound = sound.Sound(respPromptSoundPathAndFile, secs=.2)
-        corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-        corrSound = sound.Sound(corrSoundPathAndFile)
 
     postCueNumBlobsAway=-999 #doesn't apply to click tracking and non-tracking task
 
@@ -1357,7 +1355,6 @@ while trialNum < trials.nTotal and expStop==False:
             corrSound.play()
         else: #incorrect
             if useSound:
-                lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
                 lowSound.play()
     trials.addData('speedThisTrial',speedThisTrial)  #when doStaircase is true, this will often be different than thisTrial['speed]
     trials.addData('orderCorrect',orderCorrect)

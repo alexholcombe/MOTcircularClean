@@ -349,7 +349,7 @@ if useSound:
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile, volume=.8, autoLog=autoLogging)
+    corrSound = sound.Sound(corrSoundPathAndFile, volume=.1, autoLog=autoLogging)
 
 ######################################
 # Set up default practice trials. These can be overruled by experimenter in dialog box that appears before each trial.
@@ -1143,8 +1143,6 @@ while trialNum < trials.nTotal and expStop==False:
     if useSound:
         respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ respPromptSoundFileNum ])
         respPromptSound = sound.Sound(respPromptSoundPathAndFile, secs=.2)
-        corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-        corrSound = sound.Sound(corrSoundPathAndFile)
 
     postCueNumBlobsAway=-999 #doesn't apply to click tracking and non-tracking task
 
@@ -1208,7 +1206,7 @@ while trialNum < trials.nTotal and expStop==False:
             corrSound.play()
         else: #incorrect
             if useSound:
-                lowSound = sound.Sound('E',octave=3, secs=.8, volume=0.9)
+                lowSound = sound.Sound('E',octave=3, secs=.8, volume=1.0)
                 lowSound.play()
     trials.addData('speedThisTrial',speedThisTrial)
     trials.addData('orderCorrect',orderCorrect)
