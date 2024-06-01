@@ -12,10 +12,11 @@ EDFfiles <- list.files(path=EDFfolder)  # c("A20b.EDF","S451.EDF","E401.EDF","M4
 fnames<-EDFfiles
 fixatns<- data.frame()
 
+#Try to read in all the files
+failedFiles<-c()
 for (f in 1:length(fnames)) {
   EDFname <- file.path(EDFfolder, fnames[f])
   #some EDF files cannot be read, so need to catch that error and omit the file
-  failedFiles<-c()
   succeeded<- tryCatch(
     {
       EDF<- eyelinkReader::read_edf(EDFname, import_samples = TRUE,
@@ -64,16 +65,54 @@ if (length(failedFiles)) {
 
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
 
+#What is with A18?
+library(stringr)
 #Plot distance from fixation over time
-pp<- fixatns %>%
+pp<- fixatns %>% filter(sttime_rel>800) %>% filter(str_detect(ID,"A18")) %>%
   ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
   geom_point() + geom_line(aes(group=trial)) +
   ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
   ggtitle('Fixation distance from center over each trial') +
-  facet_wrap(vars(ID)) #facet_grid(rows=vars(ID)) #
+  facet_grid(rows=vars(ID),cols=vars(session)) #
 show(pp)
-plotpath<- file.path('dataForTestingOfCode', 'examplePlots')
-ggsave( file.path(plotpath, paste0('distOverTime','.png'))  )
+plotpath<- file.path('plots')
+ggsave( file.path(plotpath, paste0('A18','.png'))  )
+
+#Discard A18 completely for not fixating
+fixatns <- fixatns %>% filter( !str_detect(ID,"A18") )
+
+#number subjects with integer
+fixatns$subjNum <- match(fixatns$ID, unique(fixatns$ID))  
+
+#Graph 5 Ss at a time
+numPlots = round( max(fixatns$subjNum)/5 )
+for (i in 1:numPlots)  {
+  #Plot distance from fixation over time first 4 Ss
+  pp<- fixatns %>% 
+    filter(subjNum <= i*5) %>% filter(subjNum > (i-1)*5) %>%
+    filter(sttime_rel>800) %>%
+    ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
+    geom_point() + geom_line(aes(group=trial)) +
+    ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
+    ggtitle('Fixation distance from center, columns are sessions') +
+    #facet_wrap(vars(ID)) 
+    facet_grid(rows=vars(ID),cols=vars(session)) #
+  show(pp)
+  plotpath<- file.path('plots')
+  ggsave( file.path(plotpath, paste0('distOverTime',(i-1)*5+1,'-',i*5,'.png'))  )
+}
+
+#Plot distance from fixation over time first 4 Ss
+pp<- fixatns %>% filter(sttime_rel>800) %>% filter(ID > "C36") %>%
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
+  geom_point() + geom_line(aes(group=trial)) +
+  ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
+  ggtitle('Fixation distance from center, columns are sessions') +
+  #facet_wrap(vars(ID)) 
+  facet_grid(rows=vars(ID),cols=vars(session)) #
+show(pp)
+plotpath<- file.path('plots')
+ggsave( file.path(plotpath, paste0('distOverTime2','.png'))  )
 
 #Just look at first 2900ms, because first 800->1300ms is fixation, then blobs cued for 1200ms
 #So really I don't have to exclude until after 800+1200=2000
