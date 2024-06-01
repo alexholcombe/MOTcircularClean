@@ -4,35 +4,73 @@ library(ggplot2)
 
 #Explore how things went with eyetracking youngOld
 widthPix = 800; heightPix = 600
-fnames<- c("A20b.EDF","S451.EDF","E401.EDF","M433.EDF","M471.EDF")
+
+#expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
+EDFfolder<- file.path("..","..","dataRaw","EDF")
+EDFfiles <- list.files(path=EDFfolder)  # c("A20b.EDF","S451.EDF","E401.EDF","M433.EDF","M471.EDF")
+#Around 29 May, we switched from using 1,2,3 for session number to a,b,c
+fnames<-EDFfiles
 fixatns<- data.frame()
+
 for (f in 1:length(fnames)) {
-  EDFname <- file.path("dataForTestingOfCode", fnames[f]) # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
-  EDF<- eyelinkReader::read_edf(EDFname, import_samples = TRUE,
+  EDFname <- file.path(EDFfolder, fnames[f])
+  #some EDF files cannot be read, so need to catch that error and omit the file
+  failedFiles<-c()
+  succeeded<- tryCatch(
+    {
+      EDF<- eyelinkReader::read_edf(EDFname, import_samples = TRUE,
                                     sample_attributes = c('time', 'gx', 'gy'))
-  EDF$fixations$fname <- fnames[f]
-  if (substr(fnames[1],5,8)!=".EDF") {
-    warning("File name should be eight characters and end with .EDF")
+      TRUE
+    },
+    error = function(cond) {
+      message( paste(EDFname," yielded an error from read_edf:") )
+      message( conditionMessage(cond) )
+      # Choose a return value in case of error
+      FALSE
+    },
+    warning = function(cond) {
+      message(paste("Trying", EDFname," gave a warning from read_edf:"))
+      message( conditionMessage(cond) )
+      # Choose a return value in case of warning
+      TRUE
+    },
+    finally = message("Processed", EDFname)
+  )
+  if (!succeeded) {
+    failedFiles <- c(failedFiles,EDFname)
   }
-  #parse it into session
-  IDandSession<- substr(fnames[f],1,4)
-  ID<- substr(IDandSession,1,3)
-  EDF$fixations$ID <- ID
-  session <- substr(IDandSession,4,4)
-  EDF$fixations$session<- session
-  fixatns<- rbind(fixatns, EDF$fixations)
+  if (succeeded) {
+    EDF$fixations$fname <- fnames[f]
+    if (substr(fnames[1],5,8)!=".EDF") {
+      warning("File name should be eight characters and end with .EDF")
+    }
+    #parse out session
+    IDandSession<- substr(fnames[f],1,4)
+    ID<- substr(IDandSession,1,3)
+    EDF$fixations$ID <- ID
+    session <- substr(IDandSession,4,4)
+    if (grepl("^[a-z]$", session)) #session is lower-case letter
+      session<- match( tolower(session), letters) #returns 1 for 'a', 2 for 'b', etc.
+    
+    EDF$fixations$session<- session
+    fixatns<- rbind(fixatns, EDF$fixations)
+  }
 }
+
 table(fixatns$ID,fixatns$session)
+if (length(failedFiles)) {
+  print("Failed to read files:",failedFiles)
+}
 
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
 
 #Plot distance from fixation over time
 pp<- fixatns %>%
-  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial) ) +
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
   geom_point() + geom_line(aes(group=trial)) +
   ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
   ggtitle('Fixation distance from center over each trial') +
-  facet_grid(rows=vars(fname)) # facet_wrap(vars(fname))
+  facet_wrap(vars(ID)) #facet_grid(rows=vars(ID)) #
 show(pp)
 plotpath<- file.path('dataForTestingOfCode', 'examplePlots')
 ggsave( file.path(plotpath, paste0('distOverTime','.png'))  )
