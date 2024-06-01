@@ -1080,7 +1080,8 @@ if eyetracking:
                 nameForRemoteEDF4charsMax, ' so I am sorry but I will now QUIT!')
         core.quit()
 
-    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,nameForRemoteEDF4charsMax,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
+    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,
+                                                                 nameForRemoteEDF4charsMax,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
 
 randomStartAngleEachRing = True
 randomInitialDirExceptRing0 = True
@@ -1151,7 +1152,7 @@ while trialNum < trials.nTotal and expStop==False:
             #and calibrate. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
         
-    fixatnPeriodFrames = int(   (np.random.rand(1)/2.+0.8)   *refreshRate)  #random interval between x and x+800ms
+    fixatnPeriodFrames = int(   (np.random.rand(1)/2. +0.8)   *refreshRate)  #random interval between 800 and 1300ms
     for i in range(fixatnPeriodFrames):
         if i%2:
             fixation.draw()
@@ -1160,6 +1161,7 @@ while trialNum < trials.nTotal and expStop==False:
     trialClock.reset()
     for L in range(len(ts)):
         ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
+    #my_tracker.sendMessage('Fixation pre-stimulus period ending for trialnum=' + str(trialNum) ) 
     stimClock.reset()
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings

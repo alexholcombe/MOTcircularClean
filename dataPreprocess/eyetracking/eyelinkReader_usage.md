@@ -32,4 +32,7 @@ Maybe the blinks are removed from the time series so I can just use x, y. It say
 
 What I really want is a fully labelled time series with all variables including current event, not just start event and end event
 
-When do I send the trialnum
+"The sttime and entime fields of an end event are the timestamps of the first and last samples in the event."
+
+
+trackingExtraTime = 1.2 seconds, which is how long the blobs are cued, but that's after the fixation interval, which is between 800 and 1300 ms
