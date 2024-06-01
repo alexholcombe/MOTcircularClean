@@ -1052,6 +1052,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
+print('fixatnPeriodFrames', end='\t') #So know when important part of eyetracking begins
 print('orderCorrect\ttrialDurTotal\tnumTargets', end= '\t', file=dataFile) 
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
@@ -1317,6 +1318,7 @@ while trialNum < trials.nTotal and expStop==False:
     print(trialNum,subject,session,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
             speedThisTrial, #could be different than thisTrial['speed'] because staircase
             thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
+    print(fixatnPeriodFrames, end='\t', file=dataFile) #So know when important part of eyetracking begins
     print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t', end=' ', file=dataFile) 
     for i in range(numRings):  print( thisTrial['whichIsTargetEachRing'][i], end='\t', file=dataFile  )
     print( thisTrial['ringToQuery'],end='\t',file=dataFile )

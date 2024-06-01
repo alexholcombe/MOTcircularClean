@@ -31,3 +31,5 @@ sttime is defined in that manual but not sttime_rel !
 Maybe the blinks are removed from the time series so I can just use x, y. It says when eye cannot be tracked, for example during blinks, “.” is returned. Although Ruben said that before a blink he sees the position start to go haywire, which suggests the blink isn’t being fully filtered out.
 
 What I really want is a fully labelled time series with all variables including current event, not just start event and end event
+
+When do I send the trialnum

@@ -1,4 +1,6 @@
 library(eyelinkReader)
+library(dpylr)
+widthPix = 800; heightPix = 600
 
 #Explore how things went with eyetracking youngOld
 EDFexample <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
@@ -22,6 +24,8 @@ avgFix<- fixatns %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  -
 if any( abs(avgFix) > 40 ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
   print("Either your screen coordinates are wrong, the eyetracker sucked, or participant didn't look near center much")
 }
+
+fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
 
 #Plot to see how it changes over time across trials
 fixatns %>%
@@ -53,11 +57,28 @@ fixatns %>%
 #Look at trace of several trials
 fixatns %>% filter(trial<50) %>% 
   ggplot( aes(x=sttime_rel, y=gavx, color=trial) ) +
+  ylab('average x during fixation') + xlab('sttime_rel (ms)') +
   geom_point() + geom_line(aes(group=trial))
 
 fixatns %>% filter(trial>50) %>% 
   ggplot( aes(x=sttime_rel, y=gavx, color=trial) ) +
   geom_point() + geom_line(aes(group=trial))
+
+#Plot distance from fixation over time
+pp<- fixatns %>%
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial) ) +
+  geom_point() + geom_line(aes(group=trial)) +
+  ggtitle('Distance from fixation over each trial')
+show(pp)
+ppath<- file.path('dataForTestingOfCode', 'examplePlots')
+
+ggsave( file.path(ppath, paste0('distOverTime','.png'))  )
+
+#Plot distance from fixation over time
+fixatns %>% filter(sttime_rel<1000) %>%
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial) ) +
+  geom_point() + geom_line(aes(group=trial))
+#The frequent bad stuff happens over the first 500ms
 
 ggplot(fixatns, aes(x=sttime_rel, y=gavx, color=trial) ) +
   geom_point() 
