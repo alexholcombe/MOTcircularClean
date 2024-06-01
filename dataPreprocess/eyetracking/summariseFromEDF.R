@@ -20,7 +20,6 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
                                   import_samples = TRUE,
                                   sample_attributes = c('time', 'gx', 'gy'))
 
-
   #widthPix is width of screen. Used to calculate center of screen 
   #Eyelink reports eye position in pixels
   leftLimitPixel = widthPix/2 - centralZoneWidthPix/2
@@ -35,7 +34,7 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   if (length(EDFstuff)==0) {
     cat('Failure to read EDF file with eyelinkReader!')
   }
-  # gaze$samples contains the x,y locations
+  # gaze$samples contains the x,y locations but before parsing into saccades, blinks
   
   #Check what proportion of the time the eye was lost completely
   #Can check this by looking at rate of samples being NA, or by ?
@@ -48,17 +47,39 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   
   #Check for events$type=='LOST_DATA_EVENT'
   #Add a column for lostData event
-  myEvents<- EDFstuff$events %>% mutate(lostData = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
-  if (any(myEvents$lostData)) { #Check whether lost data ever occurred
+  events<- EDFstuff$events %>% mutate(lostData = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
+  if (any(events$lostData)) { #Check whether lost data ever occurred
     warning( "data was lost! A LOST_DATA_EVENT occurred somewhere in this EDF file")
   }
   
-  #For each trial, need to go through all the events and calculate
+  #For each trial, need to go through all the events and calculate and return
   # number of blinks
   # total duration of blinks
+  # whether any blinks were longer than 400ms
   # total time outside the designated area
   # number of fixations outside the designated area
+
+  #BLINKS  
+  blinks <- EDFstuff$blinks
+  #Visualize outliers with histogram
+  ggplot(blinks,aes(y=duration)) + geom_histogram() + ylim(-100,1000) 
+  #Mark too-long blinks
+  blinks<- blinks %>% mutate(tooLong = (duration>400))
+  #Blinks can also be too short to be realistic, but I guess they could occur via person lowering their eyelid a bit and then re-opening,
+  # especially because anytime it loses track of the eyes, it calls it a blink
   
+  blinksPerTrial <- blinks %>% group_by(trial) %>% summarise(totalBlinkDur = sum(duration), tooLongs = sum(tooLong))
+  
+  #FIXATIONS
+  fixatns <- EDFstuff$fixations
+  #take the global average which if everything worked right will be near widthPix/2, heightPix/2
+  avgFix<- fixatns %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  - 
+                    data.frame( meanX=widthPix/2,     meanY= heightPix/2)
+  #Discrepancy with screen center
+  avgFix - data.frame(meanX= avgFix$meanX - widthPix/2,   meanY = avgFix$
+  eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
+  
+  #Should I do my own drift correction?
   
   #Can I merge the events with the samples to know 
   
@@ -101,10 +122,10 @@ VISUALIZE=FALSE
 if (VISUALIZE) {
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
-
+  trialnum = 1
   # extracting fixations and saccades for the first trial
-  fixations <- gaze$fixations[gaze$fixations$trial == 1, ]
-  saccades <- gaze$saccades[gaze$saccades$trial == 1, ]
+  fixations <- gaze$fixations[gaze$fixations$trial == trialnum, ]
+  saccades <- gaze$saccades[gaze$saccades$trial == trialnum, ]
   
   #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
   library(ggplot2)
