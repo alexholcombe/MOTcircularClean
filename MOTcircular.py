@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -134,10 +134,8 @@ def getReversalTimes():
     return reversalTimesEachRing
     
 cueDur = cueRampUpDur+cueRampDownDur+trackingExtraTime  #giving the person time to attend to the cue (secs)
-trialDurFrames=int(trialDurMin*refreshRate)+int( trackingExtraTime*refreshRate )
 rampUpFrames = refreshRate*cueRampUpDur;   rampDownFrames = refreshRate*cueRampDownDur;
 cueFrames = int( refreshRate*cueDur )
-rampDownStart = trialDurFrames-rampDownFrames
 ballStdDev = 1.8 * 3 
 #mouseChoiceArea = ballStdDev * 0.2 #debugAH #*0.8  # origin =1.3  #Now use a function for this,
 units='deg' #'cm'
@@ -1135,6 +1133,7 @@ while trialNum < trials.nTotal and expStop==False:
     trackVariableIntervDur=np.random.uniform(0,trackVariableIntervMax) #random interval tacked onto tracking to make total duration variable so cant predict final position
     trialDurTotal = maxTrialDur() - trackVariableIntervDur
     trialDurFrames= int( trialDurTotal*refreshRate )
+    rampDownStart = trialDurFrames-rampDownFrames
     #print('trialDurTotal=',np.around(trialDurTotal,2),' trialDurFrames=',np.around(trialDurFrames,2), 'refreshRate=',np.around(refreshRate) ) 
     xyTargets = np.zeros( [thisTrial['numTargets'], 2] ) #need this for eventual case where targets can change what ring they are in
     numDistracters = numRings*thisTrial['numObjectsInRing'] - thisTrial['numTargets']
@@ -1151,7 +1150,7 @@ while trialNum < trials.nTotal and expStop==False:
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
             #and calibrate. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
-        
+        my_tracker.sendMessage('trialDurTotal=',trialDurTotal)
     fixatnPeriodFrames = int(   (np.random.rand(1)/2. +0.8)   *refreshRate)  #random interval between 800 and 1300ms
     for i in range(fixatnPeriodFrames):
         if i%2:
@@ -1161,7 +1160,8 @@ while trialNum < trials.nTotal and expStop==False:
     trialClock.reset()
     for L in range(len(ts)):
         ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
-    #my_tracker.sendMessage('Fixation pre-stimulus period ending for trialnum=' + str(trialNum) ) 
+    if eyetracking:
+        my_tracker.sendMessage('Fixation pre-stimulus period ending for trialnum=' + str(trialNum) ) 
     stimClock.reset()
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
