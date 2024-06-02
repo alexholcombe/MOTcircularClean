@@ -30,9 +30,22 @@ sttime is defined in that manual but not sttime_rel !
 
 Maybe the blinks are removed from the time series so I can just use x, y. It says when eye cannot be tracked, for example during blinks, “.” is returned. Although Ruben said that before a blink he sees the position start to go haywire, which suggests the blink isn’t being fully filtered out.
 
+
 What I really want is a fully labelled time series with all variables including current event, not just start event and end event
 
 "The sttime and entime fields of an end event are the timestamps of the first and last samples in the event."
 
 
-trackingExtraTime = 1.2 seconds, which is how long the blobs are cued, but that's after the fixation interval, which is between 800 and 1300 ms
+trackingExtraTime = 1.2 seconds, which is how long the blobs are cued, but that's after the fixation interval, which is between 800 and 1300 ms. 
+
+trialDurMin+trackingExtraTime+trackVariableIntervMax = trialMax
+2 + 1.2 + 2.5 = 5.8s = trialMax
+trackVariableInterDur  between 0 and 2.5s
+    trialDurTotal = maxTrialDur() - trackVariableIntervDur 
+5.8-0 = 5.8 s
+5.8-2.5 = 3.3
+
+
+Each trial is
+
+How do I do drift correction?
