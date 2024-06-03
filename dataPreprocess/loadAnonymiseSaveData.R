@@ -1,14 +1,19 @@
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
+
+#Gets behavioral data and combines with eyetracking result and anonymises 
+
 #Eyetracking
 #Looks for eyetracking file, expects it in wide format (one row for each trial)     
 #Expects eyetracking file name to be paste0(withoutSuffix,"EyetrackingReport.txt")
 #Expects in the eyetracking file that there should be a column called Exclusion
-setwd("/Users/alexh/Documents/attention_tempresltn/multiple object tracking/newTraj/newTraj_repo")
-source('dataPreprocess/eyetracking/summariseEyelinkReport.R')
+
+#Load function that can figure out whether participant moved their eyes too much on each trial
+#source('dataPreprocess/eyetracking/summariseEyelinkReport.R')
+
 expFoldersPrefix= "dataRaw/"
-expFolders <- c("offCenter","circleOrSquare_twoTargets")
+expFolders <- c("youngOld")
 expFoldersPostfix = "" #"/rawdata"
-destinationName = "offCenterAndShape"
+destinationName = "youngOld"
 destinatnDir<-"dataAnonymized/" #where the anonymized data will be exported to
 anonymiseData <- TRUE
 
@@ -26,7 +31,11 @@ centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect 
 
 for (expi in 1:length(expFolders)) {
   thisExpFolder = paste0(expFoldersPrefix,expFolders[expi], expFoldersPostfix)
-  print(paste("From exp",thisExpFolder))
+  print(paste0("From '",thisExpFolder,"'"))
+  #Create list of subjects from file names, hopefully can get away with not having one folder per participant
+  files <- dir(path=thisExpFolder,pattern='.tsv')  #find all data files in this directory
+  
+  
   foldersThisExp <- list.dirs(path=thisExpFolder,recursive=FALSE) #each folder should be a subject
   print("Loading data from folders:"); print(foldersThisExp)
   for (i in 1:length(foldersThisExp)) {

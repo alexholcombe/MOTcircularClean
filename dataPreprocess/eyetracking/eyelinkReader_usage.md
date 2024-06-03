@@ -12,6 +12,7 @@ EBLINK also known as ENDBLINK, blink end event, mark the reappearance of the eye
 
 ["all periods of tracking loss will be classified as blinks by the online parser."](https://www.sr-research.com/support/thread-9038-post-35326.html#pid35326)
 
+Uses top-left coordinate origin. "if your task opens a graphics window across the entire width and height of a 1920 x 1080 pixel monitor, when the participant's gaze is at the top left the EyeLink reports a pixel coordinate (in x y coordinates) around 1,1, while bottom-right would be around 1920, 1080."
 
 A very short definition of each of the variables is available in the “EDF Access C API user manual.pdf”
 gaze$fixations$sttime, 
@@ -38,14 +39,4 @@ What I really want is a fully labelled time series with all variables including 
 
 trackingExtraTime = 1.2 seconds, which is how long the blobs are cued, but that's after the fixation interval, which is between 800 and 1300 ms. 
 
-trialDurMin+trackingExtraTime+trackVariableIntervMax = trialMax
-2 + 1.2 + 2.5 = 5.8s = trialMax
-trackVariableInterDur  between 0 and 2.5s
-    trialDurTotal = maxTrialDur() - trackVariableIntervDur 
-5.8-0 = 5.8 s
-5.8-2.5 = 3.3
 
-
-Each trial is
-
-How do I do drift correction?

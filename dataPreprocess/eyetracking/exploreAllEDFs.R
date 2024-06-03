@@ -17,10 +17,8 @@ trackVariableInterv = c(0,2.5)
 maxTrialDur = trialDurMin + trackingExtraTime + max(trackVariableInterv)
 trialDurTotalLowerLimit = maxTrialDur - max(trackVariableInterv)
 
-
-
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
-EDFfolder<- file.path("..","..","dataRaw","EDF")
+EDFfolder<- file.path("..","..","dataRaw","youngOld","EDF")
 EDFfiles <- list.files(path=EDFfolder)  # c("A20b.EDF","S451.EDF","E401.EDF","M433.EDF","M471.EDF")
 #Around 29 May, we switched from using 1,2,3 for session number to a,b,c
 fnames<-EDFfiles
@@ -123,13 +121,71 @@ fixatnsNotPilot<- fixatns %>% filter(pilot==FALSE)
 #re-number so can use to divide up into separate figures
 fixatnsNotPilot$subjNum <- match(fixatnsNotPilot$ID, unique(fixatnsNotPilot$ID))  
 
-#Graph 5 Ss at a time. Distance from fixation
+#Sample fixation over time plots
+#Graph several Ss at a time. 
+SsPerPlot = 2
+numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
+for (i in 1:numPlots)  {
+  #Plot distance from fixation over time
+  pp<- fixatnsNotPilot %>% filter(subjNum<4) %>%
+    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
+    filter(sttime_rel>800) %>%
+    ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=session) ) +
+    geom_point() + geom_line(aes(group=trial)) +
+    ylab('gavx (pixels)') + xlab('sttime_rel (ms)') +
+    ggtitle('gavx') +
+    #coord_cartesian(ylim=c(0, 200)) +
+    #facet_wrap(vars(ID)) 
+    facet_grid(rows=vars(ID),cols=vars(session)) #
+  show(pp)
+  plotpath<- file.path('plots')
+  ggsave( file.path(plotpath, paste0('gavxSamples',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
+}
+
+#Constrain axis and replace outliers with extreme value on axis
+SsPerPlot = 2
+minValToShow = 250; maxValToShow = 550
+numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
+#numPlots =1
+for (i in 1:numPlots)  {
+  #Plot distance from fixation over time
+  pp<- fixatnsNotPilot %>% 
+    mutate(outlier = ifelse(gavx<minValToShow | gavx>maxValToShow, TRUE, FALSE)) %>%
+    mutate(gavx =  ifelse(gavx > maxValToShow, maxValToShow, gavx)) %>%
+    mutate(gavx =  ifelse(gavx < minValToShow, minValToShow, gavx)) %>%
+    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
+    filter(sttime_rel>800) %>%
+    ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=outlier) ) +
+    scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled
+    geom_point(fill='red') + #only the outlier symbol is fillable
+    ylim(minValToShow,maxValToShow) +
+    geom_line(aes(group=trial)) +
+    ylab('gavx (pixels)') + xlab('sttime_rel (ms)') +
+    ggtitle('gavx') +
+    #coord_cartesian(ylim=c(0, 200)) +
+    #facet_wrap(vars(ID)) 
+    facet_grid(rows=vars(ID),cols=vars(session)) #
+  show(pp)
+  plotpath<- file.path('plots')
+  ggsave( file.path(plotpath, paste0('gavxSamples',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
+}  
+
+
+#Wnegative gavx occurs when person seems to look offscreen but eyes aren't lost
+#  E40 session 3 for example
+E403<- fixatnsNotPilot %>% filter(fname=="E403.EDF")
+E403 %>% filter(gavx < 0) %>% 
+  ggplot( aes(x=gavx, y=gstx) ) +
+  geom_point() + geom_line(aes(group=trial))
+
+#DISTANCE FROM FIXATION
+#Graph 5 Ss at a time. 
 SsPerPlot = 5
 numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
 for (i in 1:numPlots)  {
   #Plot distance from fixation over time
   pp<- fixatnsNotPilot %>% 
-    filter(subjNum <= i*5) %>% filter(subjNum > (i-1)*5) %>%
+    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
     filter(sttime_rel>800) %>%
     ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
     geom_point() + geom_line(aes(group=trial)) +
@@ -140,7 +196,7 @@ for (i in 1:numPlots)  {
     facet_grid(rows=vars(ID),cols=vars(session)) #
   show(pp)
   plotpath<- file.path('plots')
-  ggsave( file.path(plotpath, paste0('distOverTime',(i-1)*5+1,'-',i*5,'.png'))  )
+  ggsave( file.path(plotpath, paste0('distOverTime',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
 }
 
 #Just look at first 2900ms, because first 800->1300ms is fixation, then blobs cued for 1200ms
