@@ -211,7 +211,7 @@ class EyeLinkTrack_Holcombe():
             self.tracker.enableAutoCalibration()
             while True:
                 try:
-                    # Eyelink recommends drift-check at the beginning of each trial
+                    # Eyelink recommends drift check at the beginning of each trial, not drift correct https://www.sr-research.com/support/thread-8945.html
                     # the doDriftCorrect() function requires target position in integers
                     # the last two arguments:
                     # draw_target (1-default, 0-you draw the target then call doDriftCorrect)
@@ -247,9 +247,8 @@ class EyeLinkTrack_Holcombe():
             # File transfer and cleanup!
             self.tracker.setOfflineMode();
             core.wait(0.5)
-            #Close the file and transfer it to Display PC
+            #Close the file. Then, transfer it to Display PC
             self.tracker.closeDataFile()
-
             try:
                 # Download the EDF data file from the Host PC to a local data folder
                 # parameters: source_file_on_the_host, destination_file_on_local_drive

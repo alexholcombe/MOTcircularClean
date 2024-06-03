@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -1148,10 +1148,12 @@ while trialNum < trials.nTotal and expStop==False:
     myMouse.setPos(newPos=(0,-15*3)) #Try to move mouse pointer offscreen. Supposedly it's in the window's units (deg) but that doesn't seem true, at least on Retina    
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
-            #and calibrate. It tries to draw on the screen to do the calibration.
+            #and calibrate and drift-correct. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
         my_tracker.sendMessage('trialDurTotal=',trialDurTotal)
-    fixatnPeriodFrames = int(   (np.random.rand(1)/2. +0.8)   *refreshRate)  #random interval between 800 and 1300ms
+    fixatnMinDur = 0.8
+    fixatnVariableDur = 0.5
+    fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval between 800 and 1300ms
     for i in range(fixatnPeriodFrames):
         if i%2:
             fixation.draw()
@@ -1161,7 +1163,7 @@ while trialNum < trials.nTotal and expStop==False:
     for L in range(len(ts)):
         ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
     if eyetracking:
-        my_tracker.sendMessage('Fixation pre-stimulus period ending for trialnum=' + str(trialNum) ) 
+        my_tracker.sendMessage('Fixation pre-stimulus period of ' + str(fixatnPeriodFrames*refreshRate)+ 'now ending for trialnum=' + str(trialNum) ) 
     stimClock.reset()
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings

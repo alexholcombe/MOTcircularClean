@@ -89,7 +89,13 @@ fixatns$pilot <- fixatns$ID %in% pilotParticipants
 blinks$pilot <- blinks$ID %in% pilotParticipants
 
 #BLINKS
-blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=)) + geom_histogram()
+blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
+  coord_cartesian(xlim=c(0, 500)) + xlab('blink duration (ms)') +
+  facet_wrap(vars(ID))
+
+blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
+  xlab('blink duration (ms)') 
+
 
 #Caculate distance from fixation
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
@@ -167,6 +173,7 @@ for (i in 1:numPlots)  {
     summarise(gavx = mean(gavx, na.rm = TRUE)) %>%
     ggplot( aes(x=trial,y=gavx) ) +
     geom_point() + geom_smooth() +
+    coord_cartesian(ylim=c(0, widthPix)) + 
     facet_grid(rows=vars(ID),cols=vars(session)) +
     ggtitle('Drift of gavx')  +
     #facet_wrap(vars(ID)) 
