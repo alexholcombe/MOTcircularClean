@@ -48,13 +48,29 @@ datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 #Determine number of trials in each file, than can remove files that are very short
 nRowsOfTsv <- function(fname) {
   file_path <- file.path(thisExpFolder,fname)  
-  df<- readr::read_tsv(file_path, show_col_types=FALSE)
-  nrows<- nrow(df)
+  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
+  nrows<- nrow(mydf)
   return (nrows)
 }
-  
 datafiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
+#Calculate proportion of trials with lots of timingBlips
+calcLotsTimingBlips <- function(fname) {
+  file_path <- file.path(thisExpFolder,fname)  
+  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
+  propLotsTimingBlips <- sum(mydf$timingBlips>5) / nrow(mydf)
+  return (propLotsTimingBlips)
+}
+datafiles <- datafiles %>% rowwise() %>% 
+            mutate( nrows = nRowsOfTsv(fname), 
+                    propLotsTimingBlips= calcLotsTimingBlips(fname) )
+
+#But most of them are at very beginning of trial so should have separate column to report only later timingBlips
+sum(mydf$timingBlips>5) / nrow(mydf)
+library(ggplot2)
+ggplot(mydf,aes(x=timingBlips)) + geom_histogram()
+
+#Remove dysfunctional runs
 #S26 has two files with zero rows, Loretta confirmed they can be thrown out. 
 datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")))
 
@@ -62,11 +78,17 @@ datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S
 #so, S26_1_01May2024_11-21.tsv  and the other S26s are all good
 
 #S45 has 3 and 0 trials for two files. Other files are good and all 3 sessions are there
+#S45 "fatigued during and after second MOT trial, especially during the third MOT trial" - Sarah
 datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")))
 
+#K341 has two files with 0 rows
+#Said her eyes felt dry towards the end of the trials, and that it was hard to focus. First trial 60rps, new monitor (second and third trials fine)
+#Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials
+
+#Calculate number of timing blips per file
 
 
-#"fatigued during and after second MOT trial, especially during the third MOT trial"
+
 datafiles %>% filter(str_starts(fname,"S45"))
 
 

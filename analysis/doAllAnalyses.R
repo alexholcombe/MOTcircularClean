@@ -4,6 +4,11 @@
 setwd(
 "/Users/alexh/Documents/attention_tempresltn/multiple object tracking/newTraj/newTraj_repo/analysis"
 )
+#Some earlier data will have only 80 trials, because originally the program didn't double the trials per condition, and we would enter 5. 
+#This is on the old laptop though and hasn't been uploaded yet - I can do that tomorrow
+
+#originally it was 2x2 (targets,objects) x 4 (speeds) x 6 (trials per condition, program doubles the number entered) =96trials/session
+
 ####################analyse offCenterAndShape ################
 
 dataDir="../dataAnonymized/"

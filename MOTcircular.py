@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -1050,7 +1050,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
-print('fixatnPeriodFrames', end='\t') #So know when important part of eyetracking begins
+print('fixatnPeriodFrames', end='\t',file=dataFile) #So know when important part of eyetracking begins
 print('orderCorrect\ttrialDurTotal\tnumTargets', end= '\t', file=dataFile) 
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
@@ -1060,7 +1060,7 @@ for i in range(numRings):   dataFile.write('respAdj'+str(i)+'\t')
 for r in range(numRings):
     for j in range(maxPossibleReversals()):
         dataFile.write('rev'+str(r)+'_'+str(j)+'\t')  #reversal times for each ring
-print('timingBlips', file=dataFile)
+print('timingBlips\tnumLongFramesAfterFixation\tnumLongFramesAfterCue', file=dataFile)
 #end of header
 
 trialClock = core.Clock()
@@ -1266,8 +1266,14 @@ while trialNum < trials.nTotal and expStop==False:
                         flankingAlso.append(idx)
                         if idx+1<len(interframeIntervs):  flankingAlso.append(idx+1)
                         else: flankingAlso.append(np.NaN)
-                    #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) )
-            #end timing check
+                    #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) ) 
+    #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
+    #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
+    numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
+    print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
+    numLongFramesAfterCue = len(    np.where( idxsInterframeLong > fixatnPeriodFrames + cueFrames )[0]   )
+    print('numLongFramesAfterCue=',numLongFramesAfterCue) 
+    #end timing check
     myMouse.setVisible(True)
     
     passThisTrial=False
@@ -1333,7 +1339,9 @@ while trialNum < trials.nTotal and expStop==False:
             print(round(reversalTimesEachRing[k][i],4),'\t', end='', file=dataFile)
         for j in range(i+1,maxPossibleReversals()):
             print('-999\t', end='', file=dataFile)
-    print(numCasesInterframeLong, file=dataFile)
+    print(numCasesInterframeLong, file=dataFile, end='\t')
+    print(numLongFramesAfterFixation, file=dataFile, end='\t')
+    print(numLongFramesAfterCue, file=dataFile, end='\n')
 
     if autopilot and doStaircase and simulateObserver:
         chanceRate = 1.0 / thisTrial['numObjectsInRing']
