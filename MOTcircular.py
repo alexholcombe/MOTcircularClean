@@ -43,7 +43,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -361,12 +361,14 @@ if useSound:
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
     corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
+corrText = visual.TextStim(myWin,pos=(0, 0),text="Correct",colorSpace='rgb',color= (-.1,1,-.1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
+incorrText = visual.TextStim(myWin,pos=(0, 0),text="Incorrect",colorSpace='rgb',color= (1,-.1,-.1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 
 stimList = []
 doStaircase = True
 # temporalfrequency limit test
 numTargets =        [1] #[2]
-numObjsInRing =   [6] #  [4,                 6] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
+numObjsInRing =   [6, 4] #  [4,                 6] #[4]      #Limitation: gratings don't align with blobs with odd number of objects
 
 # Get all combinations of those two main factors
 #mainCondsInfo = {
@@ -1297,6 +1299,10 @@ while trialNum < trials.nTotal and expStop==False:
     else:
         correctForFeedback=0
     if feedback and not expStop:
+        if correctForFeedback:
+            corrText.draw()
+        else: incorrText.draw()
+        myWin.flip()
         if correctForFeedback and useSound:
             corrSound.play()
         else: #incorrect
