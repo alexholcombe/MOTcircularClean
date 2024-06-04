@@ -1,7 +1,7 @@
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
-
 #Gets behavioral data and combines with eyetracking result and anonymises 
-
+library(dplyr)
+library(stringr)
 #Eyetracking
 #Looks for eyetracking file, expects it in wide format (one row for each trial)     
 #Expects eyetracking file name to be paste0(withoutSuffix,"EyetrackingReport.txt")
@@ -10,8 +10,8 @@
 #Load function that can figure out whether participant moved their eyes too much on each trial
 #source('dataPreprocess/eyetracking/summariseEyelinkReport.R')
 
-expFoldersPrefix= "dataRaw/"
-expFolders <- c("youngOld")
+expFoldersPrefix= file.path("..","dataRaw/")
+expFolder <- "youngOld"
 expFoldersPostfix = "" #"/rawdata"
 destinationName = "youngOld"
 destinatnDir<-"dataAnonymized/" #where the anonymized data will be exported to
@@ -29,15 +29,128 @@ exclusionPixels = exclusionDeg * pixelsPerDegree
 centralZoneWidthPix = exclusionPixels*2
 centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect ratio so that pixels are square
 
-for (expi in 1:length(expFolders)) {
-  thisExpFolder = paste0(expFoldersPrefix,expFolders[expi], expFoldersPostfix)
-  print(paste0("From '",thisExpFolder,"'"))
-  #Create list of subjects from file names, hopefully can get away with not having one folder per participant
-  files <- dir(path=thisExpFolder,pattern='.tsv')  #find all data files in this directory
+thisExpFolder = paste0(expFoldersPrefix,expFolder, expFoldersPostfix)
+print(paste0("From '",thisExpFolder,"'"))
+#Create list of subjects from file names, hopefully can get away with not having one folder per participant
+datafiles <- dir(path=thisExpFolder,pattern='.tsv')  #find all data files in this directory
+
+#remove the "trialHandler.tsv" files from the list. That is basically vestigial from when I was debugging
+datafiles <- datafiles[    !grepl("trialHandler.tsv$", datafiles)   ]
+#fileSizes <- file.size( file.path(thisExpFolder,datafiles) )
+
+datafiles <- data.frame(fname=datafiles)
+#datafiles$size <- fileSizes
+
+#Remove files that have PRACTICE in their names, or PRAC in case someone didn't write the whole thing
+#Data about practice sessions is manual in the Google Sheet
+datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
+
+#Determine number of trials in each file, than can remove files that are very short
+nRowsOfTsv <- function(fname) {
+  file_path <- file.path(thisExpFolder,fname)  
+  df<- readr::read_tsv(file_path, show_col_types=FALSE)
+  nrows<- nrow(df)
+  return (nrows)
+}
+  
+datafiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
+
+#S26 has two files with zero rows, Loretta confirmed they can be thrown out. 
+datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")))
+
+#Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
+#so, S26_1_01May2024_11-21.tsv  and the other S26s are all good
+
+#S45 has 3 and 0 trials for two files. Other files are good and all 3 sessions are there
+datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")))
+
+
+
+#"fatigued during and after second MOT trial, especially during the third MOT trial"
+datafiles %>% filter(str_starts(fname,"S45"))
+
+
+#Remove files with very few rows
+datafiles<- datafiles %>% arrange(nrows)
+
+
+            
+#Parse out the subject ID and session number
+datafiles$IDsession<- substr(datafiles$datafiles,1,4)
+#Validate that they all start with a letter followed by two numbers
+grepForUppercaseLetterFollowedByTwoDigits <- "^[A-Z]\\d{2}$"
+library(stringr)
+ID <- substr(datafiles$datafiles,1,3)
+
+#For those that have an underscore after the first 3 characters, delete the underscore
+underscoresInsteadOfSession <- datafiles %>% filter( str_ends(IDsession,"_") )
+#For all of them, just need to delete the underscore
+datafiles<- datafiles %>% mutate(IDsession = 
+                       ifelse(str_ends(IDsession, "_"), #if ends with underscore
+                              gsub("_", "", datafiles), #replace with filename with underscore deleted
+                              IDsession) )
+#Then take first 4 characters again of all to get IDsession
+datafiles$IDsession<- substr(datafiles$datafiles,1,4)
+
+#Deal with those with underscore instead of session number
+underscoreInsteadOfSession<- datafiles %>% filter(substr(datafiles,4,4)=="_")
+#All of them have session number right after underscore, except S26 and S45
+anomalies <- textConnection("
+S45_1_27May2024_11-43.tsv
+S45_1_27May2024_11-45.tsv
+S451_1_27May2024_11-10.tsv
+
+S26_1_01May2024_11-19.tsv #Can be deleted, <1Kb
+S26_1_01May2024_11-21.tsv #Can be deleted, <1Kb
+S26_1_01May2024_12-34.tsv #This is session 1 being redone at the end
+S26_2_01May2024_11-43.tsv
+S26_3_01May2024_12-13.tsv")
+close(anomalies)
+
+datafiles %>% mutate(IDsession = 
+                      ifelse(str_starts(datafiles, "j33_3_13May2024"), "J333", 
+                        IDsession) )
+
+datafiles %>%
+  mutate(IDsession = if(str_starts(datafiles, "j33_3_13May2024"))
+
+
+datafiles %>%
+  filter(str_starts(datafiles, "j33_3_13May2024"))
+
+
+datafiles$IDvalid <- str_detect(ID,grepForUppercaseLetterFollowedByTwoDigits)
+if (any(datafiles$IDvalid==FALSE)) {
+  cat("Problem! These files have the wrong format as the subject ID is not an upper-case letter followed by two digits:")
+  cat( datafiles %>% dplyr::filter(IDvalid==FALSE) )
+  #j33_3 I can see it's a typo and should be uppercase J
+}
+shouldBeUppercaseLetter <- substr(ID,1,1)
+
+
+result <- str_detect(my_list, "^[A-Z]\\d{2}$")
+print(result)
+
+result <- str_detect(my_list, "^[A-Za-z]+$")
+print(result)
+
+lapply(dataFiles,substr(1,4))
+
+for (f in 1:length(datafiles)) {
+  thisFname = datafiles[f]
+  IDandSession<- substr(thisFname,1,4)
+ID<- substr(IDandSession,1,3)
+EDF$fixations$ID <- ID; EDF$blinks$ID<- ID
+session <- substr(IDandSession,4,4)
+if (grepl("^[a-z]$", session)) #session is lower-case letter
+  session<- match( tolower(session), letters) #returns 1 for 'a', 2 for 'b', etc.
+
+EDF$fixations$session<- session
+EDF$blinks$session<- session
   
   
-  foldersThisExp <- list.dirs(path=thisExpFolder,recursive=FALSE) #each folder should be a subject
-  print("Loading data from folders:"); print(foldersThisExp)
+  #foldersThisExp <- list.dirs(path=thisExpFolder,recursive=FALSE) #each folder should be a subject
+  #print("Loading data from folders:"); print(foldersThisExp)
   for (i in 1:length(foldersThisExp)) {
     thisSubjectDir <- foldersThisExp[i]
     files <- dir(path=thisSubjectDir,pattern='.txt')  #find all data files in this directory

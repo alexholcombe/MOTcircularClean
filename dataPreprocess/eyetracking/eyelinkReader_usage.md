@@ -39,4 +39,4 @@ What I really want is a fully labelled time series with all variables including 
 
 trackingExtraTime = 1.2 seconds, which is how long the blobs are cued, but that's after the fixation interval, which is between 800 and 1300 ms. 
 
-
+For drift correction, because in this experiment I only care about eye movement, not static position, I can justifiably drift-correct to zero based on the first period of the trial!

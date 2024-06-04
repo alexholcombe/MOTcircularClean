@@ -1150,7 +1150,7 @@ while trialNum < trials.nTotal and expStop==False:
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
             #and calibrate and drift-correct. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
-        my_tracker.sendMessage('trialDurTotal=',trialDurTotal)
+        my_tracker.sendMessage('trialDurTotal='+str(trialDurTotal))
     fixatnMinDur = 0.8
     fixatnVariableDur = 0.5
     fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval between 800 and 1300ms
