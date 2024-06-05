@@ -150,15 +150,15 @@ numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
 for (i in 1:numPlots)  {
   #Plot distance from fixation over time
   pp<- fixatnsNotPilot %>% 
-    mutate(outlier = ifelse(gavx<minValToShow | gavx>maxValToShow, TRUE, FALSE)) %>%
-    mutate(gavx =  ifelse(gavx > maxValToShow, maxValToShow, gavx)) %>%
+    mutate(outlier = ifelse(gavx<minValToShow | gavx>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
+    mutate(gavx =  ifelse(gavx > maxValToShow, maxValToShow, gavx)) %>%     #replace outliers
     mutate(gavx =  ifelse(gavx < minValToShow, minValToShow, gavx)) %>%
     filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
     filter(sttime_rel>800) %>%
     ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=outlier) ) +
-    scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled
+    ylim(minValToShow,maxValToShow) + #restrict axes
+    scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
     geom_point(fill='red') + #only the outlier symbol is fillable
-    ylim(minValToShow,maxValToShow) +
     geom_line(aes(group=trial)) +
     ylab('gavx (pixels)') + xlab('sttime_rel (ms)') +
     ggtitle('gavx') +

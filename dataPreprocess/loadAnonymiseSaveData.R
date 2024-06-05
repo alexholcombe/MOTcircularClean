@@ -87,7 +87,7 @@ datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S
 
 #Calculate number of timing blips per file
 
-
+#There might be one participant without enough columns in the header, maybe the one Yuenchen ran that we can't find the data for
 
 datafiles %>% filter(str_starts(fname,"S45"))
 
