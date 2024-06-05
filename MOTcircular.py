@@ -59,7 +59,7 @@ subject='temp'#'test'
 autoLogging = False
 quickMeasurement = False #If true, use method of gradually speeding up and participant says when it is too fast to track
 demo = False
-autopilot= True; simulateObserver=True; showOnlyOneFrameOfStimuli = False
+autopilot= False; simulateObserver=True; showOnlyOneFrameOfStimuli = False
 if autopilot:  subject='auto'
 feedback=True
 exportImages= False #quits after one trial / output image
@@ -399,10 +399,18 @@ if doStaircase: #create the staircases
         descendingPsychometricCurve = True
         #the average threshold speed across conditions found by previous literature for young people
         avgAcrossCondsFromPrevLit = mainCondsDf['midpointThreshPrevLit'].mean()
+        print('avgAcrossCondsFromPrevLit=',avgAcrossCondsFromPrevLit)
         if session <= 1:  #give all the staircases the same starting value of 50% of that found by previous literature
             startVal = 0.4 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
-        elif session == 2:
-            startVal = avgAcrossCondsFromPrevLit
+        elif session == 2: #Manual start value
+            this_row = mainCondsDf.iloc[stairI]
+            print('thisRow='); print(this_row)
+            if this_row['numObjects'] == 4:
+                startVal = 1.1
+                print('Set startVal=',startVal,' for numObjects=4')
+            elif this_row['numObjects'] == 6:
+                startVal = 0.8
+                print('Set startVal=',startVql,' for numObjects=8')
         elif session >= 3:
             startVal = 0.75 * avgAcrossCondsFromPrevLit
 
@@ -430,7 +438,7 @@ if doStaircase: #create the staircases
             extraInfo = condition,
             startVal=startValInternal,
             stepType='lin',
-            stepSizes=[.001], #[.3,.3,.2,.1,.1,.05], #use stepSizes=0.001 for practice, and stepSizes = [.3,.3,.2,.1,.1,.05]
+            stepSizes=[.3,.3,.2,.1,.1,.05], #[.001], #use stepSizes=0.001 for practice, and stepSizes = [.3,.3,.2,.1,.1,.05]
             minVal = minSpeedForStaircase, 
             maxVal= maxSpeedForStaircase,
             nUp=nUp, nDown=nDown,  
