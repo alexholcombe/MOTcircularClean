@@ -37,6 +37,7 @@ try:
 except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import EyelinkHolcombeLabHelpers.py (you need that file to be in the eyetrackingCode subdirectory, which needs an __init__.py file in it too)')
+    print("An exception occurred:", str(e))
 try:
     from theory import publishedEmpiricalThreshes #imports from theory subfolder.
 except Exception as e:
@@ -327,7 +328,7 @@ if blindspotFill:
     blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 
-fixatnCenterPoint = [15,0] #pixels. Other things that are drawn might use units of degrees, but fixation is drawn with units='pix'
+fixatnCenterPoint = [0,0] #pixels. Other things that are drawn might use units of degrees, but fixation is drawn with units='pix'
 
 fixatnNoise = True
 fixSizePix = 6 #20 make fixation big so flicker more conspicuous
@@ -360,7 +361,7 @@ if useSound:
         soundFileNameAndPath = os.path.join(soundDir, ringQuerySoundFileNames[ i ])
         respPromptSounds[i] = sound.Sound(soundFileNameAndPath, secs=.2, autoLog=autoLogging)
     corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-    corrSound = sound.Sound(corrSoundPathAndFile, autoLog=autoLogging)
+    corrSound = sound.Sound(corrSoundPathAndFile, volume=0.3, autoLog=autoLogging)
 corrText = visual.TextStim(myWin,pos=(0, 0),text="Correct",colorSpace='rgb',color= (-.1,1,-.1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 incorrText = visual.TextStim(myWin,pos=(0, 0),text="Incorrect",colorSpace='rgb',color= (1,-.1,-.1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 
@@ -984,7 +985,8 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
 #print header for data file
 print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
-print('orderCorrect\ttrialDurTotal\tnumTargets\toffset', end= '\t', file=dataFile) 
+print('fixatnPeriodFrames', end='\t',file=dataFile) #So know when important part of eyetracking begins 
+print('orderCorrect\ttrialDurTotal\tnumTargets\toffset', end= '\t', file=dataFile)
 for i in range(numRings):
     print('whichIsTargetEachRing',i,  sep='', end='\t', file=dataFile)
 print('ringToQuery',end='\t',file=dataFile)
@@ -993,7 +995,7 @@ for i in range(numRings):   dataFile.write('respAdj'+str(i)+'\t')
 for r in range(numRings):
     for j in range(maxPossibleReversals()):
         dataFile.write('rev'+str(r)+'_'+str(j)+'\t')  #reversal times for each ring
-print('timingBlips', file=dataFile)
+print('timingBlips\tnumLongFramesAfterFixation\tnumLongFramesAfterCue', file=dataFile)
 #end of header
 
 trialClock = core.Clock()
@@ -1005,7 +1007,13 @@ ts = list();
 
 if eyetracking:
     EDF_fname_local=('EyeTrack_'+subject+'_' + str(session) + '_' + timeAndDateStr+'.EDF')
-    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,subject,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
+    nameForRemoteEDF4charsMax = subject + str(session)
+    if len(nameForRemoteEDF4charsMax) > 4:
+        print('ERROR: stem of EDF eyetracker machine filename should not exceed 4 characters, because need four more for ".EDF", but yours is currently:',
+                nameForRemoteEDF4charsMax, ' so I am sorry but I will now QUIT!')
+        core.quit()
+    my_tracker = EyelinkHolcombeLabHelpers.EyeLinkTrack_Holcombe(myWin,trialClock,
+                                                                 nameForRemoteEDF4charsMax,1, 'HV5',(255,255,255),(0,0,0),False,(widthPix,heightPix))
 
 randomStartAngleEachRing = True
 randomInitialDirExceptRing0 = True
@@ -1073,10 +1081,12 @@ while trialNum < trials.nTotal and expStop==False:
     myMouse.setPos(newPos=(0,-15*3)) #Try to move mouse pointer offscreen. Supposedly it's in the window's units (deg) but that doesn't seem true, at least on Retina    
     if eyetracking: 
         my_tracker.startEyeTracking(trialNum,calibTrial=True,widthPix=widthPix,heightPix=heightPix) # tell eyetracker to start recording
-            #and calibrate. It tries to draw on the screen to do the calibration.
+            #and calibrate and drift-correct. It tries to draw on the screen to do the calibration.
         pylink.closeGraphics()  #Don't allow eyelink to still be able to draw because as of Jan2024, we can't get it working to have both Psychopy and Eyelink routines to draw to the same graphics environment
-        
-    fixatnPeriodFrames = int(   (np.random.rand(1)/2.+0.8)   *refreshRate)  #random interval between x and x+800ms
+        my_tracker.sendMessage('trialDurTotal='+str(trialDurTotal))
+    fixatnMinDur = 0.8
+    fixatnVariableDur = 0.5
+    fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval between 800 and 1300ms
     for i in range(fixatnPeriodFrames):
         if i%2:
             fixation.draw()
@@ -1085,6 +1095,8 @@ while trialNum < trials.nTotal and expStop==False:
     trialClock.reset()
     for L in range(len(ts)):
         ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
+    if eyetracking:
+        my_tracker.sendMessage('Fixation pre-stimulus period of ' + str(fixatnPeriodFrames*refreshRate)+ 'now ending for trialnum=' + str(trialNum) ) 
     stimClock.reset()
 
     if drawingAsGrating or debugDrawBothAsGratingAndAsBlobs: #construct the gratings
@@ -1208,9 +1220,14 @@ while trialNum < trials.nTotal and expStop==False:
                         if idx+1<len(interframeIntervs):  flankingAlso.append(idx+1)
                         else: flankingAlso.append(np.NaN)
                     #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) )
-            #end timing check
+    #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
+    #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
+    numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
+    print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
+    numLongFramesAfterCue = len(    np.where( idxsInterframeLong > fixatnPeriodFrames + cueFrames )[0]   )
+    print('numLongFramesAfterCue=',numLongFramesAfterCue) 
+    #end timing check
     myMouse.setVisible(True)
-    
     passThisTrial=False
     
     #Create response prompt / postcue
@@ -1225,8 +1242,6 @@ while trialNum < trials.nTotal and expStop==False:
     if useSound:
         respPromptSoundPathAndFile= os.path.join(soundDir, ringQuerySoundFileNames[ respPromptSoundFileNum ])
         respPromptSound = sound.Sound(respPromptSoundPathAndFile, secs=.2)
-        corrSoundPathAndFile= os.path.join(soundDir, 'Ding44100Mono.wav')
-        corrSound = sound.Sound(corrSoundPathAndFile)
 
     postCueNumBlobsAway=-999 #doesn't apply to click tracking and non-tracking task
 
@@ -1265,6 +1280,7 @@ while trialNum < trials.nTotal and expStop==False:
     print(trialNum,subject,session,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
             speedThisTrial, #could be different than thisTrial['speed'] because staircase
             thisTrial['initialDirRing0'],sep='\t', end='\t', file=dataFile) #override newline end
+    print(fixatnPeriodFrames, end='\t', file=dataFile) #So know when important part of eyetracking begins
     print(orderCorrect,'\t',trialDurTotal,'\t',thisTrial['numTargets'],'\t',thisTrial['offset'],'\t', end=' ', file=dataFile) 
     for i in range(numRings):  print( thisTrial['whichIsTargetEachRing'][i], end='\t', file=dataFile  )
     print( thisTrial['ringToQuery'],end='\t',file=dataFile )
@@ -1275,7 +1291,9 @@ while trialNum < trials.nTotal and expStop==False:
             print(round(reversalTimesEachRing[k][i],4),'\t', end='', file=dataFile)
         for j in range(i+1,maxPossibleReversals()):
             print('-999\t', end='', file=dataFile)
-    print(numCasesInterframeLong, file=dataFile)
+    print(numCasesInterframeLong, file=dataFile, end='\t')
+    print(numLongFramesAfterFixation, file=dataFile, end='\t')
+    print(numLongFramesAfterCue, file=dataFile, end='\n')
 
     if autopilot and doStaircase and simulateObserver:
         chanceRate = 1.0 / thisTrial['numObjectsInRing']
