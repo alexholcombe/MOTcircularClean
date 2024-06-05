@@ -44,7 +44,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -437,7 +437,7 @@ if doStaircase: #create the staircases
             nTrials = maxTrialsPerStaircase)
     
         numPreStaircaseTrials = 0
-        #staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsycho, briefTrialUpdate=True, printInternalVal=True, alsoLog=False)
+        staircaseAndNoiseHelpers.printStaircase(staircase, descendingPsychometricCurve, briefTrialUpdate=True, printInternalVal=True, alsoLog=False) #debugAH
         print('Adding this staircase to list')
         staircases.append(staircase)
 
@@ -1276,6 +1276,20 @@ while trialNum < trials.nTotal and expStop==False:
 
     if passThisTrial:   orderCorrect = -1    #indicate for data analysis that observer opted out of this trial, because think they moved their eyes
 
+    if autopilot and doStaircase and simulateObserver:
+        chanceRate = 1.0 / thisTrial['numObjectsInRing']
+        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
+                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
+        condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
+        staircaseThis = staircases[condnum] #needed to look this up because on some trials, staircase is possibly not used (slow speed to estimate lapserate)
+        threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
+        lapseRate = .05
+        print('simulating response with speedThisTrial=',round(speedThisTrial,2),'chanceRate=',chanceRate,'lapseRate=',lapseRate,'threshold=',threshold)
+        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,chanceRate,lapseRate,threshold,descendingPsychometricCurve)
+        orderCorrect = correct_sim*3 #3 is fully correct
+        print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
+
+    #Print data to datafile
     #header print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tangleIni
     print(trialNum,subject,session,thisTrial['basicShape'],thisTrial['numObjectsInRing'],
             speedThisTrial, #could be different than thisTrial['speed'] because staircase
@@ -1294,19 +1308,6 @@ while trialNum < trials.nTotal and expStop==False:
     print(numCasesInterframeLong, file=dataFile, end='\t')
     print(numLongFramesAfterFixation, file=dataFile, end='\t')
     print(numLongFramesAfterCue, file=dataFile, end='\n')
-
-    if autopilot and doStaircase and simulateObserver:
-        chanceRate = 1.0 / thisTrial['numObjectsInRing']
-        rownum = mainCondsDf[ (mainCondsDf['numTargets'] == thisTrial['numTargets']) &
-                                  (mainCondsDf['numObjects'] == thisTrial['numObjectsInRing'] )       ].index
-        condnum = rownum[0] #Have to take[0] because it was a pandas Index object, I guess to allow for possibility of multiple indices
-        staircaseThis = staircases[condnum] #needed to look this up because on some trials, staircase is possibly not used (slow speed to estimate lapserate)
-        threshold = staircaseThis.extraInfo['midpointThreshPrevLit']
-        lapseRate = .05
-        #print('simulating response with speedThisTrial=',round(speedThisTrial,2),'chanceRate=',chanceRate,'lapseRate=',lapseRate,'threshold=',threshold)
-        correct_sim = staircaseAndNoiseHelpers.simulate_response(speedThisTrial,chanceRate,lapseRate,threshold,descendingPsychometricCurve)
-        orderCorrect = correct_sim*3 #3 is fully correct
-        #print('speedThisTrial=',speedThisTrial,'threshold=',round(threshold,2),'correct_sim=',correct_sim,'orderCorrect=',orderCorrect)
         
     numTrialsOrderCorrect += (orderCorrect >0)  #so count -1 as 0
     numAllCorrectlyIdentified += (numColorsCorrectlyIdentified==3)
