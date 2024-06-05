@@ -1506,8 +1506,8 @@ if doStaircase: #report staircase results
     plt.savefig(outputFile)
 
 #Plot percent correct by condition and speed for all trials, and then try to fit logistic regression.
-trialHandlerDatafilename = datafileName + 'trialHandler.tsv'
-df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df
+trialHandlerDatafilename = 'tempYouCanDeleteThisFile.tsv'
+df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')  #Only calling this to get the dataframe df, can't see how to stop it from saving
 #If session was incomplete, then trials that didn't get to have value "--" in columns set dynamically, like speedThisTrial
 # Create a boolean mask for where 'speedThisTrial' is '--'
 dashes_mask = (df['speedThisTrial'] == '--')
