@@ -1,5 +1,9 @@
 #To get the eyetracking file that this file processes,
 
+#To get eyelinkReader to work in 2024 on Mac, we did
+# devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE, build_vignettes=TRUE)
+# See EDF_file_processing_with_R_eyelinkReader.md
+
 #To get eyelinkReader to work in 2023, did following:
 #library("devtools")
 #install_github("alexander-pastukhov/eyelinkReader", dependencies=TRUE)
@@ -7,13 +11,9 @@
 #EDFAPI_LIB="/Library/Frameworks"
 #EDFAPI_INC="/Library/Frameworks/edfapi.framework/Headers"
 
-#To get eyelinkReader to work in 2024 on Mac, we did
-# devtools::install_github("alexholcombe/eyelinkReader", dependencies=TRUE, build_vignettes=TRUE)
-# See EDF_file_processing_with_R_eyelinkReader.md
-
 library(eyelinkReader)
 
-#data(gaze) #to use built-in dataset
+#data(gaze) #to use built-in dataset of eyelinkReader package
 EDF_example <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
 gaze <- read_edf(EDF_example)
 

@@ -5,13 +5,17 @@ widthPix = 800; heightPix = 600
 
 #Explore how things went with eyetracking youngOld
 #A20b.EDF shows a bit of drift, plus a lot of eyemovement in fixation period
-goodFixator<-file.path("dataForTestingOfCode","exampleOfGoodFixator","tema.EDF")
-EDFexample <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
-EDFexample<- goodFixator
+#goodFixator<-file.path("dataForTestingOfCode","exampleOfGoodFixator","tema.EDF")
+EDFexample<- file.path("..","..", "dataRaw","MomoLRhemifield","mh11.EDF")
+EDFexample<- file.path("/Users/alex/Downloads/EDF-data/01/0934_05J")
+EDFexample<- file.path("/Users/alex/Downloads/EDF-data/02/1432_05J")
+
+
+#EDFexample <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
 
 EDFstuff <- eyelinkReader::read_edf(EDFexample,
-                                    import_samples = TRUE,
-                                    sample_attributes = c('time', 'gx', 'gy'))
+                                    import_samples = TRUE)
+#,                                   sample_attributes = c('time', 'gx', 'gy'))
 
 samples<- EDFstuff$samples
 avgSampleRelCtr<- samples %>% summarise(meanX = mean(gxR,na.rm=TRUE), meanY = mean(gyR,na.rm=TRUE))  - 
@@ -28,6 +32,7 @@ avgFix<- fixatns %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  -
   data.frame( meanX=widthPix/2,     meanY= heightPix/2)
 if ( any( abs(avgFix) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
   print("Either your screen coordinates are wrong, the eyetracker sucked, or participant didn't look near center much")
+  print(avgFix)
 }
 
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )

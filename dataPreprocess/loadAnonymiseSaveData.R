@@ -30,7 +30,7 @@ centralZoneWidthPix = exclusionPixels*2
 centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect ratio so that pixels are square
 
 thisExpFolder = paste0(expFoldersPrefix,expFolder, expFoldersPostfix)
-print(paste0("From '",thisExpFolder,"'"))
+print(paste0("Finding files in '",thisExpFolder,"'"))
 #Create list of subjects from file names, hopefully can get away with not having one folder per participant
 datafiles <- dir(path=thisExpFolder,pattern='.tsv')  #find all data files in this directory
 
@@ -40,12 +40,13 @@ datafiles <- datafiles[    !grepl("trialHandler.tsv$", datafiles)   ]
 
 datafiles <- data.frame(fname=datafiles)
 #datafiles$size <- fileSizes
+datafiles$comment <- "None" #Create a comment field to preserve notes about weirdness of how the run went
 
 #Remove files that have PRACTICE in their names, or PRAC in case someone didn't write the whole thing
 #Data about practice sessions is manual in the Google Sheet
 datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 
-#Determine number of trials in each file, than can remove files that are very short
+#Determine number of trials in each file, than can consider files that are very short
 nRowsOfTsv <- function(fname) {
   file_path <- file.path(thisExpFolder,fname)  
   mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
@@ -53,6 +54,41 @@ nRowsOfTsv <- function(fname) {
   return (nrows)
 }
 datafiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
+
+#REMOVE/HANDLE DYSFUNCTIONAL RUNS
+#S26 has two files with zero rows, Loretta confirmed they should be thrown out rather than being lost data. 
+datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
+#Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
+#so, S26_1_01May2024_11-21.tsv  and the other S26s are all good
+
+#S45 has 3 and 0 trials for two files. Other files are good and all 3 sessions are there
+#S45 "fatigued during and after second MOT trial, especially during the third MOT trial" - Sarah
+datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")), by="fname")
+
+#K341 has two files with 0 rows
+#datafiles %>% filter(str_starts(fname,"K34"))
+#Said her eyes felt dry towards the end of the trials, and that it was hard to focus.
+#"First session 60Hz, new monitor (second and third trials run at the correct Hz)
+#Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials"
+#Delete 0-row files of K347
+datafiles<- rows_delete( datafiles, tibble(fname=c("K341_1_15May2024_09-29.tsv","K341_1_15May2024_09-30.tsv")), by="fname") 
+
+#Delete 0-row file of M323 that was run again to replace it (false start)
+datafiles<- rows_delete( datafiles, tibble(fname=c("M323_3_10May2024_14-22.tsv")), by="fname") 
+#Delete 0-row file of S392 that was run again to replace it (false start)
+datafiles<- rows_delete( datafiles, tibble(fname=c("S392_2_17May2024_11-42.tsv")), by="fname") 
+
+#Add comment to anomalous run
+datafiles<- datafiles %>% 
+  mutate(comment = ifelse(str_starts(fname,"M32"),
+       "skipped practice trial, because practice.py was not able to open at this time. Did visual acuity and intelligence firsts before doing any trials. 
+", comment) )
+
+#Add comment to anomalous run
+datafiles<- datafiles %>% 
+  mutate(comment = ifelse(fname=="K341_1_15May2024_09-31.tsv", 
+                              "Mistakenly run at 60Hz", 
+                              comment) )
 
 #Calculate proportion of trials with lots of timingBlips
 calcLotsTimingBlips <- function(fname) {
@@ -70,20 +106,6 @@ sum(mydf$timingBlips>5) / nrow(mydf)
 library(ggplot2)
 ggplot(mydf,aes(x=timingBlips)) + geom_histogram()
 
-#Remove dysfunctional runs
-#S26 has two files with zero rows, Loretta confirmed they can be thrown out. 
-datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")))
-
-#Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
-#so, S26_1_01May2024_11-21.tsv  and the other S26s are all good
-
-#S45 has 3 and 0 trials for two files. Other files are good and all 3 sessions are there
-#S45 "fatigued during and after second MOT trial, especially during the third MOT trial" - Sarah
-datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")))
-
-#K341 has two files with 0 rows
-#Said her eyes felt dry towards the end of the trials, and that it was hard to focus. First trial 60rps, new monitor (second and third trials fine)
-#Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials
 
 #Calculate number of timing blips per file
 
