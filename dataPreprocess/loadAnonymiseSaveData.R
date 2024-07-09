@@ -2,7 +2,20 @@
 #Gets behavioral data and combines with eyetracking result and anonymises 
 library(dplyr)
 library(stringr)
-#Eyetracking
+library(tidyr)
+library(ggplot2)
+
+#The raw data, both Psychopy files and EDF files, are downloaded from Sharepoint place linked from the MOTyoungOld GoogleDrive folder
+
+#How should we match up Psychopy files and EDF files?
+#There will always be a Psychopy file, but not always an EDF file, so start with Psychopy files
+#to parse out subject name and session number.
+#Then look for matching EDF file. 
+#Will need plenty of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
+#Also need to get age and sex from somewhere.. a manual copy of the Sharepoint participant sheet with only those columns?
+
+#Eyetracking files match
+
 #Looks for eyetracking file, expects it in wide format (one row for each trial)     
 #Expects eyetracking file name to be paste0(withoutSuffix,"EyetrackingReport.txt")
 #Expects in the eyetracking file that there should be a column called Exclusion
@@ -12,43 +25,33 @@ library(stringr)
 
 expFoldersPrefix= file.path("..","dataRaw/")
 expFolder <- "youngOld"
-expFoldersPostfix = "" #"/rawdata"
 destinationName = "youngOld"
 destinatnDir<-"dataAnonymized/" #where the anonymized data will be exported to
 anonymiseData <- TRUE
 
-#Eyemovement exclusion zone numbers
-exclusionDeg = 1 #in any direction from fixation
-widthPix = 800
-heightPix = 600
-monitorWidth = 39.5 #cm
-viewdist = 57 #cm
-widthScreenDeg =  2*(atan((monitorWidth/2)/viewdist) /pi*180)
-pixelsPerDegree = widthPix / widthScreenDeg
-exclusionPixels = exclusionDeg * pixelsPerDegree
-centralZoneWidthPix = exclusionPixels*2
-centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect ratio so that pixels are square
+thisExpFolder = file.path(expFoldersPrefix,expFolder)
+thisExpFolderPsychopy = file.path(thisExpFolder,"Psychopy") #As opposed to EDF folder
+  #paste0(expFoldersPrefix,expFolder,"Psychopy",expFoldersPostfix)
+print(paste0("Finding files in '",thisExpFolderPsychopy,"'"))
 
-thisExpFolder = paste0(expFoldersPrefix,expFolder, expFoldersPostfix)
-print(paste0("Finding files in '",thisExpFolder,"'"))
-#Create list of subjects from file names, hopefully can get away with not having one folder per participant
-datafiles <- dir(path=thisExpFolder,pattern='.tsv')  #find all data files in this directory
+#Create list of subjects from file names
+datafiles <- dir(path=thisExpFolderPsychopy,pattern='.tsv')  #find all data files in this directory
 
 #remove the "trialHandler.tsv" files from the list. That is basically vestigial from when I was debugging
-datafiles <- datafiles[    !grepl("trialHandler.tsv$", datafiles)   ]
-#fileSizes <- file.size( file.path(thisExpFolder,datafiles) )
+datafiles <- datafiles[  !grepl("trialHandler.tsv$", datafiles)   ]
+#fileSizes <- file.size( file.path(thisExpFolderPsychopy,datafiles) )
 
 datafiles <- data.frame(fname=datafiles)
 #datafiles$size <- fileSizes
 datafiles$comment <- "None" #Create a comment field to preserve notes about weirdness of how the run went
 
-#Remove files that have PRACTICE in their names, or PRAC in case someone didn't write the whole thing
+#Remove files that have PRACTICE in their names, PRAC in case someone didn't write the whole word correctly
 #Data about practice sessions is manual in the Google Sheet
 datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 
-#Determine number of trials in each file, than can consider files that are very short
+#Determine number of trials in each file, then can consider files that are very short
 nRowsOfTsv <- function(fname) {
-  file_path <- file.path(thisExpFolder,fname)  
+  file_path <- file.path(thisExpFolderPsychopy,fname)  
   mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
   nrows<- nrow(mydf)
   return (nrows)
@@ -90,20 +93,62 @@ datafiles<- datafiles %>%
                               "Mistakenly run at 60Hz", 
                               comment) )
 
-#Calculate proportion of trials with lots of timingBlips
-calcLotsTimingBlips <- function(fname) {
-  file_path <- file.path(thisExpFolder,fname)  
-  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
-  propLotsTimingBlips <- sum(mydf$timingBlips>5) / nrow(mydf)
-  return (propLotsTimingBlips)
+#Delete 0-row file , but don't know why it's zero yet!!!!!!!!!!!!!!!!!!!!!!!!!!
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+
+#See if any remaining files have few rows
+almostNoTrials <- datafiles %>% filter( nrows < 10 )
+if ( nrow(almostNoTrials) ) {
+  message("Hey, these datafiles you haven't taken note of have fewer than 10 trials:")
+  print( almostNoTrials$fname )
 }
+
+#Calculate proportion of trials with lots of timingBlips
+#First files had just a single timingBlips column
+#Then I realized that the timingBlips were almost all happening at the very beginning of the trial while the cue was still
+#on which keeps attention on the moving objects or even before any stimuli appeared.
+#So then I programmed new columns numLongFramesAfterFixation	numLongFramesAfterCue
+
+# Define a custom function that returns a tibble of columns to be added onto my datafiles tibble
+calcTimingBlips <- function(fname) {
+  file_path <- file.path(thisExpFolderPsychopy,fname)  
+  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
+  #Calculate proportion of trials with lots of timing blips
+  if ( !("timingBlips" %in% names(mydf)) ) {
+    message('Hey, was expecting a timingBlips column but it is not in :',file_path)
+  }
+  pTrialsLotsTimingBlips <- sum(mydf$timingBlips>5) / nrow(mydf)
+  #If has additional columns for blips not in the very beginning of trial, calculate proportion of each of those
+  pTrialsBlipsAfterFixatn <- NaN
+  if ("numLongFramesAfterFixatn" %in% names(mydf)) {
+    pTrialsBlipsAfterFixatn <- sum(mydf$numLongFramesAfterFixatn>2) / nrow(mydf)
+  }
+  pTrialsLongFramesAfterCue <- NaN
+  if ("numLongFramesAfterCue" %in% names(mydf)) {
+    pTrialsLongFramesAfterCue <- sum( mydf$numLongFramesAfterCue>2 ) / nrow(mydf)
+  }
+
+  #create columns in tibble form so can be added onto the df
+  timingStuff <- tibble( pTrialsLotsTimingBlips, pTrialsBlipsAfterFixatn, pTrialsLongFramesAfterCue )
+  return(timingStuff)
+}
+
 datafiles <- datafiles %>% rowwise() %>% 
-            mutate( nrows = nRowsOfTsv(fname), 
-                    propLotsTimingBlips= calcLotsTimingBlips(fname) )
+                mutate( timingStuff = list(calcTimingBlips(fname)) ) %>%
+                unnest_wider( timingStuff ) #unpack list of different timingBlip metrics
+
+ggplot(datafiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram() +xlim(-.1,1)
+ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram() +xlim(-.1,1)
+ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram() +xlim(-.1,1)
 
 #But most of them are at very beginning of trial so should have separate column to report only later timingBlips
 sum(mydf$timingBlips>5) / nrow(mydf)
-library(ggplot2)
 ggplot(mydf,aes(x=timingBlips)) + geom_histogram()
 
 
@@ -334,6 +379,19 @@ EDF$blinks$session<- session
 
 dat <-rawData
 #end data importation
+
+#Eyemovement exclusion zone numbers
+exclusionDeg = 1 #in any direction from fixation
+widthPix = 800
+heightPix = 600
+monitorWidth = 39.5 #cm
+viewdist = 57 #cm
+widthScreenDeg =  2*(atan((monitorWidth/2)/viewdist) /pi*180)
+pixelsPerDegree = widthPix / widthScreenDeg
+exclusionPixels = exclusionDeg * pixelsPerDegree
+centralZoneWidthPix = exclusionPixels*2
+centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect ratio so that pixels are square
+
 
 #If instead of using raw speed, I rank the speed within each numObjects*numTargets, then from that perspective everything should
 #be perfectly counterbalanced, because each numObjects*numTargets combination has the same number of speeds tested
