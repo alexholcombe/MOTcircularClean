@@ -169,12 +169,21 @@ if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsFor
 #datafiles<- datafiles %>% arrange(nrows)
 #head(datafiles)
 
-            
+#Need to match up Psychopy datafiles with EDF files
+
 #Parse out the subject ID and session number
-datafiles$IDsession<- substr(datafiles$datafiles,1,4)
+datafiles$IDsession<- substr(datafiles$fname,1,4)
 #Validate that they all start with a letter followed by two numbers
-grepForUppercaseLetterFollowedByTwoDigits <- "^[A-Z]\\d{2}$"
 library(stringr)
+grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
+validEachFname<- str_detect(datafiles$fname, grepForUppercaseLetterFollowedByTwoDigits)
+if length( which(!(validEachFname)) ) {
+  message("The following files are not valid in that don't start with letter and two digits:")
+  datafiles$fname[ !(validEachFname) ]
+}
+# invalid: "lor_a_12Jun2024_11-32.tsv" "j33_3_13May2024_13-18.tsv"
+
+#Parse out the ID, as opposed to the session number
 ID <- substr(datafiles$datafiles,1,3)
 
 #For those that have an underscore after the first 3 characters, delete the underscore
