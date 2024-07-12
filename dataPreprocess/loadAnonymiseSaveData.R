@@ -97,6 +97,7 @@ datafiles<- datafiles %>%
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
+#Loretta says lxx was just a test of the program, not a participant
 datafiles<- rows_delete( datafiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
@@ -126,12 +127,13 @@ calcTimingBlips <- function(fname) {
   pTrialsLotsTimingBlips <- sum(mydf$timingBlips>5) / nrow(mydf)
   #If has additional columns for blips not in the very beginning of trial, calculate proportion of each of those
   pTrialsBlipsAfterFixatn <- NaN
-  if ("numLongFramesAfterFixatn" %in% names(mydf)) {
-    pTrialsBlipsAfterFixatn <- sum(mydf$numLongFramesAfterFixatn>2) / nrow(mydf)
+  #message('Summarising timingBlips for',file_path)
+  if ("numLongFramesAfterFixation" %in% names(mydf)) {
+    pTrialsBlipsAfterFixatn <- sum(mydf$numLongFramesAfterFixation>0) / nrow(mydf)
   }
   pTrialsLongFramesAfterCue <- NaN
   if ("numLongFramesAfterCue" %in% names(mydf)) {
-    pTrialsLongFramesAfterCue <- sum( mydf$numLongFramesAfterCue>2 ) / nrow(mydf)
+    pTrialsLongFramesAfterCue <- sum( mydf$numLongFramesAfterCue>0 ) / nrow(mydf)
   }
 
   #create columns in tibble form so can be added onto the df
@@ -139,29 +141,33 @@ calcTimingBlips <- function(fname) {
   return(timingStuff)
 }
 
-datafiles <- datafiles %>% rowwise() %>% 
+#Send all datafiles to the timingBlips analysis function to create summary columns
+datafiles<- datafiles %>% rowwise() %>% 
                 mutate( timingStuff = list(calcTimingBlips(fname)) ) %>%
                 unnest_wider( timingStuff ) #unpack list of different timingBlip metrics
 
-ggplot(datafiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram() +xlim(-.1,1)
-ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram() +xlim(-.1,1)
-ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram() +xlim(-.1,1)
-
+#Plenty of trials with a bunch of timingBlips
+#ggplot(datafiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
 #But most of them are at very beginning of trial so should have separate column to report only later timingBlips
-sum(mydf$timingBlips>5) / nrow(mydf)
-ggplot(mydf,aes(x=timingBlips)) + geom_histogram()
 
+#Looking at this on 9 Jul, zero timingBlips after fixation! which suggests that's also true for
+#earlier data runs before I programmed this facility.
+ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+table(datafiles$pTrialsBlipsAfterFixatn)
 
-#Calculate number of timing blips per file
+criterionProportnNumTimingBlipsForThrowingOutTrial = .02 
+
+if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsForThrowingOutTrial, na.rm=T)) {
+  message('Some files actually had trials with more than ',criterionProportnNumTimingBlipsForThrowingOutTrial,
+          'timing blips after the cue! So you need to write code to delete those.')
+}
 
 #There might be one participant without enough columns in the header, maybe the one Yuenchen ran that we can't find the data for
 
-datafiles %>% filter(str_starts(fname,"S45"))
-
-
-#Remove files with very few rows
-datafiles<- datafiles %>% arrange(nrows)
-
+#Consider removing files with very few rows.  All good as of 10 Jul 2024
+#datafiles<- datafiles %>% arrange(nrows)
+#head(datafiles)
 
             
 #Parse out the subject ID and session number
