@@ -7,21 +7,11 @@ library(ggplot2)
 
 #The raw data, both Psychopy files and EDF files, are downloaded from Sharepoint place linked from the MOTyoungOld GoogleDrive folder
 
-#How should we match up Psychopy files and EDF files?
+#To match up Psychopy files and EDF files?
 #There will always be a Psychopy file, but not always an EDF file, so start with Psychopy files
 #to parse out subject name and session number.
 #Then look for matching EDF file. 
-#Will need plenty of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
-#Also need to get age and sex from somewhere.. a manual copy of the Sharepoint participant sheet with only those columns?
-
-#Eyetracking files match
-
-#Looks for eyetracking file, expects it in wide format (one row for each trial)     
-#Expects eyetracking file name to be paste0(withoutSuffix,"EyetrackingReport.txt")
-#Expects in the eyetracking file that there should be a column called Exclusion
-
-#Load function that can figure out whether participant moved their eyes too much on each trial
-#source('dataPreprocess/eyetracking/summariseEyelinkReport.R')
+#Lots of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
 
 expFoldersPrefix= file.path("..","dataRaw/")
 expFolder <- "youngOld"
@@ -93,15 +83,21 @@ datafiles<- datafiles %>%
                               "Mistakenly run at 60Hz", 
                               comment) )
 
-#Delete 0-row file , but don't know why it's zero yet!!!!!!!!!!!!!!!!!!!!!!!!!!
+#Delete 0-row files.  I believe I checked all of them with Loretta
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02 - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
+datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+
 #Loretta says lxx was just a test of the program, not a participant
 datafiles<- rows_delete( datafiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+#Loretta says lor was just a test of the program, not a participant
+datafiles<- rows_delete( datafiles, tibble(fname=c("lor_a_12Jun2024_11-32.tsv")), by="fname")
 
 #See if any remaining files have few rows
 almostNoTrials <- datafiles %>% filter( nrows < 10 )
@@ -152,9 +148,9 @@ datafiles<- datafiles %>% rowwise() %>%
 
 #Looking at this on 9 Jul, zero timingBlips after fixation! which suggests that's also true for
 #earlier data runs before I programmed this facility.
-ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-table(datafiles$pTrialsBlipsAfterFixatn)
+#ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+#ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+#table(datafiles$pTrialsBlipsAfterFixatn)
 
 criterionProportnNumTimingBlipsForThrowingOutTrial = .02 
 
@@ -169,76 +165,103 @@ if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsFor
 #datafiles<- datafiles %>% arrange(nrows)
 #head(datafiles)
 
-#Need to match up Psychopy datafiles with EDF files
+#Get ready to match up Psychopy datafiles with EDF files
 
 #Parse out the subject ID and session number
-datafiles$IDsession<- substr(datafiles$fname,1,4)
-#Validate that they all start with a letter followed by two numbers
+#Validate that they all start with a letter followed by two numbers (the subject ID)
 library(stringr)
 grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
 validEachFname<- str_detect(datafiles$fname, grepForUppercaseLetterFollowedByTwoDigits)
-if length( which(!(validEachFname)) ) {
-  message("The following files are not valid in that don't start with letter and two digits:")
-  datafiles$fname[ !(validEachFname) ]
+datafiles$validEachFname <- validEachFname
+# invalid: "j33_3_13May2024_13-18.tsv"
+#j33_3 is a typo and should be uppercase J, as certified by Loretta.
+# Change it manually to valid
+datafiles<- datafiles %>% mutate(validEachFname = ifelse(fname == "j33_3_13May2024_13-18.tsv", TRUE, validEachFname))
+if ( length( which(!(datafiles$validEachFname)) ) ) {
+  message("The following files are not valid in that they don't start with letter and two digits:")
+  datafiles$fname[ !(datafiles$validEachFname) ]
 }
-# invalid: "lor_a_12Jun2024_11-32.tsv" "j33_3_13May2024_13-18.tsv"
+datafiles$validEachFname <- NULL #Delete because don't need this column anymore
 
-#Parse out the ID, as opposed to the session number
-ID <- substr(datafiles$datafiles,1,3)
+#Take first 4 characters again to get IDsession
+datafiles$IDsession<- substr(datafiles$fname,1,4)
+
+#reorder columns for convenience of visual inspection
+datafiles<- datafiles %>% relocate(IDsession, .after=fname)
 
 #For those that have an underscore after the first 3 characters, delete the underscore
 underscoresInsteadOfSession <- datafiles %>% filter( str_ends(IDsession,"_") )
-#For all of them, just need to delete the underscore
+#View(underscoresInsteadOfSession) #Visually inspect to make sure not too weird
+#All ok based on inspection 10 Jul, so delete the underscore to make them like the others
+#How to delete only the first underscore?
 datafiles<- datafiles %>% mutate(IDsession = 
                        ifelse(str_ends(IDsession, "_"), #if ends with underscore
-                              gsub("_", "", datafiles), #replace with filename with underscore deleted
+                              gsub("_", "", fname), #replace with filename with underscore deleted
                               IDsession) )
-#Then take first 4 characters again of all to get IDsession
-datafiles$IDsession<- substr(datafiles$datafiles,1,4)
+#Because ones that had underscores will now have full filename, take first 4 characters again of all to get IDsession 
+datafiles$IDsession<- substr(datafiles$IDsession,1,4)
 
-#Deal with those with underscore instead of session number
-underscoreInsteadOfSession<- datafiles %>% filter(substr(datafiles,4,4)=="_")
-#All of them have session number right after underscore, except S26 and S45
-anomalies <- textConnection("
-S45_1_27May2024_11-43.tsv
-S45_1_27May2024_11-45.tsv
-S451_1_27May2024_11-10.tsv
+#Parse out the ID, as opposed to the session number
+datafiles$ID <- substr(datafiles$IDsession,1,3)
+#Parse out the session number
+datafiles$session <- substr(datafiles$IDsession,4,4)
 
-S26_1_01May2024_11-19.tsv #Can be deleted, <1Kb
-S26_1_01May2024_11-21.tsv #Can be deleted, <1Kb
-S26_1_01May2024_12-34.tsv #This is session 1 being redone at the end
-S26_2_01May2024_11-43.tsv
-S26_3_01May2024_12-13.tsv")
-close(anomalies)
+#To match to the EDF files, they will
+#The EDF files have names like M471.EDF, M472.EDF, M473.EDF, P23a.EDF, P23b.EDF
+#What I'll do is for each Psychopy datafile, I'll locate the corresponding EDF file and store its name,
+# or else note that one doesn't exist
 
-datafiles %>% mutate(IDsession = 
-                      ifelse(str_starts(datafiles, "j33_3_13May2024"), "J333", 
-                        IDsession) )
+datafiles$IDvalid <- str_detect(datafiles$ID,grepForUppercaseLetterFollowedByTwoDigits)
+#j33_3 is a typo and should be uppercase J, as certified by Loretta.
+# Change it manually to valid
+datafiles<- datafiles %>% mutate(IDvalid = ifelse(IDsession == "j333", TRUE, IDvalid))
 
-datafiles %>%
-  mutate(IDsession = if(str_starts(datafiles, "j33_3_13May2024"))
-
-
-datafiles %>%
-  filter(str_starts(datafiles, "j33_3_13May2024"))
-
-
-datafiles$IDvalid <- str_detect(ID,grepForUppercaseLetterFollowedByTwoDigits)
 if (any(datafiles$IDvalid==FALSE)) {
   cat("Problem! These files have the wrong format as the subject ID is not an upper-case letter followed by two digits:")
   cat( datafiles %>% dplyr::filter(IDvalid==FALSE) )
-  #j33_3 I can see it's a typo and should be uppercase J
 }
-shouldBeUppercaseLetter <- substr(ID,1,1)
+#shouldBeUppercaseLetter <- substr(ID,1,1)
 
+#EDF files
+#Get a list of the EDF files
+thisExpFolderEDF = file.path(thisExpFolder,"EDF") #As opposed to Psychopy data folder
+EDFfiles <- dir(path=thisExpFolderEDF,pattern='.EDF')  #find all EDF files in this directory
+EDFfiles<- data.frame(fname=EDFfiles)
 
-result <- str_detect(my_list, "^[A-Z]\\d{2}$")
-print(result)
+#Do some validation of the EDF filenames
+#Parse out the subject ID and session number
+#Validate that they all start with a letter followed by two numbers (the subject ID)
+grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
+first4char<- substr(EDFfiles$fname,1,4)
+validEachFname<- str_detect(first4char, grepForUppercaseLetterFollowedByTwoDigits)
+if ( length( which(!(validEachFname)) ) ) {
+  message("The following files are not valid in that they don't start with a letter and two digits:")
+  EDFfiles$fname[ !(validEachFname) ]
+}
 
-result <- str_detect(my_list, "^[A-Za-z]+$")
-print(result)
+#Validate that the 4th character is a session number/letter, e.g. "A12a" or "M321"
+fourthChar<- substr(EDFfiles$fname,4,4)
+grepForDigitOrLowerCaseLetter <- "[1-9a-z]"
+validEachFname<- str_detect(fourthChar, grepForDigitOrLowerCaseLetter)
+if ( length( which(!(validEachFname)) ) ) {
+  message("The following files are not valid in that the 4th character is not a session letter/number:")
+  EDFfiles$fname[ !(validEachFname) ]
+}
 
-lapply(dataFiles,substr(1,4))
+#Parse out the 
+
+datafiles <- data.frame(fname=datafiles)
+#datafiles$size <- fileSizes
+datafiles$comment <- "None" #Create a comment field to preserve notes about weirdness of how the run went
+
+#Remove files that have PRACTICE in their names, PRAC in case someone didn't write the whole word correctly
+#Data about practice sessions is manual in the Google Sheet
+datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
+
+#Matching eyetracking files 
+
+#Look for EDF file   
+
 
 for (f in 1:length(datafiles)) {
   thisFname = datafiles[f]
@@ -394,6 +417,8 @@ EDF$blinks$session<- session
 
 dat <-rawData
 #end data importation
+
+#Also need to get age and sex from somewhere.. a manual copy of the Sharepoint participant sheet with only those columns?
 
 #Eyemovement exclusion zone numbers
 exclusionDeg = 1 #in any direction from fixation
