@@ -44,7 +44,7 @@ except Exception as e:
     print("An exception occurred:",str(e))
     print('Could not import publishedEmpiricalThreshes.py (you need that file to be in the theory subdirectory, which needs an __init__.py file in it too)')
 
-eyetracking = False; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
+eyetracking = True; eyetrackFileGetFromEyelinkMachine = False #very timeconsuming to get the file from the eyetracking machine over the ethernet cable, 
 #sometimes better to get the EDF file from the Eyelink machine by hand by rebooting into Windows and going to 
 useSound=True
 quitFinder = True 
@@ -404,16 +404,16 @@ if doStaircase: #create the staircases
             startVal = 0.4 * avgAcrossCondsFromPrevLit #Don't go higher because this was the average for the young people only
         elif session == 2: #Manual start value
             this_row = mainCondsDf.iloc[stairI]
-            print('thisRow='); print(this_row)
+            print('this_row='); print(this_row)
             if this_row['numObjects'] == 4:
                 startVal = 1.1
-                print('Set startVal=',startVal,' for numObjects=4')
+                print('Have set startVal=',startVal,' for numObjects=4')
             elif this_row['numObjects'] == 6:
                 startVal = 0.8
-                print('Set startVal=',startVql,' for numObjects=8')
+                print('Have set startVal=',startVal,' for numObjects=8')
         elif session >= 3:
             startVal = 0.75 * avgAcrossCondsFromPrevLit
-
+        #core.quit()
         startValInternal = staircaseAndNoiseHelpers.toStaircase(startVal, descendingPsychometricCurve)
         print('staircase startVal=',startVal,' startValInternal=',startValInternal)
 
@@ -1467,7 +1467,11 @@ if doStaircase: #report staircase results
             #plot correct answer
             plt.plot( lastTrial+1, actualThresh, colors[stairI]+'<' )
     # save a vector-graphics format for future
-    figDir = 'analysisPython'
+    if os.path.isdir('.'+os.sep+'analysisPython'):
+        figDir='analysisPython'
+    else:
+        print('"analysisPython" directory does not exist, so saving data in present working directory')
+        figDir='.'
     outputFile = os.path.join(figDir, 'lastStaircases.pdf') #Don't know why it saves as empty
     plt.savefig(outputFile)
 
