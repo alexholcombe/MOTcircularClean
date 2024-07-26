@@ -24,10 +24,14 @@ thisExpFolderPsychopy = file.path(thisExpFolder,"Psychopy") #As opposed to EDF f
   #paste0(expFoldersPrefix,expFolder,"Psychopy",expFoldersPostfix)
 print(paste0("Finding files in '",thisExpFolderPsychopy,"'"))
 
+#Filename should start with participant's first initial, two-digit subject number, and 
+#   session letter (a,b, or c) or digit (1,2, or 3) ,
+#   e.g. "K31a"
+
 #Create list of subjects from file names
 datafiles <- dir(path=thisExpFolderPsychopy,pattern='.tsv')  #find all data files in this directory
 
-#remove the "trialHandler.tsv" files from the list. That is basically vestigial from when I was debugging
+#remove the "trialHandler.tsv" files from the list. That gets created when you call the function that gets the data in Psychopy in tibble form
 datafiles <- datafiles[  !grepl("trialHandler.tsv$", datafiles)   ]
 #fileSizes <- file.size( file.path(thisExpFolderPsychopy,datafiles) )
 
@@ -220,15 +224,22 @@ if (any(datafiles$IDvalid==FALSE)) {
   cat("Problem! These files have the wrong format as the subject ID is not an upper-case letter followed by two digits:")
   cat( datafiles %>% dplyr::filter(IDvalid==FALSE) )
 }
-#shouldBeUppercaseLetter <- substr(ID,1,1)
 
-#EDF files
+datafiles$IDnum <- substr(datafiles$ID,2,3)
+
+#Match EDF files to behavioral files
+####################################
 #Get a list of the EDF files
 thisExpFolderEDF = file.path(thisExpFolder,"EDF") #As opposed to Psychopy data folder
 EDFfiles <- dir(path=thisExpFolderEDF,pattern='.EDF')  #find all EDF files in this directory
 EDFfiles<- data.frame(fname=EDFfiles)
 
 #Do some validation of the EDF filenames
+#Filename should start with participant's first initial, two-digit subject number, and 
+#     session (4 characters in total), followed by ".EDF"
+
+#Ignore all those that have only 3 characters
+
 #Parse out the subject ID and session number
 #Validate that they all start with a letter followed by two numbers (the subject ID)
 grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
@@ -239,28 +250,42 @@ if ( length( which(!(validEachFname)) ) ) {
   EDFfiles$fname[ !(validEachFname) ]
 }
 
-#Validate that the 4th character is a session number/letter, e.g. "A12a" or "M321"
-fourthChar<- substr(EDFfiles$fname,4,4)
-grepForDigitOrLowerCaseLetter <- "[1-9a-z]"
-validEachFname<- str_detect(fourthChar, grepForDigitOrLowerCaseLetter)
-if ( length( which(!(validEachFname)) ) ) {
-  message("The following files are not valid in that the 4th character is not a session letter/number:")
-  EDFfiles$fname[ !(validEachFname) ]
+EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix"))
+
+#Check for files with no session letter/digit. This happened back when we didnt include a session
+# number, and the subsequent EDF files for a session would overwrite previous sessions if no one
+# got them off the computer first.
+grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
+noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
+if ( length( which(noSessionID) ) ) {
+  message("The following files are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
+  EDFfiles$name[ noSessionID ]
 }
+EDFfiles$noSessionID <- noSessionID
 
-#Parse out the 
+EDFfiles$session <- substr(EDFfiles$name,4,4)
+#Validate that it is a session number/letter, e.g. "a" or "1", of those that have one
+grepForDigitOrLowerCaseLetter <- "[0-9a-z]"
+validSession<- str_detect(EDFfiles$session, grepForDigitOrLowerCaseLetter)
+hasSessionIDbutInvalid <- which(!(noSessionID) & !validSession)
+if ( length( hasSessionIDbutInvalid  ) ) {
+  message("The following files are not valid in that the session is not a letter or digit:")
+  EDFfiles$name[ hasSessionIDbutInvalid ]
+}
+#26July none have this problem
 
-datafiles <- data.frame(fname=datafiles)
-#datafiles$size <- fileSizes
-datafiles$comment <- "None" #Create a comment field to preserve notes about weirdness of how the run went
+#Match eyetracking (EDF) files to psychopy datafiles
 
-#Remove files that have PRACTICE in their names, PRAC in case someone didn't write the whole word correctly
-#Data about practice sessions is manual in the Google Sheet
-datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
+#Assign closest match to corresponding behavioral file
+#Visually inspect, and then deal case-by-case with anomalies
 
-#Matching eyetracking files 
+EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
+#Join with datafiles dataframe by combination of ID and session columns
+joined_tibble <- inner_join(datafiles, EDFfiles, by = c("ID" = "ID", "session" = "session"))
 
-#Look for EDF file   
+#Then manually inspect ones that didn't find matches
+
+
 
 
 for (f in 1:length(datafiles)) {
