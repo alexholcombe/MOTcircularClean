@@ -264,7 +264,9 @@ if ( length( which(noSessionID) ) ) {
 EDFfiles$noSessionID <- noSessionID
 
 EDFfiles$session <- substr(EDFfiles$name,4,4)
+
 #Validate that it is a session number/letter, e.g. "a" or "1", of those that have one
+#26July no files have this problem
 grepForDigitOrLowerCaseLetter <- "[0-9a-z]"
 validSession<- str_detect(EDFfiles$session, grepForDigitOrLowerCaseLetter)
 hasSessionIDbutInvalid <- which(!(noSessionID) & !validSession)
@@ -272,7 +274,7 @@ if ( length( hasSessionIDbutInvalid  ) ) {
   message("The following files are not valid in that the session is not a letter or digit:")
   EDFfiles$name[ hasSessionIDbutInvalid ]
 }
-#26July none have this problem
+
 
 #Match eyetracking (EDF) files to psychopy datafiles
 
@@ -281,26 +283,113 @@ if ( length( hasSessionIDbutInvalid  ) ) {
 
 EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
 #Join with datafiles dataframe by combination of ID and session columns
-joined_tibble <- inner_join(datafiles, EDFfiles, by = c("ID" = "ID", "session" = "session"))
+#But first rename EDFfiles columns so clear it refers to the EDF files
+EDFfiles<- EDFfiles %>% rename(EDF_session = session, 
+                               EDF_IDnum = IDnum, 
+                               EDF_suffix = suffix,
+                               EDF_name = name)
 
-#Then manually inspect ones that didn't find matches
+
+#See how many behavioral files don't seem to have a match in the second tibble
+#anti_join returns all rows from the first tibble where there are matching values in the second tibble
+noMatchingEDFfile<- 
+  anti_join(datafiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+numSs<- length( unique(datafiles$IDnum) )
+numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
+message( paste(numSs,"Ss total, of which",
+               numSsWithoutMatchingEDFfile,"do not have a matching EDF file with a session number."))
+
+#Add a column to datafiles indicating whether there is a match
+#Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
+noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session)
+noMatchingEDF$EDFmatchExists <- FALSE
+joined <- left_join(datafiles, noMatchingEDF, 
+                            by = c("IDnum", "session"))
+#there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
+#Josh says the later one is the third session
+#I guess I need to take care of that below when I create the anonymized files
+
+#Now match the matches (as opposed to the non-matches, added above), so that have record of the EDF filename
+joinedWithEDF<- left_join(joined, EDFfiles, 
+                          by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+
+
+#A weird consequence of how I did this is that all the rows that *do* have a match are NA for EDFmatchExists,
+# need to change that to TRUE
+joined <- joined %>% mutate(EDFmatchExists = replace_na(EDFmatchExists,TRUE))
+#double-check the result is consistent with the count I did above
+numSsNoMatchingEDFfile<- nrow( unique( filter(joined,EDFmatchExists==FALSE) %>% select(IDnum) ) )
+message( paste( length( unique(joined$IDnum) ),"Ss total, of which",
+                numSsNoMatchingEDFfile,"do not have a matching EDF file with a session number."))
+
+message( paste(nrow(joined),"files total, of which",
+               summarize(joined, trues=sum(EDFmatchExists))$trues,
+               "have a matching EDF file with a session number."))
+
+#For the EDF files that don't have a session number, could try to figure out which session they
+#correspond to by looking at their date/time
+
+
+#Do I need to do any matching with sessions? 
+#Maybe the only thing to do is create a sessionNum column that assigns 1,2,3 to the a,b,cs
+
+#Create a sessionNum column that assigns 1,2,3 to the a,b,cs
+joined %>% rowwise() %>%
+  mutate(sessionNum = case_when(
+    tolower(session) == "a" ~ 1,
+    tolower(session) == "b" ~ 2,
+    tolower(session) == "c" ~ 3,
+    TRUE ~ -999  
+  ))
+
+# 
+# joined %>% rowwise() %>%
+#   mutate(sessionNum = case_when(
+#     tolower(session) == "a" ~ 1,
+#     tolower(session) == "b" ~ 2,
+#     tolower(session) == "c" ~ 3,
+#     TRUE ~ as.numeric(session)  # Assuming session is character and you want to keep other values as numeric
+#   ))
+
+#there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
+#Josh says the later one is the third session
+#I guess I need to take care of that below when I create the anonymized files
+
+#Next, save data to anonymised data folder and only then do eyetracking filtering?
+#Ideally would strip all date and time info from the anonymised data
+#That would mean re-saving each individual datafile as  IDnum + sessionNum.tsv and the EDF file
+
+
+rotX <- function(ch,x) 
+{ #rotate each letter of a string ch by x letters thru the alphabet, as long as x<=13
+  old <- paste(letters, LETTERS, collapse="", sep="")
+  new <- paste(substr(old, 2*x+1, 26*2), substr(old, 1, 26), sep="")
+  chartr(old, new, ch)
+}
+if (anonymiseData) {
+  keyFile = paste0('dataPreprocess/',"anonymisationKey.txt")
+  if ( !file.exists(keyFile) ) {
+    stop(paste0('The file ',keyFile, ' does not exist!'))
+  }
+  linesFromFile= readLines(keyFile,warn=FALSE)
+  key = as.numeric(linesFromFile[1]) #the key to encrypt the data with
+  subjectNotanonymised<- dat$subject
+  dat$subject <- rotX(subjectNotanonymised,key) #anonymise subject initials by rotating them by key characters
+  print('Mapping from name to anonymised:')
+  print(table(subjectNotanonymised,dat$subject))
+}
+
+#table(d$speedRank,d$numObjects,d$numTargets,d$subject)
+
+#Save anonymised data for loading by doAllAnalyses.R
+fname=paste(destinatnDir,destinationName,sep="")
+save(dat, file = paste(fname,".RData",sep=""))
+write.csv(dat, file = paste(fname,".csv",sep=""))
+print(paste("saved data in ",fname,".RData and ",fname,".csv",sep=""))
 
 
 
 
-for (f in 1:length(datafiles)) {
-  thisFname = datafiles[f]
-  IDandSession<- substr(thisFname,1,4)
-ID<- substr(IDandSession,1,3)
-EDF$fixations$ID <- ID; EDF$blinks$ID<- ID
-session <- substr(IDandSession,4,4)
-if (grepl("^[a-z]$", session)) #session is lower-case letter
-  session<- match( tolower(session), letters) #returns 1 for 'a', 2 for 'b', etc.
-
-EDF$fixations$session<- session
-EDF$blinks$session<- session
-  
-  
   #foldersThisExp <- list.dirs(path=thisExpFolder,recursive=FALSE) #each folder should be a subject
   #print("Loading data from folders:"); print(foldersThisExp)
   for (i in 1:length(foldersThisExp)) {
@@ -487,29 +576,3 @@ if (sanityCheckEyeTracking) {
 dat$correct = dat$orderCorrect /3
 dat$chanceRate= 1 / dat$numObjects
 
-rotX <- function(ch,x) 
-{ #rotate each letter of a string ch by x letters thru the alphabet, as long as x<=13
-  old <- paste(letters, LETTERS, collapse="", sep="")
-  new <- paste(substr(old, 2*x+1, 26*2), substr(old, 1, 26), sep="")
-  chartr(old, new, ch)
-}
-if (anonymiseData) {
-  keyFile = paste0('dataPreprocess/',"anonymisationKey.txt")
-  if ( !file.exists(keyFile) ) {
-  	stop(paste0('The file ',keyFile, ' does not exist!'))
-  }
-  linesFromFile= readLines(keyFile,warn=FALSE)
-  key = as.numeric(linesFromFile[1]) #the key to encrypt the data with
-  subjectNotanonymised<- dat$subject
-  dat$subject <- rotX(subjectNotanonymised,key) #anonymise subject initials by rotating them by key characters
-  print('Mapping from name to anonymised:')
-  print(table(subjectNotanonymised,dat$subject))
-}
-	
-#table(d$speedRank,d$numObjects,d$numTargets,d$subject)
-
-#Save anonymised data for loading by doAllAnalyses.R
-fname=paste(destinatnDir,destinationName,sep="")
-save(dat, file = paste(fname,".RData",sep=""))
-write.csv(dat, file = paste(fname,".csv",sep=""))
-print(paste("saved data in ",fname,".RData and ",fname,".csv",sep=""))
