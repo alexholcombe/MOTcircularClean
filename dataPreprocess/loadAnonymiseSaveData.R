@@ -15,9 +15,8 @@ library(ggplot2)
 
 expFoldersPrefix= file.path("..","dataRaw/")
 expFolder <- "youngOld"
-destinationName = "youngOld"
-destinatnDir<-"dataAnonymized/" #where the anonymized data will be exported to
-anonymiseData <- TRUE
+anonymizedDir<-"dataAnonymized" #where the anonymized data will be exported to
+destinationStudyFolderName = "youngOld"
 
 thisExpFolder = file.path(expFoldersPrefix,expFolder)
 thisExpFolderPsychopy = file.path(thisExpFolder,"Psychopy") #As opposed to EDF folder
@@ -313,10 +312,9 @@ joined <- left_join(datafiles, noMatchingEDF,
 joinedWithEDF<- left_join(joined, EDFfiles, 
                           by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
 
-
 #A weird consequence of how I did this is that all the rows that *do* have a match are NA for EDFmatchExists,
 # need to change that to TRUE
-joined <- joined %>% mutate(EDFmatchExists = replace_na(EDFmatchExists,TRUE))
+joined <- joinedWithEDF %>% mutate(EDFmatchExists = replace_na(EDFmatchExists,TRUE))
 #double-check the result is consistent with the count I did above
 numSsNoMatchingEDFfile<- nrow( unique( filter(joined,EDFmatchExists==FALSE) %>% select(IDnum) ) )
 message( paste( length( unique(joined$IDnum) ),"Ss total, of which",
@@ -326,30 +324,25 @@ message( paste(nrow(joined),"files total, of which",
                summarize(joined, trues=sum(EDFmatchExists))$trues,
                "have a matching EDF file with a session number."))
 
+
 #For the EDF files that don't have a session number, could try to figure out which session they
 #correspond to by looking at their date/time
-
 
 #Do I need to do any matching with sessions? 
 #Maybe the only thing to do is create a sessionNum column that assigns 1,2,3 to the a,b,cs
 
 #Create a sessionNum column that assigns 1,2,3 to the a,b,cs
-joined %>% rowwise() %>%
+joined<- joined %>% rowwise() %>%
   mutate(sessionNum = case_when(
     tolower(session) == "a" ~ 1,
     tolower(session) == "b" ~ 2,
     tolower(session) == "c" ~ 3,
+    tolower(session) == "1" ~ 1,
+    tolower(session) == "2" ~ 2,
+    tolower(session) == "3" ~ 3,
     TRUE ~ -999  
   ))
 
-# 
-# joined %>% rowwise() %>%
-#   mutate(sessionNum = case_when(
-#     tolower(session) == "a" ~ 1,
-#     tolower(session) == "b" ~ 2,
-#     tolower(session) == "c" ~ 3,
-#     TRUE ~ as.numeric(session)  # Assuming session is character and you want to keep other values as numeric
-#   ))
 
 #there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
 #Josh says the later one is the third session
@@ -359,27 +352,41 @@ joined %>% rowwise() %>%
 #Ideally would strip all date and time info from the anonymised data
 #That would mean re-saving each individual datafile as  IDnum + sessionNum.tsv and the EDF file
 
+#EDF file privacy issue #####################################
+#The preamble variable of the EDF file has exact date and time, so to anonymize should strip that out
+#Could read each EDF file with eyelinkReader and then save all the variables inside it into an R data file
 
-rotX <- function(ch,x) 
-{ #rotate each letter of a string ch by x letters thru the alphabet, as long as x<=13
-  old <- paste(letters, LETTERS, collapse="", sep="")
-  new <- paste(substr(old, 2*x+1, 26*2), substr(old, 1, 26), sep="")
-  chartr(old, new, ch)
+#In the meantime, could save the behavioral datafiles and then do the EDF file analyses in this private folder 
+#For each row of joined, save that fname as IDnum_sessionNum.
+
+#Assuming this script is being run from "dataPreprocess" subdirectory, so need to go one level up,
+#then down into anonymized directory
+destinationDir <- file.path("..",anonymizedDir,destinationStudyFolderName)
+if ( !file.exists(destinationDir) ) {
+  message( paste(destinationDir," destination directory does not exist!") )
 }
-if (anonymiseData) {
-  keyFile = paste0('dataPreprocess/',"anonymisationKey.txt")
-  if ( !file.exists(keyFile) ) {
-    stop(paste0('The file ',keyFile, ' does not exist!'))
+
+#
+for (i in 1:nrow(joined)) {
+  thisRow <- joined[i,]
+  destinationName = paste0(thisRow$IDnum, '_', thisRow$sessionNum, '.tsv')
+  destination<- file.path(destinationDir,destinationName)
+  file.exists(thisRow$fname)
+  
+  succeeded<- file.copy(from = thisRow$fname,
+                        to   = destination,   copy.date = FALSE)
+  if (!succeeded) {
+    message(paste("Copying to ",destination,"failed"))
   }
-  linesFromFile= readLines(keyFile,warn=FALSE)
-  key = as.numeric(linesFromFile[1]) #the key to encrypt the data with
-  subjectNotanonymised<- dat$subject
-  dat$subject <- rotX(subjectNotanonymised,key) #anonymise subject initials by rotating them by key characters
-  print('Mapping from name to anonymised:')
-  print(table(subjectNotanonymised,dat$subject))
 }
+
+#file.exists(destination)
+
+#Also save all the information in joined by saving everything except the filename, because it has the date/time
 
 #table(d$speedRank,d$numObjects,d$numTargets,d$subject)
+
+
 
 #Save anonymised data for loading by doAllAnalyses.R
 fname=paste(destinatnDir,destinationName,sep="")
