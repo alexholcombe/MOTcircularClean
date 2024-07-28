@@ -1,5 +1,6 @@
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
 #Gets behavioral data and combines with eyetracking result and anonymises 
+rm(list = ls()) #Clear workspace
 library(dplyr)
 library(stringr)
 library(tidyr)
@@ -13,7 +14,7 @@ library(ggplot2)
 #Then look for matching EDF file. 
 #Lots of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
 
-expFoldersPrefix= file.path("..","dataRaw/")
+expFoldersPrefix= file.path("..","dataRaw")
 expFolder <- "youngOld"
 anonymizedDir<-"dataAnonymized" #where the anonymized data will be exported to
 destinationStudyFolderName = "youngOld"
@@ -96,6 +97,12 @@ datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
 datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+
+#“J55_a_18Jun2024_11-32.tsv” this is a one-off J55 (there is no b and c), but more importantly,
+#there is a C55 with 3 sessions so let me know why you think there are two ID=55 participants
+#Josh: those are two separate participants
+#It screws up my code so until I hear from LORETTA about sessions b and c, delete
+datafiles<- rows_delete( datafiles, tibble(fname=c("J55_a_18Jun2024_11-32.tsv")), by="fname")
 
 #Loretta says lxx was just a test of the program, not a participant
 datafiles<- rows_delete( datafiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
@@ -281,6 +288,8 @@ if ( length( hasSessionIDbutInvalid  ) ) {
 #Visually inspect, and then deal case-by-case with anomalies
 
 EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
+EDFfiles <- EDFfiles %>% arrange(IDnum)
+
 #Join with datafiles dataframe by combination of ID and session columns
 #But first rename EDFfiles columns so clear it refers to the EDF files
 EDFfiles<- EDFfiles %>% rename(EDF_session = session, 
@@ -289,10 +298,18 @@ EDFfiles<- EDFfiles %>% rename(EDF_session = session,
                                EDF_name = name)
 
 
+#there are two files for C53b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
+#Josh says the later one is the third session, so change its session to c
+datafiles<- datafiles %>% 
+  mutate(session = ifelse(str_starts(fname,"C53_b_05Jun2024_14-35.tsv"),
+                          "c", session) )
+
 #See how many behavioral files don't seem to have a match in the second tibble
 #anti_join returns all rows from the first tibble where there are matching values in the second tibble
 noMatchingEDFfile<- 
   anti_join(datafiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+noMatchingEDFfile<- noMatchingEDFfile %>% arrange(IDnum)
+
 numSs<- length( unique(datafiles$IDnum) )
 numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
 message( paste(numSs,"Ss total, of which",
@@ -300,13 +317,10 @@ message( paste(numSs,"Ss total, of which",
 
 #Add a column to datafiles indicating whether there is a match
 #Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
-noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session)
+noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session) %>% arrange(IDnum)
 noMatchingEDF$EDFmatchExists <- FALSE
 joined <- left_join(datafiles, noMatchingEDF, 
                             by = c("IDnum", "session"))
-#there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
-#Josh says the later one is the third session
-#I guess I need to take care of that below when I create the anonymized files
 
 #Now match the matches (as opposed to the non-matches, added above), so that have record of the EDF filename
 joinedWithEDF<- left_join(joined, EDFfiles, 
@@ -366,14 +380,19 @@ if ( !file.exists(destinationDir) ) {
   message( paste(destinationDir," destination directory does not exist!") )
 }
 
-#
+#Copy all the files over
 for (i in 1:nrow(joined)) {
   thisRow <- joined[i,]
   destinationName = paste0(thisRow$IDnum, '_', thisRow$sessionNum, '.tsv')
   destination<- file.path(destinationDir,destinationName)
-  file.exists(thisRow$fname)
   
-  succeeded<- file.copy(from = thisRow$fname,
+  datafileToAnonymize<- file.path(thisExpFolderPsychopy,thisRow$fname)
+
+  if ( !file.exists(datafileToAnonymize)  ) {
+    message(paste("File",thisRow$fname,"from datafiles listing not found"))
+  }
+  
+  succeeded<- file.copy(from = datafileToAnonymize,
                         to   = destination,   copy.date = FALSE)
   if (!succeeded) {
     message(paste("Copying to ",destination,"failed"))
@@ -382,17 +401,25 @@ for (i in 1:nrow(joined)) {
 
 #file.exists(destination)
 
+#Saved anonymised data for loading by doAllAnalyses.R
+message( paste("Anonymised (first initial, date and time removed) data saved to",destinationDir) )
+
 #Also save all the information in joined by saving everything except the filename, because it has the date/time
+anonymisedMatchingOfDataAndEDF<- joined
+joined$fname <- NULL
+joined$IDsession <- NULL
+joined$ID <- NULL
+
+#To get rid of first initial from EDF files, would have to save them with a new name
+#, simply with the first initial stripped
+
+
+
 
 #table(d$speedRank,d$numObjects,d$numTargets,d$subject)
 
 
 
-#Save anonymised data for loading by doAllAnalyses.R
-fname=paste(destinatnDir,destinationName,sep="")
-save(dat, file = paste(fname,".RData",sep=""))
-write.csv(dat, file = paste(fname,".csv",sep=""))
-print(paste("saved data in ",fname,".RData and ",fname,".csv",sep=""))
 
 
 

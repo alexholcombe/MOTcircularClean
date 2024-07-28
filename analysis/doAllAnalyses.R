@@ -1,5 +1,5 @@
 #This file analyses anonymized data provided by "loadAnonymiseSaveData.R" in exp-specific directory
-#These are not the ones appropriate for looking at tf limits, which are in "speed-tf-VSS14" folder with separate analysis file
+#These are not the ones appropriate for looking at tf limits, which are in "speed-tf-VSS14" folder https://github.com/alexholcombe/speed-tf-VSS14 with separate analysis file
 #Working directory is set hopefully by Rproj file to directory that it's in.
 setwd(
 "/Users/alexh/Documents/attention_tempresltn/multiple object tracking/newTraj/newTraj_repo/analysis"
