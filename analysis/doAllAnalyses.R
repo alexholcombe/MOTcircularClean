@@ -309,6 +309,7 @@ paste0("Among the ",length(nearNoPat)," besides LO tested on near, mean centered
 
 
 #CRT_spinzter experiment#######################################################################
+#I think I published this
 load( paste0(dataDir,"E2_CRT_spinzter.RData"),verbose=TRUE) #E2
 E2<-dat
 #For CRT data, I need to take mean across trials. Spinzter already is
