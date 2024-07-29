@@ -5,6 +5,7 @@
 library(stringr)
 library(plyr); library(dplyr) #must be done in this order
 library(eyelinkReader)
+library(ggplot2)
 
 EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix) {
   #
@@ -13,7 +14,7 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   #When the eye cannot be tracked (for example during blinks) null values (".") are returned for the gaze X,Y data, and the Pupil Size data is zero
 
   if (!file.exists(inputEDF)) {
-    stop( paste0("ERROR no file ",fname," exists") )
+    stop( paste0("ERROR no file ",inputEDF," exists") )
   }
 
   EDFstuff <- eyelinkReader::read_edf(inputEDF,
