@@ -382,9 +382,273 @@ if ( !file.exists(destinationDir) ) {
   message( paste(destinationDir," destination directory does not exist!") )
 }
 
+#Read in datafiles #########################################
+#In previous projects, I usually read all the data into tibbles and then copied it over.
+#This involves handling that later files have different numbers of columns because I added more timing variables
+
+#Get the two kinds of column specification,for the early files with only timingBlips and the later with more columns
+# to check against each file as it comes in
+earlyFile<- "S381_1_17May2024_09-08.tsv"
+columns_specification_early_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFile)     )
+lateFile<- "D61_a_25Jun2024_11-12.tsv"
+columns_specification_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
+
+#Read all the behavioral files in and aggregate them into one massive tibble
+for (i in 1:nrow(joined)) {
+  thisRow <- joined[i,]
+  thisFile<- file.path(thisExpFolderPsychopy,thisRow$fname)
+  
+  rawDataLoad=tryCatch( 
+    readr::read_table(thisFile,show_col_types = FALSE),  #suppress the column specification output printout
+      error=function(e) { 
+        stop( paste0("ERROR reading the file ",fname," :",e) )
+      } 
+  )
+  
+  #Validate
+  identical(columns_specification_early_file,columns_specification_late_file)
+  #There are two kinds of files, t
+  
+  
+  rawDataLoad$exp <- expFolder
+  message(colnames(rawDataLoad))
+  
+  numTrials<- length(rawDataLoad$trialnum)
+  msg=''
+  rawDataThis<- rawDataLoad
+}
+#numLongFramesAfterFixation numLongFramesAfterCueexp
+
+
+
+
+removeFirstTrialIfOdd = FALSE
+if (numTrials %% 2 ==1) {
+  msg=paste0(" Odd number of trials (",numTrials,"); was session incomplete, or extra trial at end?")  
+  if (removeFirstTrialIfOdd) {
+    rawDataThis <- subset(rawDataThis, !trialnum %in% c(0))
+    cat("\tRemoved first trial- assuming it's a repeat")
+  }
+}
+if (rawDataThis$file[1] == "WN_26May2015_13-44.txt") { #Will's first session and needed practice,
+  rawDataThis <- subset(rawDataThis, trialnum > 7) #so omit first several trials
+} 
+cat(paste0(", now contains ",length(rawDataThis$trialnum)," trials ",msg))
+if (expi==1 & i==1 & j==1) { #first file of the first subject
+  rawData<- rawDataThis
+} else {  #not the first file of the first subject, so combine it with previously-loaded data
+  prevColNames<- colnames(rawData)
+  newCols <- setdiff( colnames(rawDataThis),prevColNames )
+  oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
+  if (length(newCols) >0) {
+    cat( "newCols are:")
+    print( paste(newCols,collapse=','))
+    for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
+      newCol = newCols[n]
+      rawData[,newCol] <- NA 
+      #if (is.numeric(rawDataThis[,newCol]))   #This seems too risky, might forget have -999 values
+      #  rawData[,newCol] <- -999 #dummy value
+    }
+  }
+  if (length(oldColsNotInNew) >0)
+    for (n in 1:length(oldColsNotInNew)) { #add old col to new data.frame that doesn't have it
+      if (n==1) {
+        cat("Adding to new data the old columns:")
+        print( paste(oldColsNotInNew,collapse=',') )
+      }
+      oldCol = oldColsNotInNew[n]
+      rawDataThis[,oldCol]<- NA #dummy value
+      #if (is.numeric(rawData[,oldCol]))  #seems too risky- might forget it is -999
+      #  rawDataThis[,oldCol] <- -999 #dummy value
+    }
+  #Try to merge new data file with already-loaded
+  colnamesNew <- colnames(rawDataThis)
+  colnamesOld <- colnames(rawData)
+  #colnamesNewMsg <- paste(colnamesNew,collapse=",")
+  #colnamesOldMsg <- paste(colnamesOld,collapse=",")
+  #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+  if ( length(setdiff(colnamesNew,colnamesOld)) >0 )
+    writeLines( paste('New columns not in old are ', setdiff(colnamesNew,colnamesOld)) )
+  tryCatch( rawData<-rbind(rawData,rawDataThis), #if fail to bind new with old,
+            error=function(e) { #Give feedback about how the error happened
+              cat(paste0("Tried to merge but error:",e))
+              colnamesNewFile <- colnames(rawDataThis)
+              colnamesOldFiles <- colnames(rawData)
+              #colnamesNewFileMsg <- paste(colnamesNewFile,collapse=",")
+              #colnamesOldFilesMsg <- paste(colnamesOldFiles,collapse=",")
+              #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+              #c( 'New cols: ', setdiff(colnamesNewFile,colnamesOldFiles) )
+              newCols <- setdiff(colnamesNewFile,colnamesOld)
+              oldColsNotInNew<- setdiff(colnamesOldFiles,colnamesNew)
+              if (length(newCols)>0) {
+                writeLines( paste('New cols not in old: ', paste(newCols,collapse=",") ) ) 
+              }
+              writeLines( paste('Old cols not in new file: ', paste(oldColsNotInNew,collapse=",") ) )        
+              stop(paste0("ERROR merging, error reported as ",e))
+            } 
+            
+            
+            
+
+
+
+
+
+for (i in 1:length(foldersThisExp)) {
+  thisSubjectDir <- foldersThisExp[i]
+  files <- dir(path=thisSubjectDir,pattern='.txt')  #find all data files in this directory
+  eyetrackIdxs = grep("Eyetracking",files)
+  if (length(eyetrackIdxs) ==0) {
+    eyetrackFiles = FALSE
+  } else { 
+    eyetrackFiles = TRUE 
+    eyetrackFiles = files[eyetrackIdxs]
+  }
+  nonEyetrackIdxs = grep("Eyetracking",files,invert=TRUE)
+  files<- files[nonEyetrackIdxs] #don't include eyetracking ones
+  #allFilesStr <- paste(files,collapse=",") #print(allFilesStr)
+  for (j in 1:length(files)) { #read in sessions of this subject
+    file = files[j]
+    fname = paste0(thisSubjectDir,"/",file)
+    rawDataLoad=tryCatch( 
+      read.table(fname,sep='\t',header=TRUE), 
+      error=function(e) { 
+        stop( paste0("ERROR reading the file ",fname," :",e) )
+      } )
+    rawDataLoad$exp <- expFolders[expi]
+    rawDataLoad$file <- file
+    #Search for eyetracking file
+    fileNameLen = nchar(file)
+    withoutSuffix<-substr(file,1,fileNameLen-4) 
+    eyetrackFileNameShouldBe<- paste0(withoutSuffix,"EyetrackingReport.txt")
+    whichFileIsEyetrack <- grep(toupper(eyetrackFileNameShouldBe), toupper(eyetrackFiles)) #allow for capitalisation diffs
+    eyetrackFileFound = ( length(whichFileIsEyetrack) >0 )
+    #print(paste0("Looked for eyetrack file ",eyetrackFileNameShouldBe," and found=", eyetrackFileFound))
+    numTrials<- length(rawDataLoad$trialnum)
+    msg=''
+    rawDataThis<- rawDataLoad
+    if (eyetrackFileFound) #load it in and merge with rawDataLoad
+    {
+      trackFname = paste0(thisSubjectDir,"/", eyetrackFileNameShouldBe)
+      eyeTrackInfo = tryCatch( 
+        read.table(trackFname,header=TRUE,sep='\t'), 
+        error=function(e) { 
+          stop( paste0('eyeTrackingFile exists: ',trackFname," but ERROR reading the file :",e) )
+        } )
+      msg=paste0(" and loaded Eyetracking file. ")
+      #Eyetracker begins trials with 1, whereas python and psychopy convention is 0
+      #So to match the eyetracker file with the psychopy file, subtract one from trial num
+      eyeTrackOneRowPerTrial<- 
+        eyelinkReportSummarise(trackFname,eyeTrackInfo,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
+      eyeTrackOneRowPerTrial$trialnum = eyeTrackOneRowPerTrial$trial-1 #psychopy starts with zero, Eyelink with 1
+      proportnTrialsOutOfCentralArea = sum(eyeTrackOneRowPerTrial$outOfCentralArea != 0) / nrow(eyeTrackOneRowPerTrial)
+      msg=paste0(" fixation broken on ",as.character(round(proportnTrialsOutOfCentralArea*100,1)), "% of trials")
+      if (nrow(rawDataLoad) != nrow(eyeTrackOneRowPerTrial)) {  
+        stop( paste0('eyeTrackingFile ',trackFname," does not have same number of trials as behavioral data file:",file) )	
+      }
+      rawDataWithEyetrack<- merge(rawDataLoad, eyeTrackOneRowPerTrial, by=c("trialnum"))
+      rawDataThis<- rawDataWithEyetrack
+    }
+    else { msg = ' NO eyetracking file found'}
+    cat(paste0("Loaded file ",file,msg))
+    #omit first trial is total trials are odd, last probably a repeat. And first trial people often discombobulated      
+    msg=""
+    removeFirstTrialIfOdd = TRUE
+    if (numTrials %% 2 ==1) {
+      msg=paste0(" Odd number of trials (",numTrials,"); was session incomplete, or extra trial at end?")  
+      if (removeFirstTrialIfOdd) {
+        rawDataThis <- subset(rawDataThis, !trialnum %in% c(0))
+        cat("\tRemoved first trial- assuming it's a repeat")
+      }
+    }
+    if (rawDataThis$file[1] == "WN_26May2015_13-44.txt") { #Will's first session and needed practice,
+      rawDataThis <- subset(rawDataThis, trialnum > 7) #so omit first several trials
+    } 
+    cat(paste0(", now contains ",length(rawDataThis$trialnum)," trials ",msg))
+    if (expi==1 & i==1 & j==1) { #first file of the first subject
+      rawData<- rawDataThis
+    } else {  #not the first file of the first subject, so combine it with previously-loaded data
+      prevColNames<- colnames(rawData)
+      newCols <- setdiff( colnames(rawDataThis),prevColNames )
+      oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
+      if (length(newCols) >0) {
+        cat( "newCols are:")
+        print( paste(newCols,collapse=','))
+        for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
+          newCol = newCols[n]
+          rawData[,newCol] <- NA 
+          #if (is.numeric(rawDataThis[,newCol]))   #This seems too risky, might forget have -999 values
+          #  rawData[,newCol] <- -999 #dummy value
+        }
+      }
+      if (length(oldColsNotInNew) >0)
+        for (n in 1:length(oldColsNotInNew)) { #add old col to new data.frame that doesn't have it
+          if (n==1) {
+            cat("Adding to new data the old columns:")
+            print( paste(oldColsNotInNew,collapse=',') )
+          }
+          oldCol = oldColsNotInNew[n]
+          rawDataThis[,oldCol]<- NA #dummy value
+          #if (is.numeric(rawData[,oldCol]))  #seems too risky- might forget it is -999
+          #  rawDataThis[,oldCol] <- -999 #dummy value
+        }
+      #Try to merge new data file with already-loaded
+      colnamesNew <- colnames(rawDataThis)
+      colnamesOld <- colnames(rawData)
+      #colnamesNewMsg <- paste(colnamesNew,collapse=",")
+      #colnamesOldMsg <- paste(colnamesOld,collapse=",")
+      #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+      if ( length(setdiff(colnamesNew,colnamesOld)) >0 )
+        writeLines( paste('New columns not in old are ', setdiff(colnamesNew,colnamesOld)) )
+      tryCatch( rawData<-rbind(rawData,rawDataThis), #if fail to bind new with old,
+                error=function(e) { #Give feedback about how the error happened
+                  cat(paste0("Tried to merge but error:",e))
+                  colnamesNewFile <- colnames(rawDataThis)
+                  colnamesOldFiles <- colnames(rawData)
+                  #colnamesNewFileMsg <- paste(colnamesNewFile,collapse=",")
+                  #colnamesOldFilesMsg <- paste(colnamesOldFiles,collapse=",")
+                  #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+                  #c( 'New cols: ', setdiff(colnamesNewFile,colnamesOldFiles) )
+                  newCols <- setdiff(colnamesNewFile,colnamesOld)
+                  oldColsNotInNew<- setdiff(colnamesOldFiles,colnamesNew)
+                  if (length(newCols)>0) {
+                    writeLines( paste('New cols not in old: ', paste(newCols,collapse=",") ) ) 
+                  }
+                  writeLines( paste('Old cols not in new file: ', paste(oldColsNotInNew,collapse=",") ) )        
+                  stop(paste0("ERROR merging, error reported as ",e))
+                } 
+      )
+    }      
+  }		
+}
+
+
+  
 #Copy all the files over
 for (i in 1:nrow(joined)) {
   thisRow <- joined[i,]
+  
+    file = files[j]
+    fname = paste0(thisSubjectDir,"/",file)
+    rawDataLoad=tryCatch( 
+      read.table(fname,sep='\t',header=TRUE), 
+      error=function(e) { 
+        stop( paste0("ERROR reading the file ",fname," :",e) )
+      } )
+    rawDataLoad$exp <- expFolders[expi]
+    rawDataLoad$file <- file
+    #Search for eyetracking file
+    fileNameLen = nchar(file)
+    withoutSuffix<-substr(file,1,fileNameLen-4) 
+    eyetrackFileNameShouldBe<- paste0(withoutSuffix,"EyetrackingReport.txt")
+    whichFileIsEyetrack <- grep(toupper(eyetrackFileNameShouldBe), toupper(eyetrackFiles)) #allow for capitalisation diffs
+    eyetrackFileFound = ( length(whichFileIsEyetrack) >0 )
+    #print(paste0("Looked for eyetrack file ",eyetrackFileNameShouldBe," and found=", eyetrackFileFound))
+    numTrials<- length(rawDataLoad$trialnum)
+    msg=''
+    rawDataThis<- rawDataLoad
+  
+  
   destinationName = paste0(thisRow$IDnum, '_', thisRow$sessionNum, '.tsv')
   destination<- file.path(destinationDir,destinationName)
   
@@ -415,3 +679,131 @@ joined$ID <- NULL
 #To get rid of first initial from EDF files, would have to save them with a new name
 #, simply with the first initial stripped
 
+
+for (i in 1:length(foldersThisExp)) {
+  thisSubjectDir <- foldersThisExp[i]
+  files <- dir(path=thisSubjectDir,pattern='.txt')  #find all data files in this directory
+  eyetrackIdxs = grep("Eyetracking",files)
+  if (length(eyetrackIdxs) ==0) {
+    eyetrackFiles = FALSE
+  } else { 
+    eyetrackFiles = TRUE 
+    eyetrackFiles = files[eyetrackIdxs]
+  }
+  nonEyetrackIdxs = grep("Eyetracking",files,invert=TRUE)
+  files<- files[nonEyetrackIdxs] #don't include eyetracking ones
+  #allFilesStr <- paste(files,collapse=",") #print(allFilesStr)
+  for (j in 1:length(files)) { #read in sessions of this subject
+    file = files[j]
+    fname = paste0(thisSubjectDir,"/",file)
+    rawDataLoad=tryCatch( 
+      read.table(fname,sep='\t',header=TRUE), 
+      error=function(e) { 
+        stop( paste0("ERROR reading the file ",fname," :",e) )
+      } )
+    rawDataLoad$exp <- expFolders[expi]
+    rawDataLoad$file <- file
+    #Search for eyetracking file
+    fileNameLen = nchar(file)
+    withoutSuffix<-substr(file,1,fileNameLen-4) 
+    eyetrackFileNameShouldBe<- paste0(withoutSuffix,"EyetrackingReport.txt")
+    whichFileIsEyetrack <- grep(toupper(eyetrackFileNameShouldBe), toupper(eyetrackFiles)) #allow for capitalisation diffs
+    eyetrackFileFound = ( length(whichFileIsEyetrack) >0 )
+    #print(paste0("Looked for eyetrack file ",eyetrackFileNameShouldBe," and found=", eyetrackFileFound))
+    numTrials<- length(rawDataLoad$trialnum)
+    msg=''
+    rawDataThis<- rawDataLoad
+    if (eyetrackFileFound) #load it in and merge with rawDataLoad
+    {
+      trackFname = paste0(thisSubjectDir,"/", eyetrackFileNameShouldBe)
+      eyeTrackInfo = tryCatch( 
+        read.table(trackFname,header=TRUE,sep='\t'), 
+        error=function(e) { 
+          stop( paste0('eyeTrackingFile exists: ',trackFname," but ERROR reading the file :",e) )
+        } )
+      msg=paste0(" and loaded Eyetracking file. ")
+      #Eyetracker begins trials with 1, whereas python and psychopy convention is 0
+      #So to match the eyetracker file with the psychopy file, subtract one from trial num
+      eyeTrackOneRowPerTrial<- 
+        eyelinkReportSummarise(trackFname,eyeTrackInfo,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
+      eyeTrackOneRowPerTrial$trialnum = eyeTrackOneRowPerTrial$trial-1 #psychopy starts with zero, Eyelink with 1
+      proportnTrialsOutOfCentralArea = sum(eyeTrackOneRowPerTrial$outOfCentralArea != 0) / nrow(eyeTrackOneRowPerTrial)
+      msg=paste0(" fixation broken on ",as.character(round(proportnTrialsOutOfCentralArea*100,1)), "% of trials")
+      if (nrow(rawDataLoad) != nrow(eyeTrackOneRowPerTrial)) {  
+        stop( paste0('eyeTrackingFile ',trackFname," does not have same number of trials as behavioral data file:",file) )	
+      }
+      rawDataWithEyetrack<- merge(rawDataLoad, eyeTrackOneRowPerTrial, by=c("trialnum"))
+      rawDataThis<- rawDataWithEyetrack
+    }
+    else { msg = ' NO eyetracking file found'}
+    cat(paste0("Loaded file ",file,msg))
+    #omit first trial is total trials are odd, last probably a repeat. And first trial people often discombobulated      
+    msg=""
+    removeFirstTrialIfOdd = TRUE
+    if (numTrials %% 2 ==1) {
+      msg=paste0(" Odd number of trials (",numTrials,"); was session incomplete, or extra trial at end?")  
+      if (removeFirstTrialIfOdd) {
+        rawDataThis <- subset(rawDataThis, !trialnum %in% c(0))
+        cat("\tRemoved first trial- assuming it's a repeat")
+      }
+    }
+    if (rawDataThis$file[1] == "WN_26May2015_13-44.txt") { #Will's first session and needed practice,
+      rawDataThis <- subset(rawDataThis, trialnum > 7) #so omit first several trials
+    } 
+    cat(paste0(", now contains ",length(rawDataThis$trialnum)," trials ",msg))
+    if (expi==1 & i==1 & j==1) { #first file of the first subject
+      rawData<- rawDataThis
+    } else {  #not the first file of the first subject, so combine it with previously-loaded data
+      prevColNames<- colnames(rawData)
+      newCols <- setdiff( colnames(rawDataThis),prevColNames )
+      oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
+      if (length(newCols) >0) {
+        cat( "newCols are:")
+        print( paste(newCols,collapse=','))
+        for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
+          newCol = newCols[n]
+          rawData[,newCol] <- NA 
+          #if (is.numeric(rawDataThis[,newCol]))   #This seems too risky, might forget have -999 values
+          #  rawData[,newCol] <- -999 #dummy value
+        }
+      }
+      if (length(oldColsNotInNew) >0)
+        for (n in 1:length(oldColsNotInNew)) { #add old col to new data.frame that doesn't have it
+          if (n==1) {
+            cat("Adding to new data the old columns:")
+            print( paste(oldColsNotInNew,collapse=',') )
+          }
+          oldCol = oldColsNotInNew[n]
+          rawDataThis[,oldCol]<- NA #dummy value
+          #if (is.numeric(rawData[,oldCol]))  #seems too risky- might forget it is -999
+          #  rawDataThis[,oldCol] <- -999 #dummy value
+        }
+      #Try to merge new data file with already-loaded
+      colnamesNew <- colnames(rawDataThis)
+      colnamesOld <- colnames(rawData)
+      #colnamesNewMsg <- paste(colnamesNew,collapse=",")
+      #colnamesOldMsg <- paste(colnamesOld,collapse=",")
+      #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+      if ( length(setdiff(colnamesNew,colnamesOld)) >0 )
+        writeLines( paste('New columns not in old are ', setdiff(colnamesNew,colnamesOld)) )
+      tryCatch( rawData<-rbind(rawData,rawDataThis), #if fail to bind new with old,
+                error=function(e) { #Give feedback about how the error happened
+                  cat(paste0("Tried to merge but error:",e))
+                  colnamesNewFile <- colnames(rawDataThis)
+                  colnamesOldFiles <- colnames(rawData)
+                  #colnamesNewFileMsg <- paste(colnamesNewFile,collapse=",")
+                  #colnamesOldFilesMsg <- paste(colnamesOldFiles,collapse=",")
+                  #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+                  #c( 'New cols: ', setdiff(colnamesNewFile,colnamesOldFiles) )
+                  newCols <- setdiff(colnamesNewFile,colnamesOld)
+                  oldColsNotInNew<- setdiff(colnamesOldFiles,colnamesNew)
+                  if (length(newCols)>0) {
+                    writeLines( paste('New cols not in old: ', paste(newCols,collapse=",") ) ) 
+                  }
+                  writeLines( paste('Old cols not in new file: ', paste(oldColsNotInNew,collapse=",") ) )        
+                  stop(paste0("ERROR merging, error reported as ",e))
+                } 
+      )
+    }      
+  }		
+}

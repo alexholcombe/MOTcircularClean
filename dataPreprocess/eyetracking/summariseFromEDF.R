@@ -76,20 +76,20 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   avgFix<- fixatns %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  - 
                     data.frame( meanX=widthPix/2,     meanY= heightPix/2)
   #Discrepancy with screen center
-  avgFix - data.frame(meanX= avgFix$meanX - widthPix/2,   meanY = avgFix$
+  avgFix - data.frame(meanX= avgFix$meanX - widthPix/2,   meanY = avgFix$meanY - heightPix/2)
   eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
   
   #Should I do my own drift correction?
+  #Can I merge the events with the samples to know# 
+  eachTrial<-eachTrial
+
+  proportnOutside<- gazeLocatn %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T)) #Have to ignore NAs, which might be blinks
+
+  proportnOutside<- proportnOutside$outOfCentralArea
   
-  #Can I merge the events with the samples to know 
-  
+  cat("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
   #Should probably use gavx and gavy
   
-  proportnOutside = gazeLocatn %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T)) #HAve to ignore NAs, which might be blinks
-  proportnOutside = proportnOutside$outOfCentralArea
-  #cat("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
-  
-  #
   eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
   proportnTrialsOutside = as.numeric( (eachTrial$outOfCentralArea > 0) )
   msg = paste("Proportion of trials for this participant that are outside the central zone =", mean(proportnTrialsOutside))
@@ -111,8 +111,8 @@ if (TESTME) {
 
   widthPix = 800
   heightPix = 600
-  centralZoneHeightPix = 10
-  centralZoneWidthPix = 10
+  centralZoneHeightPix = 300 #10
+  centralZoneWidthPix = 300 #10
 
   eachT <- EDFsummarise(EDF_exampleYoungOld, widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix)
 
