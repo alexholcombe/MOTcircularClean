@@ -88,13 +88,13 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
 
   proportnOutside<- proportnOutside$outOfCentralArea
   
-  cat("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
+  message("Proportion of samples for this participant that are outside the central zone =", proportnOutside)
   #Should probably use gavx and gavy
   
   eachTrial <- gazeLocatn %>% group_by(trial) %>% summarise(outOfCentralArea = mean(outOfCentralArea, na.rm=T))
   proportnTrialsOutside = as.numeric( (eachTrial$outOfCentralArea > 0) )
-  msg = paste("Proportion of trials for this participant that are outside the central zone =", mean(proportnTrialsOutside))
-  print(msg)
+  msg = paste("Proportion of trials for this participant with any sample outside the central zone =", mean(proportnTrialsOutside))
+  message(msg)
   
   #Save as a CSV file the variable of whether in each trial the person's eyes were ever outside the central zone
   library(readr)
@@ -109,7 +109,8 @@ if (TESTME) {
 
   #data(gaze) #to use built-in dataset
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
-
+  #file.exists
+  
   widthPix = 800
   heightPix = 600
   centralZoneHeightPix = 300 #10

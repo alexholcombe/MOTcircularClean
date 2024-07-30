@@ -388,10 +388,13 @@ if ( !file.exists(destinationDir) ) {
 
 #Get the two kinds of column specification,for the early files with only timingBlips and the later with more columns
 # to check against each file as it comes in
-earlyFile<- "S381_1_17May2024_09-08.tsv"
-columns_specification_early_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFile)     )
+earlyFileWithoutSessionColumn<- "M22a_05Apr2024_11-02.tsv"
+earlyFileWithSessionColumn<- "S381_1_17May2024_09-08.tsv"
 lateFile<- "D61_a_25Jun2024_11-12.tsv"
-columns_specification_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
+
+columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithoutSessionColumn)     )
+columns_spec_early_file_with_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
+columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
 
 #Read all the behavioral files in and aggregate them into one massive tibble
 for (i in 1:nrow(joined)) {
@@ -399,96 +402,117 @@ for (i in 1:nrow(joined)) {
   thisFile<- file.path(thisExpFolderPsychopy,thisRow$fname)
   
   rawDataLoad=tryCatch( 
-    readr::read_table(thisFile,show_col_types = FALSE),  #suppress the column specification output printout
+    readr::read_table(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
       error=function(e) { 
         stop( paste0("ERROR reading the file ",fname," :",e) )
       } 
   )
+  rawDataThis <- rawDataLoad
   
-  #Validate
-  identical(columns_specification_early_file,columns_specification_late_file)
-  #There are two kinds of files, t
+  #Validate columns in the file, that they're as expected
+  #Should be one of 2 possible column specs
+  cols_spec<- readr::spec_table( thisFile  )
   
+  isEarlyFileWithoutSession<- identical(cols_spec, columns_spec_early_file_without_session)
+  isEarlyFile<- identical(cols_spec, columns_spec_early_file_with_session)
+  isLaterFile<- identical(cols_spec, columns_spec_late_file)
   
-  rawDataLoad$exp <- expFolder
-  message(colnames(rawDataLoad))
-  
-  numTrials<- length(rawDataLoad$trialnum)
-  msg=''
-  rawDataThis<- rawDataLoad
-}
-#numLongFramesAfterFixation numLongFramesAfterCueexp
-
-
-
-
-removeFirstTrialIfOdd = FALSE
-if (numTrials %% 2 ==1) {
-  msg=paste0(" Odd number of trials (",numTrials,"); was session incomplete, or extra trial at end?")  
-  if (removeFirstTrialIfOdd) {
-    rawDataThis <- subset(rawDataThis, !trialnum %in% c(0))
-    cat("\tRemoved first trial- assuming it's a repeat")
+  if (!isEarlyFileWithoutSession && !isEarlyFile && !isLaterFile) {
+    stop( paste0("File,",thisFile," is not in any of the three formats that I know about") )
   }
-}
-if (rawDataThis$file[1] == "WN_26May2015_13-44.txt") { #Will's first session and needed practice,
-  rawDataThis <- subset(rawDataThis, trialnum > 7) #so omit first several trials
-} 
-cat(paste0(", now contains ",length(rawDataThis$trialnum)," trials ",msg))
-if (expi==1 & i==1 & j==1) { #first file of the first subject
-  rawData<- rawDataThis
-} else {  #not the first file of the first subject, so combine it with previously-loaded data
-  prevColNames<- colnames(rawData)
-  newCols <- setdiff( colnames(rawDataThis),prevColNames )
-  oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
-  if (length(newCols) >0) {
-    cat( "newCols are:")
-    print( paste(newCols,collapse=','))
-    for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
-      newCol = newCols[n]
-      rawData[,newCol] <- NA 
-      #if (is.numeric(rawDataThis[,newCol]))   #This seems too risky, might forget have -999 values
-      #  rawData[,newCol] <- -999 #dummy value
+
+  if (!("session" %in% colnames(rawDataThis))) {
+    rawDataThis$session<- NA
+  } 
+  if (!("numLongFramesAfterFixation" %in% colnames(rawDataThis))) {
+    rawDataThis$numLongFramesAfterFixation<- NA
+  } 
+  if (!("numLongFramesAfterCue" %in% colnames(rawDataThis))) {
+    rawDataThis$numLongFramesAfterCue<- NA
+  } 
+  if (!("fixatnPeriodFrames" %in% colnames(rawDataThis))) {
+    rawDataThis$fixatnPeriodFrames<- NA
+  } 
+
+  #From the information I added during pre-parsing of the files list, add those columns
+  #Such as the subject ID and session to each dataframe as go through it
+  #IDnum and sessionNum
+  rawDataThis$IDnum <- thisRow$IDnum
+  rawDataThis$sessionNum <- thisRow$sessionNum
+  rawDataThis$comment <- thisRow$comment
+  
+  
+  #Delete subject because it contains their first initial
+  rawDataThis$subject <- NULL
+
+  removeFirstTrialIfOdd = FALSE #This was added because in previous programs, somehow there was an odd trial some of the time
+  if (numTrials %% 2 ==1) {
+    msg=paste0(" Odd number of trials (",numTrials,"); was session incomplete, or extra trial at end?")  
+    if (removeFirstTrialIfOdd) {
+      rawDataThis <- subset(rawDataThis, !trialnum %in% c(0))
+      cat("\tRemoved first trial- assuming it's a repeat")
     }
   }
-  if (length(oldColsNotInNew) >0)
-    for (n in 1:length(oldColsNotInNew)) { #add old col to new data.frame that doesn't have it
-      if (n==1) {
-        cat("Adding to new data the old columns:")
-        print( paste(oldColsNotInNew,collapse=',') )
+  
+  #If it's the first file of the first subject, start the big tibble
+  if (i==1) { #first file of the first subject
+    rawData<- rawDataThis
+  } else {  #not the first file, so combine it with previously-loaded data
+    prevColNames<- colnames(rawData)
+    newCols <- setdiff( colnames(rawDataThis),prevColNames )
+    #There should be no newCols thanks to my checking the format above
+    oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
+    if (length(newCols) >0) {
+      message( paste("newCols in",thisRow$fname,"and they are:") )
+      print( paste(newCols,collapse=','))
+      for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
+        newCol = newCols[n]
+        rawData[,newCol] <- NA 
+        #if (is.numeric(rawDataThis[,newCol]))   #This seems too risky, might forget have -999 values
+        #  rawData[,newCol] <- -999 #dummy value
       }
-      oldCol = oldColsNotInNew[n]
-      rawDataThis[,oldCol]<- NA #dummy value
-      #if (is.numeric(rawData[,oldCol]))  #seems too risky- might forget it is -999
-      #  rawDataThis[,oldCol] <- -999 #dummy value
     }
-  #Try to merge new data file with already-loaded
-  colnamesNew <- colnames(rawDataThis)
-  colnamesOld <- colnames(rawData)
-  #colnamesNewMsg <- paste(colnamesNew,collapse=",")
-  #colnamesOldMsg <- paste(colnamesOld,collapse=",")
-  #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
-  if ( length(setdiff(colnamesNew,colnamesOld)) >0 )
-    writeLines( paste('New columns not in old are ', setdiff(colnamesNew,colnamesOld)) )
-  tryCatch( rawData<-rbind(rawData,rawDataThis), #if fail to bind new with old,
-            error=function(e) { #Give feedback about how the error happened
-              cat(paste0("Tried to merge but error:",e))
-              colnamesNewFile <- colnames(rawDataThis)
-              colnamesOldFiles <- colnames(rawData)
-              #colnamesNewFileMsg <- paste(colnamesNewFile,collapse=",")
-              #colnamesOldFilesMsg <- paste(colnamesOldFiles,collapse=",")
-              #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
-              #c( 'New cols: ', setdiff(colnamesNewFile,colnamesOldFiles) )
-              newCols <- setdiff(colnamesNewFile,colnamesOld)
-              oldColsNotInNew<- setdiff(colnamesOldFiles,colnamesNew)
-              if (length(newCols)>0) {
-                writeLines( paste('New cols not in old: ', paste(newCols,collapse=",") ) ) 
-              }
-              writeLines( paste('Old cols not in new file: ', paste(oldColsNotInNew,collapse=",") ) )        
-              stop(paste0("ERROR merging, error reported as ",e))
-            } 
-            
-            
-            
+    if (length(oldColsNotInNew) >0)
+      for (n in 1:length(oldColsNotInNew)) { #add old col to new data.frame that doesn't have it
+        if (n==1) {
+          message( paste("Old columns not in this new file",thisRow$fname,"are:") )
+          print( paste(oldColsNotInNew,collapse=',') )
+        }
+        oldCol = oldColsNotInNew[n]
+        rawDataThis[,oldCol]<- NA #dummy value
+        #if (is.numeric(rawData[,oldCol]))  #seems too risky- might forget it is -999
+        #  rawDataThis[,oldCol] <- -999 #dummy value
+      }
+    #Try to merge new data file with already-loaded
+    colnamesNew <- colnames(rawDataThis)
+    colnamesOld <- colnames(rawData)
+    #colnamesNewMsg <- paste(colnamesNew,collapse=",")
+    #colnamesOldMsg <- paste(colnamesOld,collapse=",")
+    #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+    if ( length(setdiff(colnamesNew,colnamesOld)) >0 )
+      writeLines( paste('New columns not in old are ', setdiff(colnamesNew,colnamesOld)) )
+    tryCatch( rawData<-rbind(rawData,rawDataThis), #if fail to bind new with old,
+              error=function(e) { #Give feedback about how the error happened
+                cat(paste0("Tried to merge but error:",e))
+                colnamesNewFile <- colnames(rawDataThis)
+                colnamesOldFiles <- colnames(rawData)
+                #colnamesNewFileMsg <- paste(colnamesNewFile,collapse=",")
+                #colnamesOldFilesMsg <- paste(colnamesOldFiles,collapse=",")
+                #writeLines( paste('colnamesNew=',colnamesNewMsg,'\n colnamesOld=', colnamesOldMsg))
+                #c( 'New cols: ', setdiff(colnamesNewFile,colnamesOldFiles) )
+                newCols <- setdiff(colnamesNewFile,colnamesOld)
+                oldColsNotInNew<- setdiff(colnamesOldFiles,colnamesNew)
+                if (length(newCols)>0) {
+                  writeLines( paste('New cols not in old: ', paste(newCols,collapse=",") ) ) 
+                }
+                writeLines( paste('Old cols not in new file: ', paste(oldColsNotInNew,collapse=",") ) )        
+                stop(paste0("ERROR merging, error reported as ",e))
+              } 
+    )
+} 
+}
+
+length(unique(rawData$subject))
 
 
 
