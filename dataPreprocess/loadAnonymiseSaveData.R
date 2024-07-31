@@ -81,8 +81,7 @@ datafiles<- rows_delete( datafiles, tibble(fname=c("S392_2_17May2024_11-42.tsv")
 #Add comment to anomalous run
 datafiles<- datafiles %>% 
   mutate(comment = ifelse(str_starts(fname,"M32"),
-       "skipped practice trial, because practice.py was not able to open at this time. Did visual acuity and intelligence firsts before doing any trials. 
-", comment) )
+       "skipped practice trial, because practice.py was not able to open at this time. Did visual acuity and intelligence firsts before doing any trials.", comment) )
 
 #Add comment to anomalous run
 datafiles<- datafiles %>% 
@@ -267,8 +266,8 @@ EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix"))
 grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
 noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
 if ( length( which(noSessionID) ) ) {
-  message("The following files are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
-  EDFfiles$name[ noSessionID ]
+  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
+  cat(EDFfiles$name[ noSessionID ]); cat("\n")
 }
 EDFfiles$noSessionID <- noSessionID
 
@@ -349,6 +348,7 @@ message( paste(nrow(joined),"files total, of which",
 #Maybe the only thing to do is create a sessionNum column that assigns 1,2,3 to the a,b,cs
 
 #Create a sessionNum column that assigns 1,2,3 to the a,b,cs
+#https://stackoverflow.com/questions/78802310/why-does-this-create-an-nas-introduced-by-coercion-warning?noredirect=1#comment138937096_78802310
 joined<- joined %>% rowwise() %>%
   mutate(sessionNum = case_when(
     tolower(session) == "a" ~ 1,
@@ -359,7 +359,6 @@ joined<- joined %>% rowwise() %>%
     tolower(session) == "3" ~ 3,
     TRUE ~ -999  
   ))
-
 
 #there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
 #Josh says the later one is the third session
@@ -396,6 +395,10 @@ lateFile<- "D61_a_25Jun2024_11-12.tsv"
 columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithoutSessionColumn)     )
 columns_spec_early_file_with_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
 columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
+
+#Debug why one with comment ends up with just 53 rows
+#thisRow<- joined %>% filter(fname=="M321_1_10May2024_13-43.tsv")
+#Problem seems to be that the comment has a newline in it, which of course screws things up.
 
 #Read all the behavioral files in and aggregate them into one massive tibble
 for (i in 1:nrow(joined)) {
@@ -521,7 +524,9 @@ numSessions <- n_groups(  rawData %>% group_by(IDnum,session)
                          )
 perSubjSession<- rawData %>%
   group_by(IDnum,session) %>%
-  filter(row_number()==1) %>% select(EDFmatchExists)
+  filter(row_number()==1) %>%
+  data.frame() %>%    #this is to prevent a adding grouping variables warning https://stackoverflow.com/a/51265245/302378
+  select(EDFmatchExists) 
 numSsWithoutMatchingEDFfile<- sum( perSubjSession$EDFmatchExists ==FALSE )
 message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
                numSsWithoutMatchingEDFfile,"do not have a matching EDF file with a session number."))
@@ -542,7 +547,7 @@ anonymisedMatchingOfDataAndEDF$ID <- NULL
 destination_fname = paste0(destination_fname,"_files_guide.tsv")
 write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
-#Copy all the EDF files over
+#Copy all the EDF files over?
 
 #To get rid of first initial from EDF files, would have to save them with a new name
 #, simply with the first initial stripped
