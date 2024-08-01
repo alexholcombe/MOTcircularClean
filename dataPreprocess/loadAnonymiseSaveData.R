@@ -533,11 +533,10 @@ message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
 
 #Saved anonymised data for loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationName)
-message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
-#save in both R format, and CSV for compatibility
-save(rawData, file = paste(destination_fname,".RData",sep=""))
+#save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
-  
+message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
+
 #Also save all the information about the files in joined,
 # save everything except the filename, because it has the date/time
 anonymisedMatchingOfDataAndEDF<- joined

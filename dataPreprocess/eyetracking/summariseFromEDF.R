@@ -147,3 +147,15 @@ if (VISUALIZE) {
     # better legend titles
     labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]")
 }
+
+#Copied from old code, need to adapt to new eyelinkReader thing
+sanityCheckEyeTracking=TRUE
+if (sanityCheckEyeTracking) {
+  library(ggplot2)
+  h<-ggplot(filter(dat,exp=="circleOrSquare_twoTargets"),
+            aes(x=maxXdev,y=maxYdev,color=file)) + geom_point() +facet_grid(~subject)  #Have a look at fixation positions
+  quartz("circleOrSquare_twoTargets"); show(h)
+  h<-ggplot(filter(dat,exp=="offCenter"),
+            aes(x=maxXdev)) + geom_histogram()+ facet_grid(~subject) #Have a look at fixation positions
+  quartz("offCenter"); show(h)
+}

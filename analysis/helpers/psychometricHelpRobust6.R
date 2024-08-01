@@ -503,7 +503,6 @@ makeMyMinMaxWorstCaseCurves<- function(myPlotCurve) {
 }
 
 
-
 threshStatistic= function(df) {	# Wing ADD20101111		
  thresh=mean(df$thresh)
  sethresh=qnorm(0.975)*sd(df$thresh)/sqrt(as.numeric(length(df$thresh)))

@@ -1,4 +1,4 @@
-checkCombosOccurEqually<- function(df,colNames,dropZeros=FALSE) {
+checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
 	#in data.frame df, check whether the factors in the list colNames reflect full factorial design (all combinations of levels occur equally often)
 	#
 	#dropZeros is useful if one of the factors nested in the others. E.g. testing different speeds for each level of    
@@ -15,24 +15,41 @@ checkCombosOccurEqually<- function(df,colNames,dropZeros=FALSE) {
 		t<- t[t!=0]   
 	}           
 	colNamesStr <- paste(colNames,collapse=",")
-	if ( length(unique(t)) == 1 ) { #if fully crossed, all entries in table should be identical (all combinations occur equally often)
-		  print(paste(colNamesStr,"fully crossed- each combination occurred",unique(t)[1],'times'))
-		  ans <- TRUE
+	
+	if ( length(frequencies) == 1 ) { 
+	  print(paste(colNamesStr,"fully crossed- each combination occurred",unique(t)[1],'times'))
+	  ans <- TRUE
+	} else {
+	  print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),'distinct repetition numbers.'  ))
+	  ans <- FALSE
+	}	
+	
+	if (tolerance) {
+	  #if fully crossed, all entries in table should be identical (all combinations occur equally often)
+	  frequenciesOfCombos <- unique(t)
+	  freq <- frequenciesOfCombos - mean(frequenciesOfCombos)
+	  percentDifferentFromMean <- freq / mean(frequenciesOfCombos)
+	  untolerable <- sum(which(percentDifferentFromMean > tolerance))
+	  if (untolerable) {
+	    print( paste0("And these differences exceed the tolerance of",tolerance) )
+	    ans <- FALSE
 	  } else {
-		  print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),'distinct repetition numbers.'  ))
-		  ans <- FALSE
-	  }	
+	    print( paste("These differences do not exceed the tolerance of",tolerance) )
+	    ans <- TRUE
+	  }
+	}
+	
 	return(ans)
 }
 
 
-# # checkAllCombosOccurEquallyOften(dat, c("numObjects","numTargets","ringToQuery") )
+# # checkAllCombosOccurEqually(dat, c("numObjects","numTargets","ringToQuery") )
 
-# checkAllCombosOccurEquallyOften(dat, c("numObjects","numTargets") )
+# checkAllCombosOccurEqually(dat, c("numObjects","numTargets") )
 
-# checkAllCombosOccurEquallyOften(dat, c("numTargets","ringToQuery") )
+# checkAllCombosOccurEqually(dat, c("numTargets","ringToQuery") )
 
-# checkAllCombosOccurEquallyOften(dat, c("numObjects","numTargets","speed") ) #not counterbalanced (speed nested)
+# checkAllCombosOccurEqually(dat, c("numObjects","numTargets","speed") ) #not counterbalanced (speed nested)
 
 # #If instead of using raw speed, I rank the speed within each numObjects*numTargets, then from that perspective everything should
 # #be perfectly counterbalanced, because each numObjects*numTargets combination has the same number of speeds tested
