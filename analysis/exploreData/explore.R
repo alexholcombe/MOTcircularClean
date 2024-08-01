@@ -11,52 +11,55 @@ dat<- readr::read_tsv( file.path(dataDir,expName,anonDataFile),  show_col_types=
 dat$correct <- (dat$orderCorrect==3)
 dat$correct<- as.numeric(dat$correct)
 
+#Make simpler names of variables for graphs for nicer plot labels, and make them factors
+# for better plotting.
+dat<- dat %>% rename(objects = objects) %>% mutate(objects = as.factor(objects))
+dat<- dat %>% rename(targets = targets) %>% mutate(targets = as.factor(targets))
+
+
 library(devtools) 
 library(tidyverse)
 install_github('danilinares/quickpsy')
 library(quickpsy)
 
+#Use geom_smooth to do probabilities moving average
+#https://stats.oarc.ucla.edu/r/faq/how-can-i-explore-different-smooths-in-ggplot2/
+gg<- ggplot(dat %>% filter(IDnum<99),
+            aes(x=speed,y=correct,color=objects,linetype=targets,#shape=targets
+            ) ) + 
+  geom_point(size=.2) +
+  geom_smooth(method=stats::loess, se=F, formula = 'y~x',
+              method.args=list(degree=0,span=.6)) + #degree = zero makes it into a moving average
+  facet_wrap("IDnum")
+
+show(gg)
+quartz(tit); show(gg)
+
+#Different custom stat_smooth models
+#https://stats.oarc.ucla.edu/r/faq/how-can-i-explore-different-smooths-in-ggplot2/
+
+
+
+
 # datDani$speed = -1*datDani$speed
 tit<- paste0("youngOld","vanilla")
 #Create decreasing function to fit
 negCumNormal<-function(x,p) { cum_normal_fun(-x,p) }
-#fit <- quickpsy(dat, speed, correct, grouping = c("IDnum", "numTargets"))
+#fit <- quickpsy(dat, speed, correct, grouping = c("IDnum", "targets"))
 
 datThis <- dat %>% filter(IDnum<26)
 bootstrap = 'none' #'parametric','nonparametric'
-fitCondSubj <- quickpsy(datThis, speed, correct, grouping = c("numTargets","IDnum","numObjects"), 
+fitCondSubj <- quickpsy(datThis, speed, correct, grouping = c("targets","IDnum","objects"), 
                         bootstrap=bootstrap, xmin=.00, xmax=2.1,
                         fun=negCumNormal, guess=0.5, parini = c(1.5,10))
 plot1 <- plotcurves(fitCondSubj) + theme_bw()
 #quartz(tit);
 show(plot1)
 
-ggplot(dat %>% filter(IDnum<26),
-       aes(x=speed,y=correct,color=factor(numObjects),shape=factor(numTargets),linetype=factor(numTargets)) ) + 
-  geom_point() +
-  stat_smooth(method="glm", method.args = list(family=binomial), se=F) +
-  facet_wrap("IDnum")
 
-ggplot(dat %>% filter(IDnum<26),
-       aes(x=speed,y=correct,color=factor(numObjects),shape=factor(numTargets),linetype=factor(numTargets)) ) + 
-  geom_point() +
-  stat_smooth(method="glm", family="binomial", se=F) +
-  facet_wrap("IDnum")
+  
 
 
-
-ggplot(datThis,
-       aes(x=speed,y=correct,color=factor(numObjects),shape=factor(numTargets),linetype=factor(numTargets)) ) + 
-  geom_point() +
-  geom_smooth(se=FALSE,span=4) +
-  facet_wrap("IDnum")
-
-
-
-ggplot(datThis,aes(x=speed,y=correct)) + 
-  geom_point(aes(color=factor(numObjects), shape=factor(numTargets))) +
-  geom_smooth() +
-  facet_wrap("IDnum")
 
 ggplot2( ) geom_line(data = fit$curves, aes(x = x, y = y, group = factor(ecc)), 
           #            color = 'black') +
@@ -358,7 +361,7 @@ meanThreshold<-function(df) {
   df= data.frame(thresh)
   return(df)
 }
-factorsPlusSubject=c("numObjects","subject","direction","ecc","device")
+factorsPlusSubject=c("objects","subject","direction","ecc","device")
 E2threshes<- ddply(E2, factorsPlusSubject,meanThreshold) #average over trialnum,startSpeed
 #plot
 tit<-"E2threshesSpeed"
@@ -366,7 +369,7 @@ quartz(title=tit,width=2.8,height=3.1) #create graph of thresholds
 E2threshes$eccentricity<- as.factor(E2threshes$ecc)
 #reorder device so that legend aligns with height of data points
 E2threshes$device <- factor(E2threshes$device, levels = unique(E2threshes$device)[2:1])
-g=ggplot(E2threshes, aes(x=numObjects, y=thresh, fill=device, shape=eccentricity))
+g=ggplot(E2threshes, aes(x=objects, y=thresh, fill=device, shape=eccentricity))
 dodgeAmt=0.35
 SEerrorbar<-function(x){ SEM <- sd(x) / (sqrt(length(x))); data.frame( y=mean(x), ymin=mean(x)-SEM, ymax=mean(x)+SEM ) }
 g<-g+ stat_summary(fun.data="SEerrorbar",geom="point",size=2.5,position=position_dodge(width=dodgeAmt))
