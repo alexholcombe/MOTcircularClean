@@ -9,7 +9,7 @@ factorsForBreakdown<-unlist(factorsForBreakdown) #ggplot doesn't like lists
 source('helpers/psychometricHelpRobust6.R') #load my custom version of binomfit_lims
 
 varyLapseRate = FALSE
-#global variables needed by psychometricGgplotHelpRobust.R
+#Set global variables needed by psychometricGgplotHelpRobust.R
 if (varyLapseRate) { lapseMinMax= c(0,0.05) }  else  #range of lapseRates to try for best fit
 	{ lapseMinMax = c(0.01,0.01) }
 chanceRate=.5
@@ -36,7 +36,9 @@ if (!"subject" %in% factorsForBreakdown) {
 
 #fit psychometric functions to data ########################################
 initialMethod<-"brglm.fit"  # "glmCustomlink" #  
+
 getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
+
 getFitParmsPrintProgress <- function(df) {  #So I can see which fits yielded a warning, print out what was fitting first.
   cat("Finding best fit (calling fitParms) for")
   for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line

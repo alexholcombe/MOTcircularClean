@@ -38,7 +38,7 @@ quartz(tit); show(gg)
 #Different custom stat_smooth models
 #https://stats.oarc.ucla.edu/r/faq/how-can-i-explore-different-smooths-in-ggplot2/
 
-gg<- ggplot(dat %>% filter(IDnum<99),
+gg<- ggplot(dat %>% filter(IDnum<29),
             aes(x=speed,y=correct,color=objects,linetype=targets,#shape=targets
             ) ) + 
   geom_point(size=.2) +
@@ -48,15 +48,13 @@ gg<- ggplot(dat %>% filter(IDnum<99),
     se = F
   ) + facet_wrap("IDnum") + 
     theme_bw() + theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())
-show(gg)
-quartz(tit); show(gg)
-
 
 #Can't convert factor to numeric without a custom function, see https://stackoverflow.com/a/22701462/302378
 as.double.factor <- function(x) {as.numeric(levels(x))[x]} 
 dat$chance <- 1 / as.double.factor(dat$objects)
-  
-gg+ geom_hline(mapping=aes(yintercept=chance),lty=2)  #draw horizontal line for chance performance
+gg<-gg+ geom_hline(mapping=aes(yintercept=chance,color=objects),lty=2)  #draw horizontal line for chance performance
+show(gg)
+#quartz(tit); show(gg)
 
 # datDani$speed = -1*datDani$speed
 tit<- paste0("youngOld","vanilla")

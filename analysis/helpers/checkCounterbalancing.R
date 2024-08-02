@@ -15,18 +15,21 @@ checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
 		t<- t[t!=0]   
 	}           
 	colNamesStr <- paste(colNames,collapse=",")
+
+	#if fully crossed, all entries in table should be identical (all combinations occur equally often)
+	frequenciesOfCombos <- unique(t)
 	
-	if ( length(frequencies) == 1 ) { 
+	if ( length(frequenciesOfCombos) == 1 ) { 
 	  print(paste(colNamesStr,"fully crossed- each combination occurred",unique(t)[1],'times'))
 	  ans <- TRUE
 	} else {
-	  print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),'distinct repetition numbers.'  ))
+	  print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),
+	              'distinct repetition numbers:'  ))
+	  print(frequenciesOfCombos)
 	  ans <- FALSE
 	}	
 	
 	if (tolerance) {
-	  #if fully crossed, all entries in table should be identical (all combinations occur equally often)
-	  frequenciesOfCombos <- unique(t)
 	  freq <- frequenciesOfCombos - mean(frequenciesOfCombos)
 	  percentDifferentFromMean <- freq / mean(frequenciesOfCombos)
 	  untolerable <- sum(which(percentDifferentFromMean > tolerance))

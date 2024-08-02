@@ -1,9 +1,9 @@
 library(splines)
 library(ggplot2) 
 library(boot) 
-library(modelfree)
+#library(modelfree)
 library(brglm)
-library(plyr)
+#library(plyr) #not good to load plyr after dplyt
 #library(Cairo) #for windows
 #Alex Holcombe, started November 2010
 #previous versions of this file were called things like lapseRateSearchDataSeparate
@@ -176,7 +176,7 @@ makeParamFit <- function(iv, lapseMinMax, initialMethod, verbosity=0) {
     else if (iv=="tf")
       sumry = ddply(df,.(tf),summarizNumTrials) #also calculates chanceRate
   	#curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
-	returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
+	  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
   	fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
   	#print( paste('fitParms=',fitParms) )
   	return( fitParms )
@@ -503,26 +503,26 @@ makeMyMinMaxWorstCaseCurves<- function(myPlotCurve) {
 }
 
 
-threshStatistic= function(df) {	# Wing ADD20101111		
- thresh=mean(df$thresh)
- sethresh=qnorm(0.975)*sd(df$thresh)/sqrt(as.numeric(length(df$thresh)))
- u95thresh=thresh+sethresh
- l95thresh=thresh-sethresh
- meanSlope=mean(df$slopeAtThresh)
- seSlope=qnorm(0.975)*sd(df$slopeAtThresh)/sqrt(as.numeric(length(df$slopeAtThresh)))
- u95Slope=meanSlope+seSlope
- l95Slope=meanSlope-seSlope
- dg=cbind(thresh,meanSlope,sethresh,seSlope,u95thresh,l95thresh,u95Slope,l95Slope)
- return( dg ) 
-}
-
-threshStatisticNum= function(df) {	# Wing ADD20101111		
- thresh=mean(df$thresh)
- sethresh=qnorm(0.975)*sd(df$thresh)/sqrt(as.numeric(length(df$thresh)))
- u95thresh=thresh+sethresh
- l95thresh=thresh-sethresh
- dg=cbind(thresh,sethresh,u95thresh,l95thresh)
- return( dg ) 
-}
+# threshStatistic= function(df) {	# Wing ADD20101111		
+#  thresh=mean(df$thresh)
+#  sethresh=qnorm(0.975)*sd(df$thresh)/sqrt(as.numeric(length(df$thresh)))
+#  u95thresh=thresh+sethresh
+#  l95thresh=thresh-sethresh
+#  meanSlope=mean(df$slopeAtThresh)
+#  seSlope=qnorm(0.975)*sd(df$slopeAtThresh)/sqrt(as.numeric(length(df$slopeAtThresh)))
+#  u95Slope=meanSlope+seSlope
+#  l95Slope=meanSlope-seSlope
+#  dg=cbind(thresh,meanSlope,sethresh,seSlope,u95thresh,l95thresh,u95Slope,l95Slope)
+#  return( dg ) 
+# }
+# 
+# threshStatisticNum= function(df) {	# Wing ADD20101111		
+#  thresh=mean(df$thresh)
+#  sethresh=qnorm(0.975)*sd(df$thresh)/sqrt(as.numeric(length(df$thresh)))
+#  u95thresh=thresh+sethresh
+#  l95thresh=thresh-sethresh
+#  dg=cbind(thresh,sethresh,u95thresh,l95thresh)
+#  return( dg ) 
+# }
 
 
