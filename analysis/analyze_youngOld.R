@@ -71,8 +71,11 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #The following file returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
   source('analyzeMakeReadyForPlot.R') 
   fitParms$iv<- iv
-  fitParmsAll<-rbind(fitParmsAll,fitParms)
-  source('plotIndividDataWithPsychometricCurves.R')
+  source('individDataWithPsychometricCurves.R') #Just for plotIndividDataAndCurves function
+  factorsForPlot <- tibble(colorF = targets, colF = objects, rowF = subject)
+  plotIndividDataAndCurves(expName,datAnalyze,psychometricCurves,
+                           factorsForPlot,xmin=NULL,xmax=NULL) 
+    
   source("extractThreshes.R") #provides threshes
   thrAll<-rbind(thrAll,threshes)
   #below is old way, saving separate threshes

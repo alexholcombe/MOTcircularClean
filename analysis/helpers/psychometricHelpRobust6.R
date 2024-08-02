@@ -172,9 +172,9 @@ makeParamFit <- function(iv, lapseMinMax, initialMethod, verbosity=0) {
     #so now I have to count number of correct, incorrect trials for each speed
     #assuming there's no other factors to worry about
     if (iv=="speed")
-      sumry = ddply(df,.(speed),summarizNumTrials) #also calculates chanceRate
+      sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chanceRate
     else if (iv=="tf")
-      sumry = ddply(df,.(tf),summarizNumTrials) #also calculates chanceRate
+      sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chanceRate
   	#curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
 	  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
   	fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
@@ -198,7 +198,7 @@ makeParamFitForBoot <- function(chanceRate=0.5,lapseMinMax,verbosity=0) { #defau
     	#assuming there's no other factors to worry about
     	if ( !("speed" %in% names(df)) )
     	  warning("your dataframe must contain speed as an independent variable",immediate.=TRUE)
-	    sumry = ddply(thisData,.(speed),summarizNumTrials)
+	    sumry = plyr::ddply(thisData,plyr::.(speed),summarizNumTrials)
 	    if (verbosity>1) {
 	    	print('sumry='); print(sumry)
 	    }	
@@ -493,8 +493,8 @@ makeMyMinMaxWorstCaseCurves<- function(myPlotCurve) {
   		#have to add lapse rates to this dataframe
   		
   		#print(c('allCombos=',allCombos))
-  		worstCasePsychometrics= adply(allCombos,1,myPlotCurve)  
-  		minmaxCIpsychometrics= ddply(worstCasePsychometrics,.(speed), 
+  		worstCasePsychometrics= plyr::adply(allCombos,1,myPlotCurve)  
+  		minmaxCIpsychometrics= plyr::ddply(worstCasePsychometrics,plyr::.(speed), 
 		     myMinMax<- function(df) { data.frame(lower=min(df$correct),
 		  									       upper=max(df$correct)) } )
 		return(minmaxCIpsychometrics)

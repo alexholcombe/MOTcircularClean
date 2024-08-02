@@ -1,10 +1,7 @@
 #expects datAnalyze, iv, factorsForBreakdownForAnalysis
 if (!exists('factorsForBreakdownForAnalysis'))
 { cat('Need factorsForBreakdownForAnalysis variable. Tells me how to break down data for fitting. I will add subject') }
-#factorsForBreakdownForAnalysis = c('exp','offsetXYring0','leftOrRight')
-factorsForBreakdown<- unname(factorsForBreakdownForAnalysis) #get rid of names just in case, because ggplot will use names
-#if it has them
-factorsForBreakdown<-unlist(factorsForBreakdown) #ggplot doesn't like lists
+factorsForBreakdown<- factorsForBreakdownForAnalysis
 
 source('helpers/psychometricHelpRobust6.R') #load my custom version of binomfit_lims
 
@@ -49,11 +46,21 @@ getFitParmsPrintProgress <- function(df) {  #So I can see which fits yielded a w
 }
 datAnalyze$subject <- factor(datAnalyze$subject)
 
-#tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) #Does this well now, using penalized.deviance to compare across lapse rates
-fitParms <- ddply(datAnalyze, factorsPlusSubject, getFitParmsPrintProgress)
+#Does this well now, using penalized.deviance to compare across lapse rates
+#tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 
+
+#Need plyr for ddply but that is outdated and will screw up dplyr stuff, so load it without overloading
+# so that have to use ::
+fitParms <- plyr::ddply(datAnalyze, factorsPlusSubject, getFitParmsPrintProgress)
 #To-do. Change psychometrics myCurve to accommodate rescaling based on method
 #       Stop setting global variables
-#     Figure out way to pass method thgough to binomfit_limsAlex
+#     Figure out way to pass method through to binomfit_limsAlex
+
+datAnalyze |>
+  group_by(  !!! syms(factorsPlusSubject)  ) |>
+  group_modify(\(d, g) getFitParmsPrintProgress(d))
+
+
 
 #prediction tracking two if only can track one. myPlotCurve then calculates it.
 #use the fitted parameters to get the actual curves
