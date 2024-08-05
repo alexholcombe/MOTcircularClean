@@ -111,8 +111,8 @@ if (TESTME) {
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   #file.exists
   
-  widthPix = 800
-  heightPix = 600
+  widthPix = 1024
+  heightPix = 768
   centralZoneHeightPix = 300 #10
   centralZoneWidthPix = 300 #10
 
@@ -120,36 +120,33 @@ if (TESTME) {
 
 }
 
-VISUALIZE=FALSE
+VISUALIZE=TRUE
 if (VISUALIZE) {
-  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
+  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "S392.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
-  trialnum = 1
+  trialnum = 8
   # extracting fixations and saccades for the first trial
   fixations <- gaze$fixations[gaze$fixations$trial == trialnum, ]
   saccades <- gaze$saccades[gaze$saccades$trial == trialnum, ]
   
   #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
   library(ggplot2)
-  ggplot() +
-    coord_equal( xlim=c(0,widthPix), ylim=c(0,heightPix) ) +
-    
+  gg<- ggplot() +
+    coord_equal( xlim=c(0,2*widthPix), ylim=c(0,2*heightPix) ) +
     # define screen limits and INVERSE y-axis to match Eyelink
     scale_x_continuous(name = "x", limits = gaze$display_coords[c(1, 3)]) +
-    scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
-    
+    #scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
     # draw fixations as circles
     geom_point(data = fixations, aes(x = gavx, y = gavy, size = duration), alpha=0.3) +
-
     # draw saccades as line segments
     geom_segment(data = saccades, aes(x = gstx, y = gsty, xend = genx, yend = geny, color = sttime_rel)) +
-    
     # better legend titles
     labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]")
+  show(gg)
 }
 
 #Copied from old code, need to adapt to new eyelinkReader thing
-sanityCheckEyeTracking=TRUE
+sanityCheckEyeTracking=FALSE
 if (sanityCheckEyeTracking) {
   library(ggplot2)
   h<-ggplot(filter(dat,exp=="circleOrSquare_twoTargets"),

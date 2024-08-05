@@ -72,7 +72,7 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   source('analyzeMakeReadyForPlot.R') 
   fitParms$iv<- iv
   source('individDataWithPsychometricCurves.R') #Just for plotIndividDataAndCurves function
-  factorsForPlot <- tibble(colorF = targets, colF = objects, rowF = subject)
+  factorsForPlot <- tibble(colorF = "targets", colF = "objects", rowF = "subject")
   plotIndividDataAndCurves(expName,datAnalyze,psychometricCurves,
                            factorsForPlot,xmin=NULL,xmax=NULL) 
     
