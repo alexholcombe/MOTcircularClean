@@ -26,9 +26,9 @@ ioHub generic Psychopy eyetracker commands are not recommened but built into Psy
 
 Eyelink recommends [Pastukhov's eyelinkReader R package](https://cran.r-project.org/package=eyelinkReader) for reading EDF files.
 
-Our [installation notes](eyelinkReader_installation.md). 
+Our [installation notes](eyelinkReaderNotes/eyelinkReader_installation.md). 
 
-Our [usage notes](eyelinkReader_usage.md)
+Our [usage notes](eyelinkReaderNotes/eyelinkReader_usage.md)
 
 There are other, older packages in this [longer list](https://www.sr-research.com/support/thread-7769.html), including https://github.com/dahtah/eyelinker. 
 
