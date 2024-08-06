@@ -20,65 +20,83 @@ trialDurTotalLowerLimit = maxTrialDur - max(trackVariableInterv)
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
 EDFfolder<- file.path("..","..","dataRaw","youngOld","EDF")
 EDFfiles <- list.files(path=EDFfolder)  # c("A20b.EDF","S451.EDF","E401.EDF","M433.EDF","M471.EDF")
+items_to_remove <- ("j5.EDF",  #Loretta said it's nothing and it's only one trial
+                    "tea.EDF", "tema.EDF", "temp.EDF")
+  
+EDFfiles <- setdiff(EDFfiles, items_to_remove)
+
 #Around 29 May, we switched from using 1,2,3 for session number to a,b,c
 fnames<-EDFfiles
 fixatns<- data.frame(); blinks<- data.frame()
 
-#Try to read in all the files
-failedFiles<-c()
-for (f in 1:length(fnames)) {
-  EDFname <- file.path(EDFfolder, fnames[f])
-  #some EDF files cannot be read, so need to catch that error and omit the file
-  succeeded<- tryCatch(
-    {
-      EDF<- eyelinkReader::read_edf(EDFname, import_samples = TRUE,
-                                    sample_attributes = c('time', 'gx', 'gy'))
-      TRUE
-    },
-    error = function(cond) {
-      message( paste(EDFname," yielded an error from read_edf:") )
-      message( conditionMessage(cond) )
-      # Choose a return value in case of error
-      FALSE
-    },
-    warning = function(cond) {
-      message(paste("Trying", EDFname," gave a warning from read_edf:"))
-      message( conditionMessage(cond) )
-      # Choose a return value in case of warning
-      TRUE
-    },
-    finally = message("Processed", EDFname)
-  )
-  if (!succeeded) {
-    failedFiles <- c(failedFiles,EDFname)
-  }
-  if (succeeded) {
-    EDF$fixations$fname <- fnames[f]
-    EDF$blinks$fname <- fnames[f]
-    if (substr(fnames[1],5,8)!=".EDF") {
-      warning("File name should be eight characters and end with .EDF")
+if (file.exists("fixatns.tsv")) { #Assume this means already read in all EDF files and saved them
+  readInEDFfiles<- FALSE
+  library(readr)
+  fixatns<- readr::read_tsv("fixatns.tsv")
+} else { #Try to read in all the EDF files
+  failedFiles<-c()
+  for (f in 1:length(fnames)) {
+    EDFname <- file.path(EDFfolder, fnames[f])
+    #some EDF files cannot be read, so need to catch that error and omit the file
+    succeeded<- tryCatch(
+      {
+        EDF<- eyelinkReader::read_edf(EDFname, import_samples = TRUE,
+                                      sample_attributes = c('time', 'gx', 'gy'))
+        TRUE
+      },
+      error = function(cond) {
+        message( paste(EDFname," yielded an error from read_edf:") )
+        message( conditionMessage(cond) )
+        # Choose a return value in case of error
+        FALSE
+      },
+      warning = function(cond) {
+        message(paste("Trying", EDFname," gave a warning from read_edf:"))
+        message( conditionMessage(cond) )
+        # Choose a return value in case of warning
+        TRUE
+      },
+      finally = message("Processed", EDFname)
+    )
+    if (!succeeded) {
+      failedFiles <- c(failedFiles,EDFname)
     }
-    #parse out session
-    IDandSession<- substr(fnames[f],1,4)
-    ID<- substr(IDandSession,1,3)
-    EDF$fixations$ID <- ID; EDF$blinks$ID<- ID
-    session <- substr(IDandSession,4,4)
-    if (grepl("^[a-z]$", session)) #session is lower-case letter
-      session<- match( tolower(session), letters) #returns 1 for 'a', 2 for 'b', etc.
-    
-    EDF$fixations$session<- session
-    EDF$blinks$session<- session
-    fixatns<- rbind(fixatns, EDF$fixations)
-    blinks<- rbind(blinks, EDF$blinks)
+    if (succeeded) {
+      EDF$fixations$fname <- fnames[f]
+      EDF$blinks$fname <- fnames[f]
+      if (substr(fnames[1],5,8)!=".EDF") {
+        warning("File name should be eight characters and end with .EDF")
+      }
+      #Extract date from preamble so can optionally sort by date
+      dateString<-EDF$preamble[1] #E.g. "DATE: Mon Jun 17 21:00:03 2024"
+      dateString<- substr(dateString,11,99) #"Jun 17 21:00:03 2024"
+      date<- parse_date_time(dateString, orders = "b d H:M:S Y", tz="Etc/GMT-10")
+      EDF$fixations$date<- date
+      #parse out session
+      IDandSession<- substr(fnames[f],1,4)
+      ID<- substr(IDandSession,1,3)
+      EDF$fixations$ID <- ID; EDF$blinks$ID<- ID
+      session <- substr(IDandSession,4,4)
+      if (grepl("^[a-z]$", session)) #session is lower-case letter
+        session<- match( tolower(session), letters) #returns 1 for 'a', 2 for 'b', etc.
+      
+      EDF$fixations$session<- session
+      EDF$blinks$session<- session
+      fixatns<- rbind(fixatns, EDF$fixations)
+      blinks<- rbind(blinks, EDF$blinks)
+    }
   }
-}
+
+  if (length(failedFiles)) {
+    message("Failed to read files:",failedFiles)
+  }
+  
+  library(readr)
+  readr::write_tsv(fixatns,"fixatns.tsv") #In case want to use later without having to re-read all the files
+  readr::write_tsv(blinks,"blinks.tsv") #In case want to use later without having to re-read all the files
+} #file exists
 
 table(fixatns$ID,fixatns$session)
-if (length(failedFiles)) {
-  message("Failed to read files:",failedFiles)
-}
-library(readr)
-readr::write_tsv(fixatns,"fixatns.tsv")
 
 #label pilot participants
 pilotParticipants <- c("A12", "M13", "A14", "J16", "D15", "N17", "A18", "J19", 
@@ -86,14 +104,58 @@ pilotParticipants <- c("A12", "M13", "A14", "J16", "D15", "N17", "A18", "J19",
 fixatns$pilot <- fixatns$ID %in% pilotParticipants
 blinks$pilot <- blinks$ID %in% pilotParticipants
 
-#BLINKS
+avgFix<- fixatns %>% group_by(ID) %>% 
+  summarise(meanX = mean(gavx), meanY = mean(gavy), date=first(date))
+
+#Change date variable to ordinal rank to avoid exact timestamps (privacy concern)
+
+#Calculate whether in second 20% of subjects run, to break up graphs by first versus second bit
+avgFix<- avgFix |> mutate(dateHalf =    date > quantile(avgFix$date,probs=c(.8)) )
+
+#Plot
+avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  
+                          geom_point() +geom_text(hjust=0, vjust=0)
+commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600), 
+                                       heightPix=c(600,768,982,900,1200),
+                                       resolution=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
+av<-avgEachSubjectG + geom_point(data=commonScreenResolutions, 
+                                 aes(x=widthPix/2,y=heightPix/2,label=NULL,color=resolution)) + 
+  ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions')
+
+
+av <- av + facet_grid(.~dateHalf)
+show(av)
+
+avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  geom_point() +geom_text(hjust=0, vjust=0)
+commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600), 
+                                       heightPix=c(600,768,982,900,1200),
+                                       label=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
+av<-avgEachSubjectG + geom_point(data=commonScreenResolutions, 
+                             aes(x=widthPix/2,y=heightPix/2,color=label)) +
+                ggtitle('Average fixation location of each participant, with centers of different screen resolutions in color')
+show(av)
+
+deviationFromScreenCenter <- avgFix  -    data.frame( meanX=widthPix/2, meanY= heightPix/2)
+if ( any(abs(deviationFromScreenCenter) >40) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
+  msg = paste0("Average fixation location should be near screen center (",widthPix/2,",",heightPix/2,") but")
+  msg=paste0(msg," instead it's (",round(avgFix$meanX,1),",",round(avgFix$meanY,1),") so")
+  msg=paste(msg,"either your screen widthPix, heightPix are wrong, the eyetracker sucked, or participant didn't look near center much")
+  print(msg)
+}
+
+avgFix<- $fixations %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  - 
+  data.frame( meanX=widthPix/2,     meanY= heightPix/2)
+if ( any( abs(avgFix) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
+  msg = paste0("Average fixation location should be near screen center (",widthPix/2,",",heightPix/2,") but")
+  msg=paste0(msg," instead it's (",round(avgFix$meanX,1),",",round(avgFix$meanY,1),") so")
+  msg=paste(msg,"either your screen widthPix, heightPix are wrong, the eyetracker sucked, or participant didn't look near center much")
+  print(msg)
+}
+
+#Plot blink durations per participant. Anytime the eyetracker loses the eyes the parser labels that as a blink!
 blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
   coord_cartesian(xlim=c(0, 500)) + xlab('blink duration (ms)') +
   facet_wrap(vars(ID))
-
-blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
-  xlab('blink duration (ms)') 
-
 
 #Caculate distance from fixation
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )

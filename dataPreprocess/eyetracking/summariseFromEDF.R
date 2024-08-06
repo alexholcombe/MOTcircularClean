@@ -104,7 +104,7 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   return( eachTrial )
 }
 
-TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
+TESTME = FALSE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
 if (TESTME) {
 
   #data(gaze) #to use built-in dataset
@@ -121,7 +121,7 @@ if (TESTME) {
 }
 
 VISUALIZE=TRUE
-if (VISUALIZE) {
+if (TESTME && VISUALIZE) {
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "S392.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
   trialnum = 8
@@ -131,11 +131,11 @@ if (VISUALIZE) {
   
   #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
   library(ggplot2)
-  gg<- ggplot() +
-    coord_equal( xlim=c(0,2*widthPix), ylim=c(0,2*heightPix) ) +
+  gg<- ggplot() + coord_fixed(ratio=1) +
+    #coord_equal( xlim=c(0,widthPix), ylim=c(0,heightPix) ) + #this interferes with scale_y_reverse somehow
     # define screen limits and INVERSE y-axis to match Eyelink
     scale_x_continuous(name = "x", limits = gaze$display_coords[c(1, 3)]) +
-    #scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
+    scale_y_reverse(name = "y", limits = gaze$display_coords[c(4, 2)]) +
     # draw fixations as circles
     geom_point(data = fixations, aes(x = gavx, y = gavy, size = duration), alpha=0.3) +
     # draw saccades as line segments
@@ -145,14 +145,14 @@ if (VISUALIZE) {
   show(gg)
 }
 
-#Copied from old code, need to adapt to new eyelinkReader thing
-sanityCheckEyeTracking=FALSE
-if (sanityCheckEyeTracking) {
-  library(ggplot2)
-  h<-ggplot(filter(dat,exp=="circleOrSquare_twoTargets"),
-            aes(x=maxXdev,y=maxYdev,color=file)) + geom_point() +facet_grid(~subject)  #Have a look at fixation positions
-  quartz("circleOrSquare_twoTargets"); show(h)
-  h<-ggplot(filter(dat,exp=="offCenter"),
-            aes(x=maxXdev)) + geom_histogram()+ facet_grid(~subject) #Have a look at fixation positions
-  quartz("offCenter"); show(h)
+sanityCheckEyeTracking=TRUE
+if (TESTME && sanityCheckEyeTracking) { #Calculate average fixation event location, should be widthPix/2, heightPix/2
+  avgFix<- gaze$fixations %>% summarise(meanX = mean(gavx), meanY = mean(gavy))
+  deviationFromScreenCenter <- avgFix  -    data.frame( meanX=widthPix/2, meanY= heightPix/2)
+  if ( any(abs(deviationFromScreenCenter) >40) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
+    msg = paste0("Average fixation location should be near screen center (",widthPix/2,",",heightPix/2,") but")
+    msg=paste0(msg," instead it's (",round(avgFix$meanX,1),",",round(avgFix$meanY,1),") so")
+    msg=paste(msg,"either your screen widthPix, heightPix are wrong, the eyetracker sucked, or participant didn't look near center much")
+    print(msg)
+  }
 }
