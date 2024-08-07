@@ -4,11 +4,8 @@ library(ggplot2)
 widthPix = 800; heightPix = 600
 
 #Explore how things went with eyetracking youngOld
-#A20b.EDF shows a bit of drift, plus a lot of eyemovement in fixation period
-#goodFixator<-file.path("dataForTestingOfCode","exampleOfGoodFixator","tema.EDF")
-EDFexample<- file.path("..","..", "dataRaw","MomoLRhemifield","mh11.EDF")
-EDFexample<- file.path("/Users/alex/Downloads/EDF-data/01/0934_05J")
 EDFexample<- file.path("/Users/alex/Downloads/EDF-data/02/1432_05J")
+
 
 
 #EDFexample <- file.path("dataForTestingOfCode", "A20b.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
