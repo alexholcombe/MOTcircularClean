@@ -19,9 +19,11 @@ trialDurTotalLowerLimit = maxTrialDur - max(trackVariableInterv)
 
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
 EDFfolder<- file.path("..","..","dataRaw","youngOld","EDF")
+#EDFfolder<- file.path("EDFmomoTemp")
+
 EDFfiles <- list.files(path=EDFfolder)  # c("A20b.EDF","S451.EDF","E401.EDF","M433.EDF","M471.EDF")
-items_to_remove <- ("j5.EDF",  #Loretta said it's nothing and it's only one trial
-                    "tea.EDF", "tema.EDF", "temp.EDF")
+items_to_remove <- c("j5.EDF", #Loretta said it's nothing and it's only one trial
+                     "tea.EDF", "tema.EDF", "temp.EDF")
   
 EDFfiles <- setdiff(EDFfiles, items_to_remove)
 
@@ -56,7 +58,7 @@ if (file.exists("fixatns.tsv")) { #Assume this means already read in all EDF fil
         # Choose a return value in case of warning
         TRUE
       },
-      finally = message("Processed", EDFname)
+      finally = message("Processed ", EDFname)
     )
     if (!succeeded) {
       failedFiles <- c(failedFiles,EDFname)
@@ -120,7 +122,9 @@ commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600),
                                        resolution=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
 av<-avgEachSubjectG + geom_point(data=commonScreenResolutions, 
                                  aes(x=widthPix/2,y=heightPix/2,label=NULL,color=resolution)) + 
-  ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions')
+  ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions') +
+  theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
+
 
 
 av <- av + facet_grid(.~dateHalf)

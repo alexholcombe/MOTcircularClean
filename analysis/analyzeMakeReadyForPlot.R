@@ -36,12 +36,14 @@ initialMethod<-"brglm.fit"  # "glmCustomlink" #
 
 getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
 
-getFitParmsPrintProgress <- function(df) {  #So I can see which fits yielded a warning, print out what was fitting first.
+#Changed this to work with group_modify
+getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits yielded a warning, print out what was fitting first.
+  #cat("getFitParmsPrintProgress, df=");   print(df)
+  dgg<<-df
   cat("Finding best fit (calling fitParms) for")
-  for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line
-    cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
-  cat("\n")
-  #print( df[1,factorsPlusSubject] ) #one-line commmand, but breaks across lines
+  print(groupvars)
+  #for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line
+  #  cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
   return( getFitParms(df) )
 }
 datAnalyze$subject <- factor(datAnalyze$subject)
@@ -49,16 +51,30 @@ datAnalyze$subject <- factor(datAnalyze$subject)
 #Does this well now, using penalized.deviance to compare across lapse rates
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 
 
-#Need plyr for ddply but that is outdated and will screw up dplyr stuff, so load it without overloading
-# so that have to use ::
-fitParms <- plyr::ddply(datAnalyze, factorsPlusSubject, getFitParmsPrintProgress)
+
+
+#group_modify is the closest thing to deprecated ddply
+fitParms<- datAnalyze |>
+  group_by(  !!! syms(factorsPlusSubject)  ) |>
+  group_modify( getFitParmsPrintProgress )
+
 #To-do. Change psychometrics myCurve to accommodate rescaling based on method
 #       Stop setting global variables
 #     Figure out way to pass method through to binomfit_limsAlex
 
+
+
+#group_modify() replaces each group with the results of .f
+#The first argument is passed .SD,the data.table representing the current group; the second argument is passed .BY, a list giving the current values of the grouping variables. The function should return a list or data.table.
+#For a one parameter function, you can make it work with an anonymous function backslash trick
 datAnalyze |>
   group_by(  !!! syms(factorsPlusSubject)  ) |>
-  group_modify(\(d, g) getFitParmsPrintProgress(d))
+  group_modify(\(df, groupvars)  
+                                as_tibble(is.na(df))  ) #This returns a dataframe with the result of is.na applied to each cell
+
+datAnalyze |>
+  group_by(  !!! syms(factorsPlusSubject)  ) |>
+  group_modify(\(df, groupvars)  getFitParmsPrintProgress(df) )
 
 
 

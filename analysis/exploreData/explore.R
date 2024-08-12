@@ -1,6 +1,6 @@
 #This file analyses anonymized data provided by "loadAnonymiseSaveData.R" in exp-specific directory
-#These are not the ones appropriate for looking at tf limits, which are in "speed-tf-VSS14" folder with separate analysis file
 #Working directory is set hopefully by Rproj file to directory that it's in.
+library(tidyverse)
 
 dataDir<- file.path("..","dataAnonymized")
 expName<- "youngOld"
@@ -13,14 +13,13 @@ dat$correct<- as.numeric(dat$correct)
 
 #Make simpler names of variables for graphs for nicer plot labels, and make them factors
 # for better plotting.
-dat<- dat %>% rename(objects = objects) %>% mutate(objects = as.factor(objects))
-dat<- dat %>% rename(targets = targets) %>% mutate(targets = as.factor(targets))
+dat<- dat %>% rename(objects = numObjects) %>% mutate(objects = as.factor(objects))
+dat<- dat %>% rename(targets = numTargets) %>% mutate(targets = as.factor(targets))
 
-
-library(devtools) 
-library(tidyverse)
-install_github('danilinares/quickpsy')
-library(quickpsy)
+#Calculate chance level
+#Can't convert factor to numeric without a custom function, see https://stackoverflow.com/a/22701462/302378
+as.double.factor <- function(x) {as.numeric(levels(x))[x]} 
+dat$chance <- 1 / as.double.factor(dat$objects)
 
 #Use geom_smooth to do probabilities moving average
 #https://stats.oarc.ucla.edu/r/faq/how-can-i-explore-different-smooths-in-ggplot2/
@@ -31,13 +30,20 @@ gg<- ggplot(dat %>% filter(IDnum<99),
   geom_smooth(method=stats::loess, se=F, formula = 'y~x',
               method.args=list(degree=0,span=.6)) + #degree = zero makes it into a moving average
   facet_wrap("IDnum")
-
+#draw horizontal line for chance performance
+gg<-gg+ geom_hline(mapping=aes(yintercept=chance,color=objects),lty=2)
 show(gg)
-quartz(tit); show(gg)
+tit<-"Loess-smoothed data"
+ggsave(     paste0( file.path("figs",tit), '.png' )      )
 
 #Different custom stat_smooth models
 #https://stats.oarc.ucla.edu/r/faq/how-can-i-explore-different-smooths-in-ggplot2/
 
+#Do logistic regression
+#But shortfalls of logistic regression are:
+# -Minimum is 0 rather than chanceRate
+# -No lapse rate
+# -Not constrained to reach peak value at zero speed
 gg<- ggplot(dat %>% filter(IDnum<29),
             aes(x=speed,y=correct,color=objects,linetype=targets,#shape=targets
             ) ) + 
@@ -48,11 +54,8 @@ gg<- ggplot(dat %>% filter(IDnum<29),
     se = F
   ) + facet_wrap("IDnum") + 
     theme_bw() + theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())
-
-#Can't convert factor to numeric without a custom function, see https://stackoverflow.com/a/22701462/302378
-as.double.factor <- function(x) {as.numeric(levels(x))[x]} 
-dat$chance <- 1 / as.double.factor(dat$objects)
-gg<-gg+ geom_hline(mapping=aes(yintercept=chance,color=objects),lty=2)  #draw horizontal line for chance performance
+#draw horizontal line for chance performance
+gg<-gg+ geom_hline(mapping=aes(yintercept=chance,color=objects),lty=2)  
 show(gg)
 #quartz(tit); show(gg)
 

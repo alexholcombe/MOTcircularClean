@@ -178,7 +178,7 @@ makeParamFit <- function(iv, lapseMinMax, initialMethod, verbosity=0) {
   	#curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
 	  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
   	fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
-  	#print( paste('fitParms=',fitParms) )
+  	print( paste('fitParms=',fitParms) )
   	return( fitParms )
   }
   return (fn2)
