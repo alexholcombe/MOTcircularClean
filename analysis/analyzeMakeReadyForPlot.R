@@ -34,18 +34,6 @@ if (!"subject" %in% factorsForBreakdown) {
 #Fit psychometric functions to data ########################################
 initialMethod<-"brglm.fit"  # "glmCustomlink" #  
 
-# getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
-# getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits yielded a warning, print out what was fitting first.
-#   #cat("getFitParmsPrintProgress, df=");   print(df)
-#   dgg<<-df
-#   cat("Finding best fit (calling fitParms) for")
-#   print(groupvars)
-#   #for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line
-#   #  cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
-#   return( getFitParms(df) )
-# }
-#Above obsolete thanks to group_modify
-
 fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
   #data comes in one row per trial, but binomFit wants total correct, numTrials
   #so now I have to count number of correct, incorrect trials for each speed
@@ -71,38 +59,20 @@ fitParms<- datAnalyze |>
   #Take each group's condition variables as a tibble and add the results of the curve fit
   group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=0)  
 
-
 #Does this well now, using penalized.deviance to compare across lapse rates
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 
-
-
-#group_modify is the closest thing to deprecated ddply
-#group_modify() replaces each group with the results of .f
-#The first argument is passed .SD,the data.table representing the current group; the second argument is passed .BY, a list giving the current values of the grouping variables. The function should return a list or data.table.
-#For a one parameter function, you can make it work with an anonymous function backslash trick
-# datAnalyze |>
-#   group_by(  !!! syms(factorsPlusSubject)  ) |>
-#   group_modify(\(df, groupvars)  
-#                                 as_tibble(is.na(df))  ) #This returns a dataframe with the result of is.na applied to each cell
 
 
 #To-do. Change psychometrics myCurve to accommodate rescaling based on method
 #       Stop setting global variables
 #     Figure out way to pass method through to binomfit_limsAlex
 
-
-#Use the fitted parameters to get the actual psychometric curves for plotting
-#myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2],numPointsForPsychometricCurve)
-#psychometrics<- fitParms |>
-#  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
-#  group_modify( myPlotCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
-
 psychometrics<- fitParms |>
   group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
   group_modify( plotCurve, iv,xLims[1],xLims[2],numPointsForPsychometricCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
 
 #Usually ggplot with stat_summary will collapse the data into means, but for some plots and analyses can't do it that way.
-#Therefore calculate the means
+#Therefore calculate the means for later plotting
 calcMeans<-function(df,groupVars) { #Surely this can be done with mutate, but maybe without the validation
   if ( !("correct" %in% names(df)) )
     warning("your dataframe must have a column named 'correct'",immediate.=TRUE)

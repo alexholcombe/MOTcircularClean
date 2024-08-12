@@ -58,12 +58,14 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #The following file returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
   source('analyzeMakeReadyForPlot.R') 
   fitParms$iv<- iv
-  #Get the plotIndividDataAndCurves function
+  #Get the plotIndividDataAndCurves function from another file
   source('individDataWithPsychometricCurves.R') 
-  factorsForPlot <- tibble(colorF = "targets", colF = "objects", rowF = "subject")
+  factorsForPlot <- tibble( colorF = "targets", colF = "objects", rowF = "subject" )
   
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) < 30 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject))<30  )
+  #ERROR occurred with subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
+  
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 64 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 64  )
   plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
     

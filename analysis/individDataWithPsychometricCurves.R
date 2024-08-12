@@ -45,7 +45,8 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
     breakDownBy<- c(colF,rowF)
     
     numPts <- df |> group_by( !!!syms(breakDownBy)) |> 
-                  summarize(n=paste("n =", length(correct))) 
+                  summarize(  n=paste("n =", length(correct))   ,
+                              .groups = 'drop_last')  #Avoid warning message https://forum.posit.co/t/summarise-has-grouped-output-by-x-you-can-override-using-the-groups-argument/174520
   
     g=g+geom_text(data=numPts, aes(x=xlims[2]-.2, y=.95, label=n), 
                   colour="black", size=2, inherit.aes=FALSE, parse=FALSE)

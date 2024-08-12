@@ -46,8 +46,6 @@ for (numObjectsThis in unique(numObjects)) {
   for (i in 1:length(threshCriteriaThis)) {
     threshCriterion = threshCriteriaThis[i]
     cat('Extracting thresh for criterion:',threshCriterion)
-    #use point by point search to find the threshold. 
-    myThreshGetNumeric= makeMyThreshGetNumerically(iv,threshCriterion)
     
     psychometricTemp<- subset(psychometrics,objects==numObjectsThis)
     calcThreshForPredictn<- FALSE  #because tracking-two prediction for 6, 9 objects never gets that high. Anyway this is to address
@@ -58,8 +56,11 @@ for (numObjectsThis in unique(numObjects)) {
     
     #Because with replacement for ddply, can pass parameters, potentially don't need to make a myThreshGetNumeric, instead
     # can pass parameters to group_modify
-    #Doesn't work with some objects = 8? INSERT stop so can probe
-    threshesThisNumeric = plyr::ddply(psychometricTemp,factorsPlusSubject,myThreshGetNumeric) 
+    #myThreshGetNumeric= makeMyThreshGetNumerically(iv,threshCriterion)
+    #threshesThisNumeric = plyr::ddply(psychometricTemp,factorsPlusSubject,myThreshGetNumeric) 
+
+    threshesThisNumeric<- psychometricTemp |>  group_by( !!!syms(factorsPlusSubject) ) |>
+            group_modify(extractThreshFromCurveNumerically, iv,threshCriterion)
     
     threshesThisNumeric$criterion <- threshCriterion
     threshesThisNumeric$criterionNote <- threshCriteriaNotes[i]

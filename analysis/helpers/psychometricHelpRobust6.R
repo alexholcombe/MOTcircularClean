@@ -94,8 +94,9 @@ fitBrglmKludge<- function( df, lapseMinMax, returnAsDataframe, initialMethod, ve
   		#deviances=c(deviances,fitModel$fit$penalized.deviance)  #use penalized deviance
   		#Deviance, penalized deviance calculated by brglm is wrong because is after data has been rescaled and truncated (chance to 1-lapseRate) 
   		#It's ok for arriving at the best model for a particular lapse rate, but no good for comparing models across lapse rates.
-  		print('About to calcGlmCustomLinkDeviance with chance=',chance)
-  		deviance<- calcGlmCustomLinkDeviance(fitModel,df$numCorrect,df$numTrials,iv,guessing=chance,lapsing=l)
+  	  print('About to calcGlmCustomLinkDeviance with chance=')
+  	  print(chance)
+  	  deviance<- calcGlmCustomLinkDeviance(fitModel,df$numCorrect,df$numTrials,iv,guessing=chance,lapsing=l)
   		#cat('leaving calcGlmCustomLinkDeviance with deviance=',deviance)
   		deviances<-c(deviances,deviance)
   	}
@@ -368,6 +369,35 @@ makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plott
   return (fnToReturn)
 }
 
+extractThreshFromCurveNumerically<- function(df,groupvars, iv,threshCriterion) {
+  #after function has been fit, determine x-value needed for criterion performance (threshold)
+  #If an error occurs, return info about what it errored on. And also indicate there was an error
+  #in the dataframe.
+  #dgg<<-df #debugOFF
+  #message("iv=",iv)
+  #message("df$correct=",df$correct)
+  #message("criterion=",threshCriterion)
+  ans<- tryCatch( {
+    #pull out the iv values. Use pull so it's a vector rather than a tibble, as threshold_slope expects vector
+    ivVals<- df |> pull(!!iv) #to use a variable for a column name, have to use !! unquote operator
+    threshSlop<- threshold_slope(df$correct, ivVals, criterion= threshCriterion)
+    return( data.frame(thresh=threshSlop$x_th, slopeThisCrit=threshSlop$slope, error=FALSE) )
+  }, 
+  error = function(e) {
+    cat("\nERROR occurred with ")  
+    print(groupvars)
+    print(e)
+    return( data.frame(thresh=NA, slopeThisCrit=NA, error=TRUE) )
+  }#,
+  #       finally = function(e) { #just return the normal answer
+  #         return( data.frame(thresh=threshSlop$x_th, error=FALSE) )
+  #       }
+  )
+  
+  print(ans)
+  return (ans)
+}
+  
 makeMyThreshGetNumerically<- function(iv,threshCriterion) {#create function that can use with ddply once have psychometric curves for each condition
   fnToReturn<-function(df) { #after function has been fit, determine x-value needed for criterion performance
     #So if there's an error, return info about what it errored on. And also indicate there was an error
