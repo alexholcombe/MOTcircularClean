@@ -328,8 +328,8 @@ makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plott
     if (df$method=="brglm.fit" | df$method=="glm.fit") {
 		  pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
 	  }
-    if ("numTargets" %in% names(fitParms))
-      if(df$numTargets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
+    if ("targets" %in% names(fitParms))
+      if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
         pfit<-0.5*(df$chance+pfit)
       }	
     #returning the dependent variable with two names because some functions expect one
@@ -347,22 +347,26 @@ makeMyThreshGetNumerically<- function(iv,threshCriterion) {#create function that
   fnToReturn<-function(df) { #after function has been fit, determine x-value needed for criterion performance
     #So if there's an error, return info about what it errored on. And also indicate there was an error
     #in the dataframe.
+    #dgg<<-df #debugOFF
+    #message("iv=",iv)
+    #message("df$correct=",df$correct)
+    #message("criterion=",threshCriterion)
     ans<- tryCatch( {
       threshSlop<- threshold_slope(df$correct,df[,iv],criterion= threshCriterion)
       return( data.frame(thresh=threshSlop$x_th, slopeThisCrit=threshSlop$slope, error=FALSE) )
     }, 
                     error = function(e) {
-                      cat("\nERROR occurred with")  
+                      cat("\nERROR occurred with ")  
                       if ("separatnDeg" %in% names(df))
                         cat(paste(' separatnDeg=',df$separatnDeg[1]),' ') #debugON
                       if ("exp" %in% names(df))
                         cat(paste('exp=',df$exp[1]),' ') #debugON
                       if ("subject" %in% names(df))
                         cat(paste('subject=',df$subject[1]),' ') #debugON
-                      if ("numObjects" %in% names(df))
-                        cat(paste('numObjects=',df$numObjects[1]),' ') #debugON
-                      if ("numTargets" %in% names(df))
-                        cat(paste('numTargets=',df$numTargets[1])) #debugON
+                      if ("objects" %in% names(df))
+                        cat(paste('objects=',df$objects[1]),' ') #debugON
+                      if ("targets" %in% names(df))
+                        cat(paste('targets=',df$targets[1])) #debugON
                       print(e)
                       return( data.frame(thresh=NA, slopeThisCrit=NA, error=TRUE) )
                     }#,

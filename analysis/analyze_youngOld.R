@@ -67,7 +67,7 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
     
-  source("extractThreshes.R") #provides threshes
+  source("extractThreshesAndPlot.R") #provides threshes
   thrAll<-rbind(thrAll,threshes)
   #below is old way, saving separate threshes
   #   varName=paste("threshes_",iv,"_",expName,sep='') #combine threshes

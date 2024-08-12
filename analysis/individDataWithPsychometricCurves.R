@@ -55,7 +55,7 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
   #g<-g+ scale_x_continuous(breaks=c(1.5,2.0,2.5),labels=c("1.5","","2.5"))
   #g<-g+ scale_x_continuous(breaks=speeds)
   show(g)
-  ggsave( paste('figs/individPlotsE',expName,'.png',sep='')  )
+  ggsave( paste0('figs/individPlotsE',expName,'.png')  )
   
   #can't show threshold lines right now because depends on criterion
   # thisThreshes<- subset(threshesThisNumeric, exp==1)

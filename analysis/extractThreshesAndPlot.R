@@ -13,7 +13,9 @@ if (!varyLapseRate)
   lapseMsg=paste("lapseRate always",unique(lapseMinMax))
 #go point by point to find thresholds for each criterion for each factorsPlusSubject
 worstLapseRate <- max(fitParms$lapseRate)
-paste("Can't calculate threshold above criterion level of",1-worstLapseRate,"because that's the worst subject")
+if (worstLapseRate > .03) {
+  paste("Can't calculate threshold above criterion level of",1-worstLapseRate,"because worst lapseRate is",worstLapseRate)
+}
 calcMidPointThresh<- TRUE
 calcThreeQuartersThresh<- TRUE
 #maxCriterion <- 1-worstLapseRate
@@ -21,7 +23,12 @@ maxCriterion <- .95
 threshCriteria<- seq(from=.67,to=maxCriterion,by=.06) #high thresholds
 threshCriterion = round(threshCriteria,3) #because otherwise can include invisible 10^-21 diff which will trip you up later
 threshes <- data.frame()
-for (numObjectsThis in unique(fitParms$numObjects)) {
+
+numObjects <- fitParms$objects
+if (is.factor(numObjects)) {
+  numObjects<- as.numeric(as.character(numObjects))
+}
+for (numObjectsThis in unique(numObjects)) {
   threshCriteriaThis = threshCriteria
   threshCriteriaNotes = rep("nothingSpecial",length(threshCriteriaThis))
   if (calcMidPointThresh) {
@@ -42,14 +49,18 @@ for (numObjectsThis in unique(fitParms$numObjects)) {
     #use point by point search to find the threshold. 
     myThreshGetNumeric= makeMyThreshGetNumerically(iv,threshCriterion)
     
-    psychometricTemp<- subset(psychometrics,numObjects==numObjectsThis)
+    psychometricTemp<- subset(psychometrics,objects==numObjectsThis)
     calcThreshForPredictn<- FALSE  #because tracking-two prediction for 6, 9 objects never gets that high. Anyway this is to address
     if (!calcThreshForPredictn)  
-      psychometricTemp <- subset(psychometricTemp,numTargets!="2P")
+      psychometricTemp <- subset(psychometricTemp,targets!="2P")
     #Don't do it where criterion corresponds to below chance
     #psychometricTemp <- subset(psychometricTemp, numObjects > 1/threshCriterion) #For these numObjects conditions, chance is above the current criterion
     
-    threshesThisNumeric = ddply(psychometricTemp,factorsPlusSubject,myThreshGetNumeric) 
+    #Because with replacement for ddply, can pass parameters, potentially don't need to make a myThreshGetNumeric, instead
+    # can pass parameters to group_modify
+    #Doesn't work with some objects = 8? INSERT stop so can probe
+    threshesThisNumeric = plyr::ddply(psychometricTemp,factorsPlusSubject,myThreshGetNumeric) 
+    
     threshesThisNumeric$criterion <- threshCriterion
     threshesThisNumeric$criterionNote <- threshCriteriaNotes[i]
     threshesThis<- merge(threshesThisNumeric,fitParms)
@@ -57,9 +68,8 @@ for (numObjectsThis in unique(fitParms$numObjects)) {
   }
 }
 
-threshes$targets<-threshes$numTargets
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
-  theme(axis.line = element_line(size=.3, color = "grey"), 
+  theme(axis.line = element_line(linewidth=.3, color = "grey"), 
         axis.title.y=element_text(vjust=0.24), #Move y axis label slightly away from axis
         axis.title.x=element_text(vjust=.10), #Move x axis label slightly away from axis
         legend.key = element_blank(), #don't put boxes around legend bits
@@ -71,23 +81,23 @@ tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_threeQuarterThresh",sep='')
 dv="speed"
 quartz(title=tit,width=6,height=3) #create graph of thresholds
 h<-ggplot(data=subset(threshes,criterionNote=="threeQuarters"),   #midpoint
-          aes(x=numTargets,y=thresh,color=factor(numObjects)))
-h<-h+facet_grid(. ~ exp)  #facet_grid(criterion ~ exp)
+          aes(x=targets,y=thresh,color=factor(objects)))
+h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
-h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
+h<-h+ geom_point() + geom_line(aes(group=interaction(subject,objects))) #plot individual lines for each subject
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(dv=="speed","rps","Hz"),')',sep='') )  
-if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 6,9 will converge when plot tf") 
-} else h<-h+ggtitle('6,9 validate tf limit.')
+if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge when plot tf") 
+} else h<-h+ggtitle('4,8 validate tf limit.')
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################Plot mean speed threshes against numTargets
 tit<-paste0("SpeedMeanThreshAgainstTargets)",infoMsg,"_threeQuarterThresh")
 quartz(title=tit,width=4,height=3) 
 h<-ggplot(data=subset(threshes,criterionNote=="threeQuarters"),   #midpoint
-          aes(x=numTargets,y=thresh,color=factor(numObjects)))
-h<-h+facet_grid(. ~ exp)  #facet_grid(criterion ~ exp)
+          aes(x=targets,y=thresh,color=factor(objects)))
+h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
@@ -96,17 +106,17 @@ h<-h+ stat_summary(fun.y=mean,geom="point")
 h<-h+ stat_summary(fun.y=mean,geom="line")
 h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,conf.int=.95) #error bar
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
-if (iv=="speed") {  h<-h+ggtitle("6,9 difft validates t.f. limit. Speed limits vary widely")
-} else h<-h+ggtitle('6,9 validate tf limit.')
+if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
+} else h<-h+ggtitle('4,8 validate tf limit.')
 #h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
-h<-h+ggtitle(paste("6,9 difft validates t.f. limit. Speed limits vary widely",lapseMsg))
+h<-h+ggtitle(paste("4,8 difft validates t.f. limit. Speed limits vary widely",lapseMsg))
 show(h)
 ggsave( paste0('figs/E1_EpostVSStargets_',tit,'.png') )
 #############################################Plot mean speed threshes against distractors
 tit<-paste0('SpeedMeanThreshAgainstDistractors ',infoMsg,' threeQuarterThresh') 
 quartz(title=tit,width=4,height=3) #create graph of threshes
 threshes$numObjects <- as.numeric(threshes$numObjects) #Otherwise can't connect with lines
-threshes$targets <- threshes$numTargets #Otherwise can't connect with lines
+threshes$targets <- threshes$targets #Otherwise can't connect with lines
 h<-ggplot(data=subset(threshes,criterionNote=="threeQuarters"),   #midpoint
           aes(x=numObjects-1,y=thresh)) #,color=factor(targets) #I have no idea why but this doesn't work, hence put it in facet_grid
 h<-h+facet_grid(exp ~ targets)  #facet_grid(criterion ~ exp)
