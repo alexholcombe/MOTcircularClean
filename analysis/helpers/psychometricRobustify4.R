@@ -182,10 +182,9 @@ source( file.path(modelfreePath,"logit_link_private.R") )
 
 binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=2,
 								control=list(),initial="brglm.fit",tryOthers=TRUE) {
-
 #
-# The function fits a binomial generalised linear model with fixed guessing and lapsing rates.
-# It is based closely on a function of similar name in the modelfree package
+# Fits a binomial generalised linear model with fixed guessing and lapsing rates.
+# Based closely on a function of similar name in the modelfree package
 # INPUT
 
 #
@@ -195,7 +194,6 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
 #
 
 # OPTIONAL INPUT
-
 #
 
 # p    - degree of the polynomial; default is p = 1 
@@ -214,10 +212,7 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
 
 
 # MAIN PROGRAM
-
 # First 3 arguments are mandatory
-
-    # First 3 arguments are mandatory
     if( missing("x") || missing("r") || missing("m") ) {
         stop("Check input. First 3 arguments are mandatory");
     }
@@ -263,17 +258,12 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
     glmformula <- c( "resp ~ x" );
 
     if( p > 1 ) {
-
         for( pp in 2:p ) {
-
             glmformula <- paste( glmformula, " + I(x^", pp,")", sep = "");
-
         }
 
     }
-
     fit <- NULL;
-
 
 
 # GLM fit
@@ -285,9 +275,8 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
               }
 
 
-   if( linkfun != "weibull_link_private" && linkfun != "revweibull_link_private" ) {
+  if( linkfun != "weibull_link_private" && linkfun != "revweibull_link_private" ) {
 
-    	
     	handleErr <- function(e) {
     		eventType = class(e)[2]
     		cat(paste(eventType,"in AH function '", e$call, "': '",e$message,"'\n"))
