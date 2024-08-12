@@ -35,8 +35,6 @@ if (!"subject" %in% factorsForBreakdown) {
 initialMethod<-"brglm.fit"  # "glmCustomlink" #  
 
 getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
-
-#Changed this to work with group_modify
 getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits yielded a warning, print out what was fitting first.
   #cat("getFitParmsPrintProgress, df=");   print(df)
   dgg<<-df
@@ -46,7 +44,35 @@ getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits y
   #  cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
   return( getFitParms(df) )
 }
+
+#Changed above to work with group_modify
+
+fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
+  #data comes in one row per trial, but binomFit wants total correct, numTrials
+  #so now I have to count number of correct, incorrect trials for each speed
+  #assuming there's no other factors to worry about
+  cat("Finding best fit (calling fitParms) for")
+  print(groupvars)
+  
+  if (iv=="speed")
+    sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chance
+  else if (iv=="tf")
+    sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chance
+  #curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
+  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
+  cat("Calling fitBrglmKludge with sumry which should include chance:"); print(sumry) #debugON
+  fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
+  return( fitParms )
+}
+
+
 datAnalyze$subject <- factor(datAnalyze$subject)
+
+fitParms<- datAnalyze |>
+  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
+  #Take each group's condition variables as a tibble and add the results of the curve fit
+  group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=0)  
+
 
 #Does this well now, using penalized.deviance to compare across lapse rates
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 

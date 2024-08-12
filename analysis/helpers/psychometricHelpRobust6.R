@@ -6,7 +6,6 @@ library(brglm)
 #library(plyr) #not good to load plyr after dplyt
 #library(Cairo) #for windows
 #Alex Holcombe, started November 2010
-#previous versions of this file were called things like lapseRateSearchDataSeparate
 source('helpers/psychometricRobustify4.R') #load my custom version of binomfit_lims
 
 #global variables this code expects:  
@@ -163,6 +162,24 @@ summarizNumTrials<-function(df) {
   return(df)
 }  
 
+fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
+  #data comes in one row per trial, but binomFit wants total correct, numTrials
+  #so now I have to count number of correct, incorrect trials for each speed
+  #assuming there's no other factors to worry about
+  cat("Finding best fit (calling fitParms) for")
+  print(groupvars)
+  
+  if (iv=="speed")
+    sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chance
+  else if (iv=="tf")
+    sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chance
+  #curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
+  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
+  cat("Calling fitBrglmKludge with sumry which should include chance:"); print(sumry) #debugON
+  fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
+  return( fitParms )
+}
+
 #construct a function to use for one-shot (non-bootstrapping) fit
 makeParamFit <- function(iv, lapseMinMax, initialMethod, verbosity=0) {
   #verbosity passed to binomFitChanceFromDf
@@ -250,7 +267,7 @@ makeMyPsychoCorr2<- function(iv) { #Very similar to makeMyPlotCurve below, only 
     if (df$method=="brglm.fit" | df$method=="glm.fit") {#Doesn't support custom link function, so had to scale from guessing->1-lapsing manually
       pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
     }
-    if(df$numTargets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
+    if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
       pfit<-0.5*(df$chance+pfit)
     }  
     return (pfit)
@@ -287,7 +304,7 @@ makeMyPsychoCorr<- function(iv) { #Very similar to makeMyPlotCurve below, only f
     if (df$method=="brglm.fit" | df$method=="glm.fit") {#Doesn't support custom link function, so had to scale from guessing->1-lapsing manually
       pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
     }
-    if(df$numTargets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
+    if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
       pfit<-0.5*(df$chance+pfit)
     }	
     return (pfit)
@@ -330,7 +347,7 @@ makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plott
 	  }
     if ("targets" %in% names(fitParms))
       if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
-        pfit<-0.5*(df$chance+pfit)
+        pfit<-0.5*(df$chance + pfit)
       }	
     #returning the dependent variable with two names because some functions expect one
     #Reason is that want to be able to plot it with same ggplot stat_summary as use for raw
