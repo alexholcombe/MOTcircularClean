@@ -11,7 +11,7 @@ if (varyLapseRate) { lapseMinMax= c(0,0.05) }  else  #range of lapseRates to try
 	{ lapseMinMax = c(0.01,0.01) }
 chanceRate=.5
 
-xLims=c(.04,4);  if (iv=="tf") {xLims=c(.5,8)}
+xLims=c(.04,1.5);  if (iv=="tf") {xLims=c(.5,7)}
 yLims=c(.3,1.05)
 numPointsForPsychometricCurve=150 #250
 #end global variables expected
@@ -52,11 +52,23 @@ datAnalyze$subject <- factor(datAnalyze$subject)
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 
 
 
-
 #group_modify is the closest thing to deprecated ddply
+#group_modify() replaces each group with the results of .f
+#The first argument is passed .SD,the data.table representing the current group; the second argument is passed .BY, a list giving the current values of the grouping variables. The function should return a list or data.table.
+#For a one parameter function, you can make it work with an anonymous function backslash trick
+# datAnalyze |>
+#   group_by(  !!! syms(factorsPlusSubject)  ) |>
+#   group_modify(\(df, groupvars)  
+#                                 as_tibble(is.na(df))  ) #This returns a dataframe with the result of is.na applied to each cell
+# 
+# datAnalyze |>
+#   group_by(  !!! syms(factorsPlusSubject)  ) |>
+#   group_modify(\(df, groupvars)  getFitParmsPrintProgress(df) )
+# 
+
 fitParms<- datAnalyze |>
-  group_by(  !!! syms(factorsPlusSubject)  ) |>
-  group_modify( getFitParmsPrintProgress )
+  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
+  group_modify( getFitParmsPrintProgress )  #Take each group's parameters as a tibble and add the results of the curve fit
 
 #To-do. Change psychometrics myCurve to accommodate rescaling based on method
 #       Stop setting global variables
@@ -64,41 +76,33 @@ fitParms<- datAnalyze |>
 
 
 
-#group_modify() replaces each group with the results of .f
-#The first argument is passed .SD,the data.table representing the current group; the second argument is passed .BY, a list giving the current values of the grouping variables. The function should return a list or data.table.
-#For a one parameter function, you can make it work with an anonymous function backslash trick
-datAnalyze |>
-  group_by(  !!! syms(factorsPlusSubject)  ) |>
-  group_modify(\(df, groupvars)  
-                                as_tibble(is.na(df))  ) #This returns a dataframe with the result of is.na applied to each cell
-
-datAnalyze |>
-  group_by(  !!! syms(factorsPlusSubject)  ) |>
-  group_modify(\(df, groupvars)  getFitParmsPrintProgress(df) )
-
-
-
 #prediction tracking two if only can track one. myPlotCurve then calculates it.
 #use the fitted parameters to get the actual curves
-myPlotCurve <- makeMyPlotCurve4(iv,xLims[1],xLims[2]+.5,numPointsForPsychometricCurve)
-#ddply(fitParms,factorsPlusSubject,function(df) { if (nrow(df)>1) {print(df); STOP} })  #debugOFF
-psychometrics<-ddply(fitParms,factorsPlusSubject,myPlotCurve)  
+myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2]+.5,numPointsForPsychometricCurve)
 
-#Below are just helper functions. Consider migration into a helper function file
+psychometrics<- fitParms |>
+  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
+  group_modify( myPlotCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
+#psychometrics<- plyr::ddply(fitParms,factorsPlusSubject,myPlotCurve)  
+
 #Usually ggplot with stat_summary will collapse the data into means, but for some plots and analyses can't do it that way.
 #Therefore calculate the means
-calcMeans<-function(df) {
+calcMeans<-function(df,groupVars) { #Surely this can be done with mutate, but maybe without the validation
   if ( !("correct" %in% names(df)) )
     warning("your dataframe must have a column named 'correct'",immediate.=TRUE)
   numCorrect<-sum(df$correct==1)
   numTrials= sum(complete.cases(df$correct))
   pCorr <- numCorrect/numTrials
-  df= data.frame(pCorr)
-  return(df)
+  result= data.frame(pCorr)
+  return(result)
 }  
 factorsPlusSubjectAndIv <- factorsPlusSubject
 factorsPlusSubjectAndIv[ length(factorsPlusSubjectAndIv)+1 ] <- iv
-datMeans<- ddply(datAnalyze,factorsPlusSubjectAndIv,calcMeans)
+
+#Collapse the binary data by calculating the mean for each subject*condition*speed
+datMeans<- datAnalyze |> 
+  group_by ( !!!syms(factorsPlusSubjectAndIv) ) |>
+  group_modify( calcMeans )
 
 calcPctCorrThisIvVal <- function(df,iv,val) {
   #Take dataframe with fitted psychometric function, 

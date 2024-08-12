@@ -58,9 +58,13 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #The following file returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
   source('analyzeMakeReadyForPlot.R') 
   fitParms$iv<- iv
-  source('individDataWithPsychometricCurves.R') #Just for plotIndividDataAndCurves function
+  #Get the plotIndividDataAndCurves function
+  source('individDataWithPsychometricCurves.R') 
   factorsForPlot <- tibble(colorF = "targets", colF = "objects", rowF = "subject")
-  plotIndividDataAndCurves(expName,datAnalyze,psychometricCurves,
+  
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) < 35 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject))<35  )
+  plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,xmin=NULL,xmax=NULL) 
     
   source("extractThreshes.R") #provides threshes

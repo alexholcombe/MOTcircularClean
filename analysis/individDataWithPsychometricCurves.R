@@ -1,3 +1,4 @@
+#This file's only purpose is to provide a plotIndividDataAndCurves function
 #Variables expected:
 #dat
 #iv - "tf" or "speed"
@@ -6,7 +7,7 @@ if (!("speed" %in% colnames(psychometrics))) { #psychometrics must have been fit
   psychometrics$speed = psychometrics$tf / psychometrics$numObjects #because always plot them in terms of speed
 }
 
-#function, not used, that plots the psychometric functions for a dataset / experiment /criterion,
+#function that plots the psychometric functions for a dataset / experiment /criterion,
 plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=NULL,xmax=NULL) {
   #draw individual psychometric functions for individual experiment
   #the F's, like colorF are factors to break down data by (expects psychometric functions to have these factors)
@@ -40,7 +41,7 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
     xlims[2]<-xmax
   g<-g+ coord_cartesian( xlim=xlims)#have to use coord_cartesian here instead of naked ylim()  
   
-  showNumPts=TRUE
+  showNumPts=FALSE
   if (showNumPts) {#add count of data points per graph. http://stackoverflow.com/questions/13239843/annotate-ggplot2-facets-with-number-of-observations-per-facet?rq=1
     breakDownBy<- c(colF,rowF)
     numPts <- ddply(.data=df, breakDownBy, summarize, 

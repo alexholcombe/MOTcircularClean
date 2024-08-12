@@ -294,18 +294,17 @@ makeMyPsychoCorr<- function(iv) { #Very similar to makeMyPlotCurve below, only f
 return (fnToReturn)
 }
   
-makeMyPlotCurve4<- function(iv,xmin,xmax,numxs) {#create psychometric curve plotting function over specified domain
-  fnToReturn<-function(df) {
+makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plotting function over specified domain
+  fnToReturn<-function(df,groupvars) {
   	#expecting to be passed df with fields:
   	# mean, slope, lapseRate, chanceRate,
   	# method, linkFx
-    df = data.frame(df) #in case it wasn't a dataframe yet
-    #set up example model with fake data
+    
+    #set up example model with fake data, then substitute in the parameters from the fit
     #I don't know why the below didn't work with example01 but it doesn't work
     dh=data.frame(speed=c(.7,1.0,1.4,1.7,2.2),tf=c(3.0,4.0,5.0,6.0,7.0),
                   numCorrect=c(46,45,35,26,32),numTrials=c(48,48,48,48,49))
     dh$lapseRate=df$lapseRate
-    #binomfit_limsAlex(df$numCorrect,df$numTrials,df$speed,link=linkf,guessing=chanceRate,lapsing=l,control=cntrl,initial="brglm.fit")
     if(iv=="speed") {
       exampleModel<-suppressWarnings( 
         binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$speed, link=as.character(df$linkFx), 
@@ -318,12 +317,14 @@ makeMyPlotCurve4<- function(iv,xmin,xmax,numxs) {#create psychometric curve plot
         print(paste("iv must be either speed or tf, but what was passed was",tf))
       }    
     exampleModel=exampleModel$fit
+    
     #modify example fit, use its predictor only plus parameters I've found by fitting
     exampleModel[1]$coefficients[1] = df$mean
     exampleModel[1]$coefficients[2] = df$slope
     xs = (xmax-xmin) * (0:numxs)/numxs + xmin
     pfit<- suppressWarnings( predict( exampleModel, data.frame(x=xs), type = "response" ) ) #because of bad previous fit, generates warnings
-    if (df$method=="brglm.fit" | df$method=="glm.fit") {#Doesn't support custom link function, so had to scale from guessing->1-lapsing manually
+    #Some methods don't support custom link function, so have to scale from guessing->1-lapsing manually
+    if (df$method=="brglm.fit" | df$method=="glm.fit") {
 		  pfit<-unscale0to1(pfit,df$chanceRate,df$lapseRate)
 	  }
     if ("numTargets" %in% names(fitParms))
