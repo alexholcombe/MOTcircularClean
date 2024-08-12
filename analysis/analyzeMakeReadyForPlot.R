@@ -31,21 +31,20 @@ if (!"subject" %in% factorsForBreakdown) {
   factorsPlusSubject[ length(factorsForBreakdown)+1 ]<- "subject"
 }
 
-#fit psychometric functions to data ########################################
+#Fit psychometric functions to data ########################################
 initialMethod<-"brglm.fit"  # "glmCustomlink" #  
 
-getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
-getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits yielded a warning, print out what was fitting first.
-  #cat("getFitParmsPrintProgress, df=");   print(df)
-  dgg<<-df
-  cat("Finding best fit (calling fitParms) for")
-  print(groupvars)
-  #for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line
-  #  cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
-  return( getFitParms(df) )
-}
-
-#Changed above to work with group_modify
+# getFitParms <- makeParamFit(iv,lapseMinMax,initialMethod,verbosity) #use resulting function for one-shot curvefitting
+# getFitParmsPrintProgress <- function(df,groupvars) {  #So I can see which fits yielded a warning, print out what was fitting first.
+#   #cat("getFitParmsPrintProgress, df=");   print(df)
+#   dgg<<-df
+#   cat("Finding best fit (calling fitParms) for")
+#   print(groupvars)
+#   #for (i in 1:length(factorsPlusSubject) ) #Using a loop print them all on one line
+#   #  cat( paste( factorsPlusSubject[i],"=",df[1,factorsPlusSubject[i]])," " )
+#   return( getFitParms(df) )
+# }
+#Above obsolete thanks to group_modify
 
 fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
   #data comes in one row per trial, but binomFit wants total correct, numTrials
@@ -64,7 +63,6 @@ fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity
   fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
   return( fitParms )
 }
-
 
 datAnalyze$subject <- factor(datAnalyze$subject)
 
@@ -86,30 +84,22 @@ fitParms<- datAnalyze |>
 #   group_by(  !!! syms(factorsPlusSubject)  ) |>
 #   group_modify(\(df, groupvars)  
 #                                 as_tibble(is.na(df))  ) #This returns a dataframe with the result of is.na applied to each cell
-# 
-# datAnalyze |>
-#   group_by(  !!! syms(factorsPlusSubject)  ) |>
-#   group_modify(\(df, groupvars)  getFitParmsPrintProgress(df) )
-# 
 
-fitParms<- datAnalyze |>
-  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
-  group_modify( getFitParmsPrintProgress )  #Take each group's parameters as a tibble and add the results of the curve fit
 
 #To-do. Change psychometrics myCurve to accommodate rescaling based on method
 #       Stop setting global variables
 #     Figure out way to pass method through to binomfit_limsAlex
 
 
-
-#prediction tracking two if only can track one. myPlotCurve then calculates it.
-#use the fitted parameters to get the actual curves
-myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2],numPointsForPsychometricCurve)
+#Use the fitted parameters to get the actual psychometric curves for plotting
+#myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2],numPointsForPsychometricCurve)
+#psychometrics<- fitParms |>
+#  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
+#  group_modify( myPlotCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
 
 psychometrics<- fitParms |>
   group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
-  group_modify( myPlotCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
-#psychometrics<- plyr::ddply(fitParms,factorsPlusSubject,myPlotCurve)  
+  group_modify( plotCurve, iv,xLims[1],xLims[2],numPointsForPsychometricCurve )  #Take each group's parameters as a tibble and add the results of the curve fit
 
 #Usually ggplot with stat_summary will collapse the data into means, but for some plots and analyses can't do it that way.
 #Therefore calculate the means

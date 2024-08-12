@@ -94,7 +94,7 @@ fitBrglmKludge<- function( df, lapseMinMax, returnAsDataframe, initialMethod, ve
   		#deviances=c(deviances,fitModel$fit$penalized.deviance)  #use penalized deviance
   		#Deviance, penalized deviance calculated by brglm is wrong because is after data has been rescaled and truncated (chance to 1-lapseRate) 
   		#It's ok for arriving at the best model for a particular lapse rate, but no good for comparing models across lapse rates.
-  		cat('about to calcGlmCustomLinkDeviance with chance=',chance)
+  		print('About to calcGlmCustomLinkDeviance with chance=',chance)
   		deviance<- calcGlmCustomLinkDeviance(fitModel,df$numCorrect,df$numTrials,iv,guessing=chance,lapsing=l)
   		#cat('leaving calcGlmCustomLinkDeviance with deviance=',deviance)
   		deviances<-c(deviances,deviance)
@@ -162,45 +162,6 @@ summarizNumTrials<-function(df) {
   return(df)
 }  
 
-fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
-  #data comes in one row per trial, but binomFit wants total correct, numTrials
-  #so now I have to count number of correct, incorrect trials for each speed
-  #assuming there's no other factors to worry about
-  cat("Finding best fit (calling fitParms) for")
-  print(groupvars)
-  
-  if (iv=="speed")
-    sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chance
-  else if (iv=="tf")
-    sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chance
-  #curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
-  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
-  cat("Calling fitBrglmKludge with sumry which should include chance:"); print(sumry) #debugON
-  fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
-  return( fitParms )
-}
-
-#construct a function to use for one-shot (non-bootstrapping) fit
-makeParamFit <- function(iv, lapseMinMax, initialMethod, verbosity=0) {
-  #verbosity passed to binomFitChanceFromDf
-  #iv is independent variable
-  fn2 <- function(df) {
-    #data comes in one row per trial, but binomFit wants total correct, numTrials
-    #so now I have to count number of correct, incorrect trials for each speed
-    #assuming there's no other factors to worry about
-    if (iv=="speed")
-      sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chance
-    else if (iv=="tf")
-      sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chance
-  	#curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
-	  returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
-	  cat("Calling fitBrglmKludge with sumry which should include chance:"); print(sumry) #debugON
-  	fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
-  	print( paste('fitParms=',fitParms) )
-  	return( fitParms )
-  }
-  return (fn2)
-}
 
 #construct a function to use for function fitting and bootstrapping. Will be sent one row per trial
 makeParamFitForBoot <- function(chance=0.5,lapseMinMax,verbosity=0) { #default chancePerformanceRate=.5
@@ -311,7 +272,54 @@ makeMyPsychoCorr<- function(iv) { #Very similar to makeMyPlotCurve below, only f
   }
 return (fnToReturn)
 }
+
+plotCurve<- function(df,groupvars,  iv,xmin,xmax,numxs) {
+  #expecting to be passed df with fields:
+  # mean, slope, lapseRate, chance,
+  # method, linkFx
   
+  #set up example model with fake data, then substitute in the parameters from the fit
+  #I don't know why the below didn't work with example01 but it doesn't work
+  dh=data.frame(speed=c(.7,1.0,1.4,1.7,2.2),tf=c(3.0,4.0,5.0,6.0,7.0),
+                numCorrect=c(46,45,35,26,32),numTrials=c(48,48,48,48,49))
+  dh$lapseRate=df$lapseRate
+  if(iv=="speed") {
+    exampleModel<-suppressWarnings( 
+      binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$speed, link=as.character(df$linkFx), 
+                        guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
+    ) } else if (iv=="tf") {
+      exampleModel<-suppressWarnings( 
+        binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$tf, link=as.character(df$linkFx), 
+                          guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
+      ) } else {
+        print(paste("iv must be either speed or tf, but what was passed was",tf))
+      }    
+  exampleModel=exampleModel$fit
+  
+  #modify example fit, use its predictor only plus parameters I've found by fitting
+  exampleModel[1]$coefficients[1] = df$mean
+  exampleModel[1]$coefficients[2] = df$slope
+  xs = (xmax-xmin) * (0:numxs)/numxs + xmin
+  pfit<- suppressWarnings( predict( exampleModel, data.frame(x=xs), type = "response" ) ) #because of bad previous fit, generates warnings
+  #Some methods don't support custom link function, so have to scale from guessing->1-lapsing manually
+  if (df$method=="brglm.fit" | df$method=="glm.fit") {
+    pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
+  }
+  if ( ("targets" %in% names(fitParms)) && ("targets" %in% colnames(df)))
+    if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
+      pfit<-0.5*(df$chance + pfit)
+    }	
+  #returning the dependent variable with two names because some functions expect one
+  #Reason is that want to be able to plot it with same ggplot stat_summary as use for raw
+  #data that expects "correct"
+  if (iv=="tf") {
+    data.frame(tf=xs,pCorr=pfit,correct=pfit)
+  } else if (iv=="speed")        
+    data.frame(speed=xs,pCorr=pfit,correct=pfit)
+
+}
+
+
 makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plotting function over specified domain
   fnToReturn<-function(df,groupvars) {
   	#expecting to be passed df with fields:
@@ -345,7 +353,7 @@ makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plott
     if (df$method=="brglm.fit" | df$method=="glm.fit") {
 		  pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
 	  }
-    if ("targets" %in% names(fitParms))
+    if ("targets" %in% names(fitParms) && ("targets" %in% colnames(df)))
       if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
         pfit<-0.5*(df$chance + pfit)
       }	
