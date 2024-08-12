@@ -67,6 +67,7 @@ for (numObjectsThis in unique(numObjects)) {
     threshes<- rbind(threshes, threshesThis)
   }
 }
+#ERROR occurred with subject= 64  objects= 8  targets= 3
 
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
   theme(axis.line = element_line(linewidth=.3, color = "grey"), 
