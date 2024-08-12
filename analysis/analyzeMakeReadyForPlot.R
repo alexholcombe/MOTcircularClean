@@ -78,7 +78,7 @@ fitParms<- datAnalyze |>
 
 #prediction tracking two if only can track one. myPlotCurve then calculates it.
 #use the fitted parameters to get the actual curves
-myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2]+.5,numPointsForPsychometricCurve)
+myPlotCurve <- makeMyPlotCurve(iv,xLims[1],xLims[2],numPointsForPsychometricCurve)
 
 psychometrics<- fitParms |>
   group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit

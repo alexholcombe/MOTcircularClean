@@ -62,10 +62,10 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   source('individDataWithPsychometricCurves.R') 
   factorsForPlot <- tibble(colorF = "targets", colF = "objects", rowF = "subject")
   
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) < 35 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject))<35  )
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) < 30 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject))<30  )
   plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
-                           factorsForPlot,xmin=NULL,xmax=NULL) 
+                           factorsForPlot,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
     
   source("extractThreshes.R") #provides threshes
   thrAll<-rbind(thrAll,threshes)

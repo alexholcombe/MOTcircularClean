@@ -31,22 +31,23 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
   show(g)
   #draw individual psychometric functions, for only one experiment  
   g=g+geom_line(data=psychometricCurves)
-  g=g+geom_hline(mapping=aes(yintercept=chanceRate),lty=2)  #draw horizontal line for chance performance
+  g=g+geom_hline(mapping=aes(yintercept=chance),lty=2)  #draw horizontal line for chance performance
   g=g+xlab('Speed (rps)')+ylab('Proportion Correct')
-  g<<-g
   xlims= ggplot_build(g)$panel$ranges[[1]]$x.range #http://stackoverflow.com/questions/7705345/how-can-i-extract-plot-axes-ranges-for-a-ggplot2-object
   if (!is.null(xmin))
     xlims[1]<-xmin
   if (!is.null(xmax))
     xlims[2]<-xmax
-  g<-g+ coord_cartesian( xlim=xlims)#have to use coord_cartesian here instead of naked ylim()  
+  g<-g+ coord_cartesian( xlim=xlims )#have to use coord_cartesian here instead of naked ylim()  
   
-  showNumPts=FALSE
+  showNumPts=TRUE
   if (showNumPts) {#add count of data points per graph. http://stackoverflow.com/questions/13239843/annotate-ggplot2-facets-with-number-of-observations-per-facet?rq=1
     breakDownBy<- c(colF,rowF)
-    numPts <- ddply(.data=df, breakDownBy, summarize, 
-                    n=paste("n =", length(correct)))
-    g=g+geom_text(data=numPts, aes(x=2.2, y=.95, label=n), 
+    
+    numPts <- df |> group_by( !!!syms(breakDownBy)) |> 
+                  summarize(n=paste("n =", length(correct))) 
+  
+    g=g+geom_text(data=numPts, aes(x=xlims[2]-.2, y=.95, label=n), 
                   colour="black", size=2, inherit.aes=FALSE, parse=FALSE)
   }  
   #g=g+theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())# hide all gridlines.
