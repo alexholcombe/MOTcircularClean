@@ -62,10 +62,12 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   source('individDataWithPsychometricCurves.R') 
   factorsForPlot <- tibble( colorF = "targets", colF = "objects", rowF = "subject" )
   
-  #ERROR occurred with subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
+  #With subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 50 ) |>
+        filter(  as.numeric(as.character(subject)) <= 60 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 50  ) |>
+    filter(  as.numeric(as.character(subject)) <= 60 )
   
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 64 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 64  )
   plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
     

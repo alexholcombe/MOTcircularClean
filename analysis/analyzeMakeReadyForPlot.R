@@ -47,7 +47,7 @@ fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity
     sumry = plyr::ddply(df,plyr::.(tf),summarizNumTrials) #also calculates chance
   #curveFit(sumry$speed,sumry$correct,sumry$numTrials,subjectname,lapsePriors,meanPriors,widthPriors,'MAPEstimation')  
   returnAsDataframe=TRUE #this allows keeping the text of the warning messages. (Boot can't do this)
-  cat("Calling fitBrglmKludge with sumry which should include chance:"); print(sumry) #debugON
+  #cat("Calling fitBrglmKludge with sumry which should include chance:\n"); print(sumry) #debugON
   fitParms = fitBrglmKludge(sumry,lapseMinMax, returnAsDataframe,initialMethod,verbosity)
   return( fitParms )
 }
@@ -55,9 +55,9 @@ fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity
 datAnalyze$subject <- factor(datAnalyze$subject)
 
 fitParms<- datAnalyze |>
-  group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
-  #Take each group's condition variables as a tibble and add the results of the curve fit
-  group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=0)  
+    group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
+    #Take each group's condition variables as a tibble and add the results of the curve fit
+    group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=0)  
 
 #Does this well now, using penalized.deviance to compare across lapse rates
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 

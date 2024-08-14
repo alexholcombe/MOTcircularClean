@@ -237,42 +237,7 @@ makeMyPsychoCorr2<- function(iv) { #Very similar to makeMyPlotCurve below, only 
   return (fnToReturn)
 }
 
-makeMyPsychoCorr<- function(iv) { #Very similar to makeMyPlotCurve below, only for just one x
-  fnToReturn<-function(df,x) {
-    #expecting to be passed df with fields:
-    # mean, slope, lapseRate, chance, method, linkFx
-    df = data.frame(df) #in case it wasn't a dataframe yet
-    #set up example model with fake data
-    #I don't know why the below didn't work with example01 but it doesn't work
-    dh=data.frame(speed=c(.7,1.0,1.4,1.7,2.2),tf=c(3.0,4.0,5.0,6.0,7.0),
-                  numCorrect=c(46,45,35,26,32),numTrials=c(48,48,48,48,49))
-    dh$lapseRate=df$lapseRate
-    if(iv=="speed") {
-      exampleModel<-suppressWarnings( 
-        binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$speed, link=as.character(df$linkFx), 
-                          guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
-      ) } else if (iv=="tf") {
-        exampleModel<-suppressWarnings( 
-          binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$tf, link=as.character(df$linkFx), 
-                            guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
-        ) } else {
-          print(paste("iv must be either speed or tf, but what was passed was",tf))
-        }    
-    exampleModel=exampleModel$fit
-    #modify example fit, use its predictor only plus parameters I've found by fitting
-    exampleModel[1]$coefficients[1] = df$mean
-    exampleModel[1]$coefficients[2] = df$slope
-    pfit<- suppressWarnings( predict( exampleModel, data.frame(x=x), type = "response" ) ) #because of bad previous fit, generates warnings
-    if (df$method=="brglm.fit" | df$method=="glm.fit") {#Doesn't support custom link function, so had to scale from guessing->1-lapsing manually
-      pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
-    }
-    if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
-      pfit<-0.5*(df$chance+pfit)
-    }	
-    return (pfit)
-  }
-return (fnToReturn)
-}
+
 
 plotCurve<- function(df,groupvars,  iv,xmin,xmax,numxs) {
   #expecting to be passed df with fields:
@@ -321,53 +286,7 @@ plotCurve<- function(df,groupvars,  iv,xmin,xmax,numxs) {
 }
 
 
-makeMyPlotCurve<- function(iv,xmin,xmax,numxs) {#create psychometric curve plotting function over specified domain
-  fnToReturn<-function(df,groupvars) {
-  	#expecting to be passed df with fields:
-  	# mean, slope, lapseRate, chance,
-  	# method, linkFx
-    
-    #set up example model with fake data, then substitute in the parameters from the fit
-    #I don't know why the below didn't work with example01 but it doesn't work
-    dh=data.frame(speed=c(.7,1.0,1.4,1.7,2.2),tf=c(3.0,4.0,5.0,6.0,7.0),
-                  numCorrect=c(46,45,35,26,32),numTrials=c(48,48,48,48,49))
-    dh$lapseRate=df$lapseRate
-    if(iv=="speed") {
-      exampleModel<-suppressWarnings( 
-        binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$speed, link=as.character(df$linkFx), 
-                          guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
-      ) } else if (iv=="tf") {
-      exampleModel<-suppressWarnings( 
-        binomfit_limsAlex(dh$numCorrect, dh$numTrials, dh$tf, link=as.character(df$linkFx), 
-                          guessing=df$chance, lapsing=df$lapseRate, initial=as.character(df$method))  #, tryAlts=FALSE  ) 
-      ) } else {
-        print(paste("iv must be either speed or tf, but what was passed was",tf))
-      }    
-    exampleModel=exampleModel$fit
-    
-    #modify example fit, use its predictor only plus parameters I've found by fitting
-    exampleModel[1]$coefficients[1] = df$mean
-    exampleModel[1]$coefficients[2] = df$slope
-    xs = (xmax-xmin) * (0:numxs)/numxs + xmin
-    pfit<- suppressWarnings( predict( exampleModel, data.frame(x=xs), type = "response" ) ) #because of bad previous fit, generates warnings
-    #Some methods don't support custom link function, so have to scale from guessing->1-lapsing manually
-    if (df$method=="brglm.fit" | df$method=="glm.fit") {
-		  pfit<-unscale0to1(pfit,df$chance,df$lapseRate)
-	  }
-    if ("targets" %in% names(fitParms) && ("targets" %in% colnames(df)))
-      if(df$targets=="2P"){ #Parameters were duplicate of numTargets==1, and p's are corresponding prediction averaged with chance
-        pfit<-0.5*(df$chance + pfit)
-      }	
-    #returning the dependent variable with two names because some functions expect one
-    #Reason is that want to be able to plot it with same ggplot stat_summary as use for raw
-    #data that expects "correct"
-    if (iv=="tf") {
-      data.frame(tf=xs,pCorr=pfit,correct=pfit)
-    } else if (iv=="speed")        
-      data.frame(speed=xs,pCorr=pfit,correct=pfit)
-  }
-  return (fnToReturn)
-}
+
 
 extractThreshFromCurveNumerically<- function(df,groupvars, iv,threshCriterion) {
   #after function has been fit, determine x-value needed for criterion performance (threshold)
@@ -398,42 +317,6 @@ extractThreshFromCurveNumerically<- function(df,groupvars, iv,threshCriterion) {
   return (ans)
 }
   
-makeMyThreshGetNumerically<- function(iv,threshCriterion) {#create function that can use with ddply once have psychometric curves for each condition
-  fnToReturn<-function(df) { #after function has been fit, determine x-value needed for criterion performance
-    #So if there's an error, return info about what it errored on. And also indicate there was an error
-    #in the dataframe.
-    #dgg<<-df #debugOFF
-    #message("iv=",iv)
-    #message("df$correct=",df$correct)
-    #message("criterion=",threshCriterion)
-    ans<- tryCatch( {
-      threshSlop<- threshold_slope(df$correct,df[,iv],criterion= threshCriterion)
-      return( data.frame(thresh=threshSlop$x_th, slopeThisCrit=threshSlop$slope, error=FALSE) )
-    }, 
-                    error = function(e) {
-                      cat("\nERROR occurred with ")  
-                      if ("separatnDeg" %in% names(df))
-                        cat(paste(' separatnDeg=',df$separatnDeg[1]),' ') #debugON
-                      if ("exp" %in% names(df))
-                        cat(paste('exp=',df$exp[1]),' ') #debugON
-                      if ("subject" %in% names(df))
-                        cat(paste('subject=',df$subject[1]),' ') #debugON
-                      if ("objects" %in% names(df))
-                        cat(paste('objects=',df$objects[1]),' ') #debugON
-                      if ("targets" %in% names(df))
-                        cat(paste('targets=',df$targets[1])) #debugON
-                      print(e)
-                      return( data.frame(thresh=NA, slopeThisCrit=NA, error=TRUE) )
-                    }#,
-                    #       finally = function(e) { #just return the normal answer
-                    #         return( data.frame(thresh=threshSlop$x_th, error=FALSE) )
-                    #       }
-    )
-    
-    print(ans)
-    return (ans)
-  }
-}
 
 makeMyThreshGetAnalytically<- function(threshCriterion,linkingFunctionType) { #create function that can use with 
 #ddply once have function fits for each condition

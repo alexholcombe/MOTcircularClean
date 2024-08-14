@@ -243,7 +243,6 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
 		stop(paste("Unexpected value of initial-",initial))
 
 # GLM settings
-
     glmdata <- data.frame( cbind( r/m , m , x ) );
 
     names( glmdata ) <- c( "resp", "m", "x" );
@@ -251,7 +250,6 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
 
    	ctrl<- do.call("glm.control",control)
    	cntrl.brglm<- do.call("brglm.control",control) 
-
 
 # formula
 
@@ -281,7 +279,7 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
     		eventType = class(e)[2]
     		cat(paste(eventType,"in AH function '", e$call, "': '",e$message,"'\n"))
     		e
-    	  }
+    	}
 
 	method <- initial
 	#brglm.fit requires rescaling because brglm doesn't support custom link functions
