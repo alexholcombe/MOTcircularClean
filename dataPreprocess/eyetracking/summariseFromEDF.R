@@ -122,12 +122,12 @@ if (TESTME) {
 
 VISUALIZE=TRUE
 if (TESTME && VISUALIZE) {
-  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "S392.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
+  EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "K041.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
-  trialnum = 8
+  trialnum = 2
   # extracting fixations and saccades for the first trial
-  fixations <- gaze$fixations[gaze$fixations$trial == trialnum, ]
-  saccades <- gaze$saccades[gaze$saccades$trial == trialnum, ]
+  fixations <- EDFstuff$fixations[EDFstuff$fixations$trial == trialnum, ]
+  saccades <- EDFstuff$saccades[EDFstuff$saccades$trial == trialnum, ]
   
   #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
   library(ggplot2)
@@ -143,6 +143,10 @@ if (TESTME && VISUALIZE) {
     # better legend titles
     labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]")
   show(gg)
+  
+  #Calculate average across all trials
+  avgFixatn<- EDFstuff$fixations %>% 
+    summarise(meanX = mean(gavx), meanY = mean(gavy))
 }
 
 sanityCheckEyeTracking=TRUE

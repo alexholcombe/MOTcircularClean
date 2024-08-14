@@ -125,10 +125,18 @@ av<-avgEachSubjectG + geom_point(data=commonScreenResolutions,
   ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions') +
   theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
 
-
-
 av <- av + facet_grid(.~dateHalf)
 show(av)
+
+#plot momo's temporary
+avgFix |> filter(ID=="K04") |>
+  ggplot( aes(x= meanX, y= meanY, label=ID))+  
+  geom_point() +geom_text(hjust=0, vjust=0)+
+ geom_point(data=commonScreenResolutions, 
+                                 aes(x=widthPix/2,y=heightPix/2,label=NULL,color=resolution)) + 
+  ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions') +
+  theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
+
 
 avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  geom_point() +geom_text(hjust=0, vjust=0)
 commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600), 
