@@ -8,7 +8,16 @@ This uses some functions copied from the modelfree package.
 
 Old temporal frequency versus speed analyses can be found in https://github.com/alexholcombe/speed-tf-VSS14
 
+## Fitting a psychophysical function with logistic regression and custom link function
+
+### Old method from <2014
+
+
 I think with brglm, it doesn't support custom link function, so I scale the y's from guessing->(1-lapseRate) to 0 to 1. But then some of the data is actually below guessing and above 1-lapseRate, and because in logistic regression the y's can't be greater than 1 or below 0, I truncate those, which is not good. So need to switch to non-brglm so can use custom link function, and need to then use logit_link_private.
+
+On line 35 of analyzeMakeReadyForPlot, line 35 set initialMethod to "glmCustomlink" 
+
+## Newer method?
 
 But with brglm2, brglmFit() now takes custom link functions. https://cran.r-project.org/web/packages/brglm2/news/news.html
 

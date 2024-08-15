@@ -299,7 +299,10 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
    	#assign("last.warning", NULL, envir = baseenv())  
 	  
    	#linkfun<<-linkfun; guessing<<-guessing; lapsing<<-lapsing; ctrl<<-ctrl; glmformula<<-glmformula; glmdata<<-glmdata;
-  	fit<- glm( glmformula, data = glmdata, weights = m, family = binomial( eval( call( linkfun, guessing, lapsing ) ) ),x=T,y=T,control=ctrl )
+	  
+  	fit<- glm( glmformula, data = glmdata, weights = m, 
+  	           family = binomial( eval( call( linkfun, guessing, lapsing ) ) ), #call the linkfun, which is specified as a string so that's why have to use eval(call())
+  	           x=T,y=T,control=ctrl )
 		fit$family$link<-"logit" #is something like "logit( c(0.5, 1) )" which will make myPlotCurve crash, so needed to change it
 		#Other algorithms return "logit"
 	}

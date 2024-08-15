@@ -32,7 +32,7 @@ if (!"subject" %in% factorsForBreakdown) {
 }
 
 #Fit psychometric functions to data ########################################
-initialMethod<-"brglm.fit"  # "glmCustomlink" #  
+initialMethod<-"glmCustomlink" #"brglm.fit"  # "glmCustomlink" #  
 
 fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity=0) {
   #data comes in one row per trial, but binomFit wants total correct, numTrials
