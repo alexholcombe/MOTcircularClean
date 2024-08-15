@@ -286,8 +286,6 @@ plotCurve<- function(df,groupvars,  iv,xmin,xmax,numxs) {
 }
 
 
-
-
 extractThreshFromCurveNumerically<- function(df,groupvars, iv,threshCriterion) {
   #after function has been fit, determine x-value needed for criterion performance (threshold)
   #If an error occurs, return info about what it errored on. And also indicate there was an error

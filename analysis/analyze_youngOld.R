@@ -62,15 +62,21 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   source('individDataWithPsychometricCurves.R') 
   factorsForPlot <- tibble( colorF = "targets", colF = "objects", rowF = "subject" )
   
-  #With subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 50 ) |>
-        filter(  as.numeric(as.character(subject)) <= 60 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 50  ) |>
-    filter(  as.numeric(as.character(subject)) <= 60 )
+  #Problem curvefitting subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
+  #if length(unique())
   
-  plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
-                           factorsForPlot,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
-    
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 0 ) |>
+        filter(  as.numeric(as.character(subject)) <= 999 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 0  ) |>
+    filter(  as.numeric(as.character(subject)) <= 999 )
+  
+  plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
+                           factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
+  plt<-plt+facet_wrap(vars(subject))
+  show(plt)
+  ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
+  
+  #Example of error is criterion=0.625, subject=27, 4 objects, 2 targets
   source("extractThreshesAndPlot.R") #provides threshes
   thrAll<-rbind(thrAll,threshes)
   #below is old way, saving separate threshes

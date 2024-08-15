@@ -8,7 +8,8 @@ if (!("speed" %in% colnames(psychometrics))) { #psychometrics must have been fit
 }
 
 #function that plots the psychometric functions for a dataset / experiment /criterion,
-plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=NULL,xmax=NULL) {
+plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapOrGrid=TRUE,xmin=NULL,xmax=NULL) {
+  #wrapOrGrid means facet_grid. facet_wrap is better if have lots of participants
   #draw individual psychometric functions for individual experiment
   #the F's, like colorF are factors to break down data by (expects psychometric functions to have these factors)
   #factors is named structure, like list. If no factor, should be ""
@@ -18,7 +19,8 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
   title<-paste0(expName,' individual Ss data')
   quartz(title,width=6,height=7)
   #print( table(df[colorF],df[colF],df[rowF) ) #debug
-  g=ggplot(data=df,aes_string(x='speed',y='correct',color=colorF))
+  g=ggplot(data=df,
+           aes_string(x='speed',y='correct',color=colorF,shape=colF))
   g=g+stat_summary(fun.y=mean,geom="point", position=position_jitter(w=0.01,h=0.01),alpha=.95)
   if (colF != "" | rowF != "") {
     if (colF=="") { colF='.' }
@@ -28,7 +30,6 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
   }
   g=g+ theme_bw()
   
-  show(g)
   #draw individual psychometric functions, for only one experiment  
   g=g+geom_line(data=psychometricCurves)
   g=g+geom_hline(mapping=aes(yintercept=chance),lty=2)  #draw horizontal line for chance performance
@@ -55,14 +56,12 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,xmin=
   #g<- g+ theme(axis.title.y=element_text(size=12,angle=90),axis.text.y=element_text(size=10),axis.title.x=element_text(size=12),axis.text.x=element_text(size=10))
   #g<-g+ scale_x_continuous(breaks=c(1.5,2.0,2.5),labels=c("1.5","","2.5"))
   #g<-g+ scale_x_continuous(breaks=speeds)
-  show(g)
-  ggsave( paste0('figs/individPlotsE',expName,'.png')  )
   
   #can't show threshold lines right now because depends on criterion
   # thisThreshes<- subset(threshesThisNumeric, exp==1)
   # threshLines <- ddply(thisThreshes,factorsPlusSubject,threshLine)
   # g<-g+ geom_line(data=threshLines,lty=3,size=0.9)  #,color="black") #emphasize lines so can see what's going on
-  
+  return(g)
 }
 
 #condition: centered, slightly off-center, or fully off-center

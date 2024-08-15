@@ -16,11 +16,13 @@ worstLapseRate <- max(fitParms$lapseRate)
 if (worstLapseRate > .03) {
   paste("Can't calculate threshold above criterion level of",1-worstLapseRate,"because worst lapseRate is",worstLapseRate)
 }
-calcMidPointThresh<- TRUE
-calcThreeQuartersThresh<- TRUE
+addMidPointThresh<- TRUE #Work out what the midpoint thresh criterion and thresh is for each number of objects
+addThreeQuartersThresh<- FALSE #Work out what the three-quarters thresh criterion and thresh is for each number of objects
+#c(0.0.562,0.625) are the halfway-threshold criteria for 4 objects and 8 objects
 #maxCriterion <- 1-worstLapseRate
 maxCriterion <- .95
-threshCriteria<- seq(from=.67,to=maxCriterion,by=.06) #high thresholds
+
+threshCriteria<- c() # seq(from=.67,to=maxCriterion,by=.06) #high thresholds
 threshCriterion = round(threshCriteria,3) #because otherwise can include invisible 10^-21 diff which will trip you up later
 threshes <- data.frame()
 
