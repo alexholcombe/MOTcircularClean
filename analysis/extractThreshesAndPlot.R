@@ -85,14 +85,47 @@ themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, s
 tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
 dv="speed"
 quartz(title=tit,width=6,height=3) #create graph of thresholds
-midpoint<- subset(threshes,criterionNote=="midpoint")
-h<-ggplot(data=midpoint,   
-          aes(x=targets,y=thresh,color=factor(objects)))
-h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
+dodgeWidth<-.4
+midpointThreshes<- subset(threshes,criterionNote=="midpoint")
+h<-ggplot(data=midpointThreshes,
+          aes(x=targets,y=thresh,color=factor(objects), 
+              group=interaction(subject,objects))) #this is critical for points and lines to dodge in same way
+#h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
-h<-h+ geom_point() + geom_line(aes(group=interaction(subject,objects))) #plot individual lines for each subject
+h<-h+ geom_point(position=position_dodge(width=dodgeWidth),size=1)
+h<-h+ geom_line(position=position_dodge(width=dodgeWidth)) #plot individual lines for each subject
+h<-h+ stat_summary(fun.y=mean,geom="point",size=5,fill=NA,shape=21,stroke=3,
+                   aes(x=targets,y=thresh,color=factor(objects),group=factor(objects)))
+h
+
+#######
+
+
+h<-ggplot(data=midpointThreshes,   
+          aes(x=targets,y=thresh,color=factor(objects)))
+#h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+#ylim(1.4,2.5) DO NOT use this command, it will drop some data
+#h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
+
+h<-h+ geom_point( position=position_dodge(width=dodgeWidth) ) 
+#h<-h+ geom_line( position=position_dodge(width=dodgeWidth) ) 
+h<-h+geom_line(aes(group=interaction(subject,objects)), position=position_dodge(width=dodgeWidth)) #plot individual lines for each subject
+show(h)
+
+h<-h+ stat_summary(fun.y=mean,geom="point",position=position_dodge(width=dodgeWidth/2), size=4,
+                   )  + scale_shape_manual(values = c(22, 21))
+show(h)
+  
+  scale_fill_manual(values=c("blue", "cyan4"))
+show(h)
+h<-h+ stat_summary(fun.y=mean,geom="point",position=position_dodge(width=dodgeWidth/2), size=4)
+show(h)
+
+h<-h+ stat_summary(fun.y=mean,geom="line",position=position_dodge(width=dodgeWidth/2))
+
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(dv=="speed","rps","Hz"),')',sep='') )  
 if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge when plot tf") 
 } else h<-h+ggtitle('4,8 validate tf limit.')
