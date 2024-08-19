@@ -96,11 +96,11 @@ h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw()
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
 h<-h+ geom_point(position=position_dodge(width=dodgeWidth),size=1)
 h<-h+ geom_line(position=position_dodge(width=dodgeWidth)) #plot individual lines for each subject
-h<-h+ stat_summary(fun.y=mean,geom="point",size=5,fill=NA,shape=21,stroke=3,
+h<-h+ stat_summary(fun.y=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
                    aes(x=targets,y=thresh,color=factor(objects),group=factor(objects)))
 h
 
-#######
+#######Go back and vet trials based on eyetracking
 
 
 h<-ggplot(data=midpointThreshes,   
