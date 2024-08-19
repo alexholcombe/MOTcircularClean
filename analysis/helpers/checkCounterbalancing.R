@@ -37,7 +37,7 @@ checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
 	    print( paste0("And these differences exceed the tolerance of",tolerance) )
 	    ans <- FALSE
 	  } else {
-	    print( paste("These differences do not exceed the tolerance of",tolerance) )
+	    print( paste("Differences do not exceed the tolerance of",tolerance) )
 	    ans <- TRUE
 	  }
 	}

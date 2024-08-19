@@ -65,6 +65,11 @@ datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-21.tsv")),
 #S45 "fatigued during and after second MOT trial, especially during the third MOT trial" - Sarah
 datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")), by="fname")
 
+#N64 stella's comment when running: "found the outer ring very difficult, most of the time guessed (could not see it) + found the task very draining (fatigued)". partcipant also reported macula repair + cataracts
+#Also overall percent correct not much above 50%, unlike everyone else who got closer to
+#the staircase-converging values of 79% correct
+datafiles<- rows_delete(datafiles, tibble(fname=c("N64_a_27Jun2024_10-21.tsv","N64_b_27Jun2024_10-59.tsv","N64_c_27Jun2024_11-38.tsv")), by="fname")
+
 #K341 has two files with 0 rows
 #datafiles %>% filter(str_starts(fname,"K34"))
 #Said her eyes felt dry towards the end of the trials, and that it was hard to focus.
@@ -215,8 +220,15 @@ datafiles$IDsession<- substr(datafiles$IDsession,1,4)
 
 #Parse out the ID, as opposed to the session number
 datafiles$ID <- substr(datafiles$IDsession,1,3)
+datafiles$IDnum <- substr(datafiles$ID,2,3)
+
 #Parse out the session number
 datafiles$session <- substr(datafiles$IDsession,4,4)
+
+#The mouseClickArea problem was fixed on 10 May (SHA:802a331b80c544348da255ce61827583759bb879),
+#prior to that it would sometimes attribute a response to the wrong ring if participant didn't click in the best place
+#Affecting all participants < 31, in other words: 22,23,24,26,27,28,29,30,31
+datafiles<- datafiles %>% filter(IDnum>31)
 
 #To match to the EDF files, they will
 #The EDF files have names like M471.EDF, M472.EDF, M473.EDF, P23a.EDF, P23b.EDF
@@ -232,8 +244,6 @@ if (any(datafiles$IDvalid==FALSE)) {
   cat("Problem! These files have the wrong format as the subject ID is not an upper-case letter followed by two digits:")
   cat( datafiles %>% dplyr::filter(IDvalid==FALSE) )
 }
-
-datafiles$IDnum <- substr(datafiles$ID,2,3)
 
 #Match EDF files to behavioral files
 ####################################
@@ -253,9 +263,13 @@ EDFfiles<- data.frame(fname=EDFfiles)
 grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
 first4char<- substr(EDFfiles$fname,1,4)
 validEachFname<- str_detect(first4char, grepForUppercaseLetterFollowedByTwoDigits)
-if ( length( which(!(validEachFname)) ) ) {
+notValidEDFfileNames<- EDFfiles$fname[ !(validEachFname) ]
+knownDegenerateEDFfiles<- c("j5.EDF", "lora.EDF", "lxxa.EDF", "tea.EDF", "tema.EDF", "temp.EDF")
+#remove the known degenerate ones that I already double-checked with Loretta and Josh
+notValidEDFfileNames<- setdiff(notValidEDFfileNames,knownDegenerateEDFfiles)
+if ( length( notValidEDFfileNames) )  {
   message("The following files are not valid in that they don't start with a letter and two digits:")
-  EDFfiles$fname[ !(validEachFname) ]
+  notValidEDFfileNames
 }
 
 EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix"))
@@ -265,30 +279,42 @@ EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix"))
 # got them off the computer first.
 grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
 noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
-if ( length( which(noSessionID) ) ) {
-  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
-  cat(EDFfiles$name[ noSessionID ]); cat("\n")
-}
+
+message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
+cat(EDFfiles$name[ noSessionID ]); cat("\n")
+
+
+grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
+noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
 EDFfiles$noSessionID <- noSessionID
+knownEDFfilesWithoutSession<- c() #Fill this in once decide which ones not to care about
+noSessionID_EDFfiles<- EDFfiles$name[ noSessionID ]
+noSessionID_EDFfiles<- setdiff(noSessionID_EDFfiles, knownEDFfilesWithoutSession)
+if ( length( noSessionID_EDFfiles ) ) {
+  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
+  cat(noSessionID_EDFfiles); cat("\n")
+}
 
 EDFfiles$session <- substr(EDFfiles$name,4,4)
 
 #Validate that it is a session number/letter, e.g. "a" or "1", of those that have one
-#26July no files have this problem
+knownBadSessionNums<- c("j5","tea")
+
 grepForDigitOrLowerCaseLetter <- "[0-9a-z]"
 validSession<- str_detect(EDFfiles$session, grepForDigitOrLowerCaseLetter)
 hasSessionIDbutInvalid <- which(!(noSessionID) & !validSession)
-if ( length( hasSessionIDbutInvalid  ) ) {
-  message("The following files are not valid in that the session is not a letter or digit:")
-  EDFfiles$name[ hasSessionIDbutInvalid ]
-}
+badSessionNums<- EDFfiles$name[ hasSessionIDbutInvalid ]
 
+unknownBadSessionNums <- setdiff(badSessionNums,knownBadSessionNums)
+if ( length( unknownBadSessionNums  ) ) {
+  message("The following EDF filenames are not valid in that the session is not a letter or digit:")
+  cat(unknownBadSessionNums)
+}
 
 #Match eyetracking (EDF) files to psychopy datafiles
 
 #Assign closest match to corresponding behavioral file
 #Visually inspect, and then deal case-by-case with anomalies
-
 EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
 EDFfiles <- EDFfiles %>% arrange(IDnum)
 
@@ -306,7 +332,7 @@ datafiles<- datafiles %>%
   mutate(session = ifelse(str_starts(fname,"C53_b_05Jun2024_14-35.tsv"),
                           "c", session) )
 
-#See how many behavioral files don't seem to have a match in the second tibble
+#See how many behavioral files don't seem to have a match in the EDFfiles tibble
 #anti_join returns all rows from the first tibble where there are matching values in the second tibble
 noMatchingEDFfile<- 
   anti_join(datafiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
@@ -339,8 +365,6 @@ message( paste( length( unique(joined$IDnum) ),"Ss total, of which",
 message( paste(nrow(joined),"files total, of which",
                summarize(joined, trues=sum(EDFmatchExists))$trues,
                "have a matching EDF file with a session number."))
-
-
 #For the EDF files that don't have a session number, could try to figure out which session they
 #correspond to by looking at their date/time
 
@@ -530,6 +554,12 @@ perSubjSession<- rawData %>%
 numSsWithoutMatchingEDFfile<- sum( perSubjSession$EDFmatchExists ==FALSE )
 message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
                numSsWithoutMatchingEDFfile,"do not have a matching EDF file with a session number."))
+
+#If staircases work, average correct should be 0.794 in each condition.
+avgCorrOverall<- rawData |> group_by(IDnum) |> summarise(correct=mean(orderCorrect==3),n=n())
+pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
+#Originally subjects 23 to 31 have below 70% accuracy indicating that staircases didn't work.
+#due to the mouseClickArea problem making the program malfunction, data now thrown out above.
 
 #Saved anonymised data for loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationName)

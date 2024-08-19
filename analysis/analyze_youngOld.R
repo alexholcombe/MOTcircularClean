@@ -50,6 +50,12 @@ centralZoneHeightPix = exclusionPixels*2 #assumes the monitor is correct aspect 
 datAnalyze$subject<- datAnalyze$IDnum
 factorsForBreakdownForAnalysis <- c('objects','targets')
 
+#If staircases work, average correct should be 0.794 in each condition
+avgCorrOverall<- datAnalyze |> group_by(subject) |> summarise(mean=mean(correct),n=n())
+avgCorr<- ggplot(avgCorrOverall,aes(x=subject,y=mean)) + geom_point()
+#subject 69 is lowest with 64% correct, not terrible
+
+
 #https://github.com/alexholcombe/speed-tf-VSS14/blob/master/analyseExps/doAllAnalyses_E4ab.R
 iv<-"speed"
 for (iv in c("speed","tf")) { #"logTf","logSpd"
@@ -65,9 +71,9 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #Problem curvefitting subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
   #if length(unique())
   
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 0 ) |>
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= 27 ) |>
         filter(  as.numeric(as.character(subject)) <= 999 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >= 0  ) |>
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=27  ) |>
     filter(  as.numeric(as.character(subject)) <= 999 )
   
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
@@ -77,7 +83,10 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
   
   #Example of error is criterion=0.625, subject=27, 4 objects, 2 targets
+  thrAll<-tibble()
   source("extractThreshesAndPlot.R") #provides threshes
+  #Add threshes to the plots so that can see where threshold extraction failed
+  
   thrAll<-rbind(thrAll,threshes)
   #below is old way, saving separate threshes
   #   varName=paste("threshes_",iv,"_",expName,sep='') #combine threshes

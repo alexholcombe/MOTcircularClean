@@ -22,7 +22,7 @@ addThreeQuartersThresh<- FALSE #Work out what the three-quarters thresh criterio
 #maxCriterion <- 1-worstLapseRate
 maxCriterion <- .95
 
-threshCriteria<- c() # seq(from=.67,to=maxCriterion,by=.06) #high thresholds
+threshCriteria<- c(.75) # seq(from=.67,to=maxCriterion,by=.06) #high thresholds
 threshCriterion = round(threshCriteria,3) #because otherwise can include invisible 10^-21 diff which will trip you up later
 threshes <- data.frame()
 
@@ -33,13 +33,13 @@ if (is.factor(numObjects)) {
 for (numObjectsThis in unique(numObjects)) {
   threshCriteriaThis = threshCriteria
   threshCriteriaNotes = rep("nothingSpecial",length(threshCriteriaThis))
-  if (calcMidPointThresh) {
+  if (addMidPointThresh) {
     crit <- 1/numObjectsThis + 0.5*(1-1/numObjectsThis)  #midpoint threshold
     crit<- round(crit,3)
     threshCriteriaThis= c(threshCriteriaThis,crit)
     threshCriteriaNotes = c(threshCriteriaNotes,"midpoint")
   }
-  if (calcThreeQuartersThresh) {
+  if (addThreeQuartersThresh) {
     crit <- 1/numObjectsThis + 0.75*(1-1/numObjectsThis)
     crit<- round(crit,3)
     threshCriteriaThis= c(threshCriteriaThis,crit)
@@ -49,19 +49,19 @@ for (numObjectsThis in unique(numObjects)) {
     threshCriterion = threshCriteriaThis[i]
     cat('Extracting thresh for criterion:',threshCriterion)
     
-    psychometricTemp<- subset(psychometrics,objects==numObjectsThis)
+    psychometricThis<- subset(psychometrics,objects==numObjectsThis)
     calcThreshForPredictn<- FALSE  #because tracking-two prediction for 6, 9 objects never gets that high. Anyway this is to address
     if (!calcThreshForPredictn)  
-      psychometricTemp <- subset(psychometricTemp,targets!="2P")
+      psychometricThis <- subset(psychometricThis,targets!="2P")
     #Don't do it where criterion corresponds to below chance
-    #psychometricTemp <- subset(psychometricTemp, numObjects > 1/threshCriterion) #For these numObjects conditions, chance is above the current criterion
+    #psychometricThis <- subset(psychometricThis, numObjects > 1/threshCriterion) #For these numObjects conditions, chance is above the current criterion
     
-    #Because with replacement for ddply, can pass parameters, potentially don't need to make a myThreshGetNumeric, instead
-    # can pass parameters to group_modify
-    #myThreshGetNumeric= makeMyThreshGetNumerically(iv,threshCriterion)
-    #threshesThisNumeric = plyr::ddply(psychometricTemp,factorsPlusSubject,myThreshGetNumeric) 
-
-    threshesThisNumeric<- psychometricTemp |>  group_by( !!!syms(factorsPlusSubject) ) |>
+    if (threshCriterion==0.625) {
+      temp<- filter(psychometrics,subject==27 & targets==2 & objects==4 )
+      print(temp)
+      #STOP
+    }
+    threshesThisNumeric<- psychometricThis |>  group_by( !!!syms(factorsPlusSubject) ) |>
             group_modify(extractThreshFromCurveNumerically, iv,threshCriterion)
     
     threshesThisNumeric$criterion <- threshCriterion

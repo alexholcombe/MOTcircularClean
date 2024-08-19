@@ -19,6 +19,7 @@ On line 35 of analyzeMakeReadyForPlot, line 35 set initialMethod to "glmCustomli
     * the lapseRate does not actually mean what it says on the tin. This issue doesn't arise in most psychophysics because performance gets better with large values, not worse, with no actual bound. 
     * The curve fit may not reach the threshold
 
+To-do: Add threshes to the plots so that can see where threshold extraction failed
 
 ## Newer method?
 

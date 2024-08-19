@@ -1,0 +1,26 @@
+---
+title: "tryConstrainedFit"
+format: html
+editor: visual
+---
+
+Try constrained fit using general optimization package CVXR
+
+<https://www.jstatsoft.org/article/view/v094i14>
+
+First follow this example
+
+<https://stats.stackexchange.com/a/586465/1640>
+
+```{r}
+library(CVXR)
+```
+
+```{r}
+X <- matrix(runif(300), ncol=3)
+Y <- round(X %*% c(0.2,0.3,0.5))
+Y <- rbinom(300, 1, X %*% c(0.2,0.3,0.5))
+ 
+beta <- CVXR::Variable(3)
+obj <- -sum((1-Y) * (X %*% beta)) - sum(logistic(-X %*% beta))
+```
