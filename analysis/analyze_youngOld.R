@@ -55,7 +55,6 @@ avgCorrOverall<- datAnalyze |> group_by(subject) |> summarise(mean=mean(correct)
 avgCorr<- ggplot(avgCorrOverall,aes(x=subject,y=mean)) + geom_point()
 #subject 69 is lowest with 64% correct, not terrible
 
-
 #https://github.com/alexholcombe/speed-tf-VSS14/blob/master/analyseExps/doAllAnalyses_E4ab.R
 iv<-"speed"
 for (iv in c("speed","tf")) { #"logTf","logSpd"
@@ -71,18 +70,28 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #Problem curvefitting subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
   #if length(unique())
   
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= 27 ) |>
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 27 ) |>
         filter(  as.numeric(as.character(subject)) <= 999 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=27  ) |>
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >=27  ) |>
     filter(  as.numeric(as.character(subject)) <= 999 )
   
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
-                           factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) #xmin=NULL,xmax=NULL) 
+                           factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) 
   plt<-plt+facet_wrap(vars(subject))
   show(plt)
   ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
   
-  #Example of error is criterion=0.625, subject=27, 4 objects, 2 targets
+  #Psychometric doesn't go high enough with subject= 69  objects= 8  targets= 2, which
+  #from the below individual graph looks appropriate - the persom was getting 25% wrong even at low speeds
+  sub69<- datAnalyze |> filter( subject==69)
+  s69<- plotIndividDataAndCurves("subject69",sub69,
+                           psychometricsForThisPlot |> filter(subject==69),
+                           tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
+                           wrapOrGrid=T,xmin=0,xmax=1.5)
+  
+  show(s69)
+
+  
   thrAll<-tibble()
   source("extractThreshesAndPlot.R") #provides threshes
   #Add threshes to the plots so that can see where threshold extraction failed

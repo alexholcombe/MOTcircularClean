@@ -70,7 +70,8 @@ for (numObjectsThis in unique(numObjects)) {
     threshes<- rbind(threshes, threshesThis)
   }
 }
-#ERROR occurred with subject= 64  objects= 8  targets= 3
+#ERROR occurred with subject= 69  objects= 8  targets= 2, which looks appropriate, subject getting 25% wrong at
+#slow speeds with objects = 8
 
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
   theme(axis.line = element_line(linewidth=.3, color = "grey"), 
@@ -81,10 +82,11 @@ themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, s
         panel.background = element_rect(fill = "transparent",colour = NA),
         plot.background = element_rect(fill = "transparent",colour = NA)   )
 ##########Plot threshes, exp*subject*numTargets*numObjects ################
-tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_threeQuarterThresh",sep='')
+tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
 dv="speed"
 quartz(title=tit,width=6,height=3) #create graph of thresholds
-h<-ggplot(data=subset(threshes,criterionNote=="threeQuarters"),   #midpoint
+midpoint<- subset(threshes,criterionNote=="midpoint")
+h<-ggplot(data=midpoint,   
           aes(x=targets,y=thresh,color=factor(objects)))
 h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
@@ -94,6 +96,9 @@ h<-h+ geom_point() + geom_line(aes(group=interaction(subject,objects))) #plot in
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(dv=="speed","rps","Hz"),')',sep='') )  
 if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge when plot tf") 
 } else h<-h+ggtitle('4,8 validate tf limit.')
+h<-
+  h+ stat_summary(fun.y=mean,geom="point",size=5)
+
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################Plot mean speed threshes against numTargets
