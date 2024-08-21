@@ -1,5 +1,5 @@
 library(eyelinkReader)
-library(dplyr)
+library(tidyverse)
 library(ggplot2)
 
 #Explore how things went with eyetracking youngOld
@@ -106,7 +106,7 @@ pilotParticipants <- c("A12", "M13", "A14", "J16", "D15", "N17", "A18", "J19",
 fixatns$pilot <- fixatns$ID %in% pilotParticipants
 blinks$pilot <- blinks$ID %in% pilotParticipants
 
-avgFix<- fixatns %>% group_by(ID) %>% 
+avgFix<- fixatns |> group_by(ID) |> 
   summarise(meanX = mean(gavx), meanY = mean(gavy), date=first(date))
 
 #Change date variable to ordinal rank to avoid exact timestamps (privacy concern)
@@ -138,7 +138,8 @@ avgFix |> filter(ID=="K04") |>
   theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
 
 
-avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  geom_point() +geom_text(hjust=0, vjust=0)
+avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=factor(ID)))+  geom_point() +
+                          geom_text(hjust=0, vjust=0)
 commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600), 
                                        heightPix=c(600,768,982,900,1200),
                                        label=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
