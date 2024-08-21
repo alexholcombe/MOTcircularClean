@@ -104,7 +104,7 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   return( eachTrial )
 }
 
-TESTME = FALSE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
+TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
 if (TESTME) {
 
   #data(gaze) #to use built-in dataset
@@ -128,7 +128,11 @@ if (TESTME && VISUALIZE) {
   # extracting fixations and saccades for the first trial
   fixations <- EDFstuff$fixations[EDFstuff$fixations$trial == trialnum, ]
   saccades <- EDFstuff$saccades[EDFstuff$saccades$trial == trialnum, ]
-  
+
+  commonScreenResolutions <- data.frame( widthPix = c(800,1024), 
+                                         heightPix=c(600,768),
+                                         resolution=c("800x600","1024x768"))
+    
   #eyelinkReader:::plot.eyelinkRecording(gaze,trial=1)
   library(ggplot2)
   gg<- ggplot() + coord_fixed(ratio=1) +
@@ -141,7 +145,10 @@ if (TESTME && VISUALIZE) {
     # draw saccades as line segments
     geom_segment(data = saccades, aes(x = gstx, y = gsty, xend = genx, yend = geny, color = sttime_rel)) +
     # better legend titles
-    labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]")
+    labs(size = "Fixation duration [ms]", color = "Saccade onset [ms]") +
+    geom_point(data=commonScreenResolutions,
+               aes(x=widthPix/2,y=heightPix/2),color="darkred",shape=3) + 
+    ggtitle('All fixations in the trial, with screen center in dark red')
   show(gg)
   
   #Calculate average across all trials

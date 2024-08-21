@@ -138,13 +138,10 @@ avgFix |> filter(ID=="K04") |>
   theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
 
 
-avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=factor(ID)))+  geom_point() +
+avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  geom_point() +
                           geom_text(hjust=0, vjust=0)
-commonScreenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600), 
-                                       heightPix=c(600,768,982,900,1200),
-                                       label=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
 av<-avgEachSubjectG + geom_point(data=commonScreenResolutions, 
-                             aes(x=widthPix/2,y=heightPix/2,color=label)) +
+                             aes(x=widthPix/2,y=heightPix/2,color=resolution,label=NULL)) +
                 ggtitle('Average fixation location of each participant, with centers of different screen resolutions in color')
 show(av)
 
