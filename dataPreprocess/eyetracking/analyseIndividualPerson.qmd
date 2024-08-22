@@ -1,5 +1,5 @@
 ---
-title: "Analysis of eyetracking data for an individual participant"
+title: "Examine eyetracking data for an individual participant"
 format: html
 editor: visual
 ---
@@ -16,7 +16,7 @@ library(ggplot2)
 widthPix = 800; heightPix = 600
 ```
 
-Read in an EDF file
+Read in an EDF file.
 
 ```{r}
 #| echo: false
@@ -31,59 +31,99 @@ if (!file.exists(EDFfileWithPath)) {
 EDFstuff <- eyelinkReader::read_edf(EDFfileWithPath,
                                     import_samples = TRUE,
                                     sample_attributes = c('time', 'gx', 'gy'))
-
-```
-
-Special instructions to fixator to look not at fixation trials:
-
-```{r}
-
-print(specialInstructionsTrials)
-
 ```
 
 ## Graphs
 
-Check mean gX sample and mean gY samples
+Assuming screen width is `r widthPix` pixels and screen height is `r heightPix` pixels,
+
+check mean gX in and mean gY in samples (raw eyetracker record of where person was looking) to see where it is relative to screen center.
 
 ```{r}
 #| echo: false
+
+screenCtr <-  data.frame( x=widthPix/2, y= heightPix/2)
+criterionDist<-40
 samples<- EDFstuff$samples
-avgSampleRelCtr<- samples %>% filter(! trial %in% specialInstructionsTrials ) %>%
-                  summarise(meanX = mean(gxR,na.rm=TRUE), meanY = mean(gyR,na.rm=TRUE))  - 
-                             data.frame( meanX=widthPix/2,             meanY= heightPix/2)
+avgSampleRelCtr<- samples %>%
+                summarise(x = mean(gxR,na.rm=TRUE), y = mean(gyR,na.rm=TRUE)) - screenCtr
+                            
 
 if ( any( abs(avgSampleRelCtr) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40
-  print("Either your screen coordinates are wrong, the eyetracker sucked, or participant didn't look near center much")
+  msg = paste0("Average eye location should be near screen center (",widthPix/2,",",heightPix/2,") but")
+  msg=paste0(msg,"for this participant, it's more than")
+  msg=paste(msg,criterionDist,"pixels from the center, on average the eye position relative to center was (x,y)")
+  msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
+  msg=paste(msg,"This happens because the eyetracker or its calibration was no good, or the participant didn't look near center much.")
+  message(msg)
+} else {
+  msg="Average eye position was pretty close to screen center, deviated on average: (x,y) "
+  msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
+  message(msg)
 }
 
 ```
 
-Checked.
-
-Check average FIXATION event location
+Plot average eye position in each quartile of trials
 
 ```{r}
 #| echo: false
-fixatns <- EDFstuff$fixations
-#take the global average which if everything worked right will be near widthPix/2, heightPix/2
-avgFix<- fixatns %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  - 
-  data.frame( meanX=widthPix/2,     meanY= heightPix/2)
-if ( any( abs(avgFix) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
-  print("Either your screen coordinates are wrong, the eyetracker sucked, or participant didn't look near center much")
-}
+
+screenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600)-widthPix/2, 
+                                  heightPix=c(600,768,982,900,1200)-heightPix/2,
+                    resolution=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
+commonScrnResolutns<- screenResolutions[1:2,]
+
+samples<-samples |> mutate(xDev = gxR - widthPix/2, yDev = gyR - heightPix/2)
+
+# Calculate quartiles
+quartiles <- quantile(samples$trial)
+# Create the new column 'quartile'
+samples <- samples %>%
+  mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
+
+avg<- samples |> group_by(quartile) |> 
+  summarise(meanX = mean(xDev,na.rm=T), meanY = mean(yDev,na.rm=T))
+
+avgPlot<- ggplot(avg, aes(x= meanX, y= meanY, label=quartile))+  
+                          geom_point() +geom_text(hjust=0, vjust=0)
+#Add cross at center
+avgPlot<-avgPlot +
+      geom_point(data=tibble(x=0,y=0),
+               aes(x=x,y=x,label=NULL),color="darkred",shape=3) 
+#Add title and set graph limits
+avgPlot<-avgPlot +  
+  ggtitle('Average eye position of each quartile',subtitle=', with red cross showing screen center') +
+  xlim(-widthPix/2,widthPix/2) + ylim(-heightPix/2,heightPix/2) +
+  theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
+
+show(avgPlot)
 ```
 
-Checked
+Just look after first 2000ms, because first 800-\>1300ms is fixation, then blobs cued for 1200ms So really I don't have to exclude until after 800+1200=2000ms.
 
-Plot to see how average fixation x changes over time across (non-special) trials
+For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
+
+From previous exploring, I know that lots of occasional bad stuff happens over the first 100ms.
 
 ```{r}
 #| echo: false
-fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
+
+#Calculate time by which it matters that they're fixating, which is when targets are no longer cued
+fixationInterval = c(800,1300)
+trackingExtraTime = 1.2 #seconds, which is how long the blobs are cued, but that's after the fixation interval
+trialMinTimeCuesOff = min(fixationInterval) + trackingExtraTime
+#Can also look at additional columns in later versions of the program, that show fixationInterval
+```
+
+Plot to see how average fixation x changes over time across trials, after minimum fixation interval, to look for possible drift (gradual trend of calibration getting more and more wrong).
+
+```{r}
+#| echo: false
+fixatns<- EDFstuff$fixations
 
 #Plot to see how it changes over time across trials
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavx = mean(gavx, na.rm = TRUE)) %>%
   ggplot(aes(x = trial, y = gavx)) +
@@ -92,24 +132,25 @@ fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
 
 ```
 
-Plot to see how average fixation y changes over time across (non-special) trials
+Plot to see how average fixation y changes over time across trials, to look possible drift (gradual trend of calibration getting more and more wrong).
 
 ```{r}
 #| echo: false
 
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavy = mean(gavy, na.rm = TRUE)) %>%
   ggplot(aes(x = trial, y = gavy)) +
   geom_hline(yintercept = heightPix/2,col="black") +  
-  geom_point()
+  geom_point() #You can see the drift
+
 ```
 
-Show drift of average fixation position across trials with 2D plot
+Look for possible drift (gradual trend of calibration getting more and more wrong) of average fixation position across trials with 2D plot.
 
 ```{r}
 #| echo: false
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavx = mean(gavx, na.rm = TRUE), gavy = mean(gavy, na.rm = TRUE)) %>%
   ggplot(aes(x = gavx, y = gavy)) +
@@ -124,60 +165,65 @@ fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
 # by taking average of every trial? Need to decide on limited interval at beginning of trial.
 ```
 
-Just look after first 2000ms, because first 800-\>1300ms is fixation, then blobs cued for 1200ms So really I don't have to exclude until after 800+1200=2000ms.
-
-For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
-
-Look at x and y traces of trials
+Look at x and y traces of trials for first 50 trials
 
 ```{r}
 #| echo: false
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
+
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
   filter(trial<50) %>% 
   ggplot( aes(x=sttime_rel, y=gavx, color=trial) ) +
   ylab('average x during fixation') + xlab('sttime_rel (ms)') +
   ggtitle('First 50 trials') +
-  geom_vline(xintercept = widthPix/2,col="black") +  
+  geom_hline(yintercept = widthPix/2,col="black") +  
   geom_point() + geom_line(aes(group=trial))
 
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  filter(trial>50) %>% 
-  ggplot( aes(x=sttime_rel, y=gavx, color=trial) ) +
+```
+
+Divide trials into four groups (quartile) and plot for each
+```{r}
+#| echo: false
+# Calculate quartiles
+quartiles <- quantile(samples$trial)
+# Create the new column 'quartile'
+fixatns <- fixatns %>%
+  mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
+fixatns<- fixatns |> mutate(trialWithinQuartile = trial-(quartile-1)*max(samples$trial)/max(fixatns$quartile))
+
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
+  ggplot( aes(x=sttime_rel, y=gavx, color=trialWithinQuartile) ) +
   ylab('average x during fixation') + xlab('sttime_rel (ms)') +
-  ggtitle('After first 50 trials') +
-  geom_vline(xintercept = widthPix/2,col="black") +  
-  geom_point() + geom_line(aes(group=trial))
+  ggtitle('') +
+  geom_hline(yintercept = widthPix/2,col="black") +  
+  geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
+```
+Do it for y
 
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  filter(trial<50) %>% 
-  ggplot( aes(x=sttime_rel, y=gavy, color=trial) ) +
-    ggtitle('First 50 trials') +
+```{r}
+#| echo: false
+
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
+  ggplot( aes(x=sttime_rel, y=gavy, color=trialWithinQuartile) ) +
   ylab('average y during fixation') + xlab('sttime_rel (ms)') +
-  geom_vline(xintercept = heightPix/2,col="black") +  
-  geom_point() + geom_line(aes(group=trial))
-
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  filter(trial>50) %>% 
-  ggplot( aes(x=sttime_rel, y=gavy, color=trial) ) +
-  ggtitle('After first 50 trials') +
-  ylab('average y during fixation') + xlab('sttime_rel (ms)') +
-  geom_vline(xintercept = heightPix/2,col="black") +  
-  geom_point() + geom_line(aes(group=trial))
-
+  ggtitle('') +
+  geom_hline(yintercept = heightPix/2,col="black") +  
+  geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
 
 Plot distance from fixation over time
 
 ```{r}
 #| echo: false
+fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
 
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial) ) +
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trialWithinQuartile) ) +
   geom_point() + geom_line(aes(group=trial)) +
-  ggtitle('Distance from fixation over each trial')
+  ggtitle('Distance from fixation over each trial') + facet_wrap(.~quartile)
+
 ```
 
-The occasional bad stuff happens over the first 100ms, so zoom in Zoom in but show outliers off-scale in red.
+Zoom in but show outliers off-scale in red.
 
 ```{r}
 #| echo: false
@@ -185,34 +231,13 @@ The occasional bad stuff happens over the first 100ms, so zoom in Zoom in but sh
 minValToShow = 0
 maxValToShow = 50
   
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  filter(sttime_rel<1000) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
   mutate(outlier = ifelse(distFromFixatn<minValToShow | distFromFixatn>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn > maxValToShow, maxValToShow, distFromFixatn)) %>%     #replace outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn < minValToShow, minValToShow, distFromFixatn)) %>%
-  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=outlier) ) +
+  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trialWithinQuartile, shape=outlier) ) +
       ylim(minValToShow,maxValToShow) + #restrict axes
       scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
       geom_point(fill='red') + #only the outlier symbol is fillable
-      geom_line(aes(group=trial))
-```
-
-Zoom in but show outliers off-scale in red.
-
-```{r}
-#| echo: false
-minValToShow = widthPix/2-100
-maxValToShow = widthPix/2+100
-fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
-  filter(trial<50) %>% 
-  mutate(outlier = ifelse(gavx<minValToShow | gavx>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
-  mutate(gavx =  ifelse(gavx > maxValToShow, maxValToShow, gavx)) %>%     #replace outliers
-  mutate(gavx =  ifelse(gavx < minValToShow, minValToShow, gavx)) %>%
-  ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=outlier) ) +
-  ylab('average x during fixation') + xlab('sttime_rel (ms)') +
-  ylim(minValToShow,maxValToShow) + #restrict axes
-  scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
-  geom_point(fill='red') + #only the outlier symbol is fillable
-  geom_hline(yintercept = widthPix/2,col="black") +  
-  geom_line(aes(group=trial))
+      geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```

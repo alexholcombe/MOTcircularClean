@@ -123,7 +123,7 @@ blinks$pilot <- blinks$ID %in% pilotParticipants
 avgFix<- fixatns |> group_by(ID) |> 
   summarise(meanX = mean(gavx), meanY = mean(gavy), date=first(date))
 
-#Ideally, cange date variable to ordinal rank to avoid exact timestamps (privacy concern)
+#Ideally, change date variable to ordinal rank to avoid exact timestamps (privacy concern)
 #But that would have to be done by having loadAnonymiseSaveData read in all the EDF files,
 # strip out the timestamps, and then re-save. But because can't re-save as EDF file,
 # would have to make a massive tibble for fixations, for blinks, and with raw if potentially want to analyze that
