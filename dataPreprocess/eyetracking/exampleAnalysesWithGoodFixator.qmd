@@ -8,13 +8,11 @@ editor: visual
 
 Overall this report shows that for at least 7 trials out of 120, the eyetracker is way off, with X off by 90 pixels.
 
-Otherwise, things are reasonable esp. after first 500 ms when only fixation period turns on.
-But by reasonable, I mean that drift or something means that X and Y was off by up to ~20 pixels.
+Otherwise, things are reasonable esp. after first 500 ms when only fixation period turns on. But by reasonable, I mean that drift or something means that X and Y was off by up to \~20 pixels.
 
 For the weird 7 trials, there aren't many fixations so I should check how much missing data ("blinks") there was, maybe that helps explain why those trials were weird.
 
 ## Do basic checks
-
 
 ```{r}
 #| echo: false
@@ -24,10 +22,11 @@ library(ggplot2)
 widthPix = 800; heightPix = 600
 ```
 
-Read in good fixator's EDF file
+Read in good fixator (someone from the lab who we know was looking at the center) EDF file
 
 ```{r}
 #| echo: false
+
 goodFixator<-file.path("dataForTestingOfCode","exampleOfGoodFixator","tema.EDF")
 EDFexample<- goodFixator
 
@@ -40,15 +39,17 @@ specialInstructionsTrials <- c(20,30,31,37,42,45,50,54,60)
 ```
 
 Special instructions to fixator to look not at fixation trials:
+
 ```{r}
 
 print(specialInstructionsTrials)
 
 ```
 
-## Graphs 
+## Graphs
 
 Check mean gX sample and mean gY samples
+
 ```{r}
 #| echo: false
 samples<- EDFstuff$samples
@@ -61,6 +62,7 @@ if ( any( abs(avgSampleRelCtr) > 40 ) ) { #check if deviation from screen center
 }
 
 ```
+
 Checked.
 
 Check average FIXATION event location
@@ -75,9 +77,11 @@ if ( any( abs(avgFix) > 40 ) ) { #check if deviation from screen center of avera
   print("Either your screen coordinates are wrong, the eyetracker sucked, or participant didn't look near center much")
 }
 ```
+
 Checked
 
 Plot to see how average fixation x changes over time across (non-special) trials
+
 ```{r}
 #| echo: false
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
@@ -93,6 +97,7 @@ fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
 ```
 
 Plot to see how average fixation y changes over time across (non-special) trials
+
 ```{r}
 #| echo: false
 
@@ -174,9 +179,7 @@ fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
   ggtitle('Distance from fixation over each trial')
 ```
 
-The occasional bad stuff happens over the first 100ms, so zoom in
-Zoom in but show outliers off-scale in red.
-
+The occasional bad stuff happens over the first 100ms, so zoom in Zoom in but show outliers off-scale in red.
 
 ```{r}
 #| echo: false
@@ -195,6 +198,7 @@ fixatns %>% filter(! trial %in% specialInstructionsTrials) %>%
       geom_point(fill='red') + #only the outlier symbol is fillable
       geom_line(aes(group=trial))
 ```
+
 Zoom in but show outliers off-scale in red.
 
 ```{r}

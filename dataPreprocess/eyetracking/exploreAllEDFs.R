@@ -1,6 +1,6 @@
 library(eyelinkReader)
 library(tidyverse)
-library(ggplot2)
+rm(list = ls()) #Clear workspace so that any code executed before won't contaminate this run
 
 #Explore how things went with eyetracking youngOld
 widthPix = 800; heightPix = 600
@@ -31,10 +31,11 @@ EDFfiles <- setdiff(EDFfiles, items_to_remove)
 fnames<-EDFfiles
 fixatns<- data.frame(); blinks<- data.frame()
 
-if (file.exists("fixatns.tsv")) { #Assume this means already read in all EDF files and saved them
+if (file.exists("fixatns.tsv") & file.exists("blinks.tsv")) { #Assume this means already read in all EDF files and saved them
   readInEDFfiles<- FALSE
   library(readr)
-  fixatns<- readr::read_tsv("fixatns.tsv")
+  fixatns<- readr::read_tsv("fixatns.tsv", show_col_types=FALSE)
+  blinks<- readr::read_tsv("blinks.tsv", show_col_types=FALSE)
 } else { #Try to read in all the EDF files
   failedFiles<-c()
   for (f in 1:length(fnames)) {
@@ -98,7 +99,20 @@ if (file.exists("fixatns.tsv")) { #Assume this means already read in all EDF fil
   readr::write_tsv(blinks,"blinks.tsv") #In case want to use later without having to re-read all the files
 } #file exists
 
-table(fixatns$ID,fixatns$session)
+fixatns$IDnum <- substr(fixatns$ID,2,3)
+blinks$IDnum <- substr(blinks$ID,2,3)
+#table(fixatns$ID,fixatns$session)
+
+toThrowAway<- tibble(ID=c("lor","lxx")) #Non-legit participant files
+#Delete non-legit files
+fixatns<- rows_delete(fixatns, toThrowAway, by="ID")
+blinks<- rows_delete(blinks, toThrowAway, by="ID")
+
+#The mouseClickArea problem was fixed on 10 May (SHA:802a331b80c544348da255ce61827583759bb879),
+#prior to that it would sometimes attribute a response to the wrong ring if participant didn't click in the best place
+#Affecting all participants < 31, in other words: 22,23,24,26,27,28,29,30,31
+fixatns<- fixatns |> filter(IDnum>31)
+blinks<- blinks |> filter(IDnum>31)
 
 #label pilot participants
 pilotParticipants <- c("A12", "M13", "A14", "J16", "D15", "N17", "A18", "J19", 
@@ -109,10 +123,13 @@ blinks$pilot <- blinks$ID %in% pilotParticipants
 avgFix<- fixatns |> group_by(ID) |> 
   summarise(meanX = mean(gavx), meanY = mean(gavy), date=first(date))
 
-#Change date variable to ordinal rank to avoid exact timestamps (privacy concern)
+#Ideally, cange date variable to ordinal rank to avoid exact timestamps (privacy concern)
+#But that would have to be done by having loadAnonymiseSaveData read in all the EDF files,
+# strip out the timestamps, and then re-save. But because can't re-save as EDF file,
+# would have to make a massive tibble for fixations, for blinks, and with raw if potentially want to analyze that
 
-#Calculate whether in second 20% of subjects run, to break up graphs by first versus second bit
-avgFix<- avgFix |> mutate(dateHalf =    date > quantile(avgFix$date,probs=c(.8)) )
+#Calculate whether in second 50% of subjects run, to break up graphs by first versus second bit
+avgFix<- avgFix |> mutate(dateHalf =    date > quantile(avgFix$date,probs=c(.5)) )
 
 #Plot
 avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  
@@ -128,104 +145,70 @@ av<-avgEachSubjectG + geom_point(data=commonScreenResolutions,
 av <- av + facet_grid(.~dateHalf)
 show(av)
 
-#plot momo's temporary
-avgFix |> filter(ID=="K04") |>
-  ggplot( aes(x= meanX, y= meanY, label=ID))+  
-  geom_point() +geom_text(hjust=0, vjust=0)+
- geom_point(data=commonScreenResolutions, 
-                                 aes(x=widthPix/2,y=heightPix/2,label=NULL,color=resolution)) + 
-  ggtitle('Average fixation location of each participant',subtitle=', with colored points showing centers of different screen resolutions') +
-  theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
-
-
 avgEachSubjectG<- ggplot(avgFix, aes(x= meanX, y= meanY, label=ID))+  geom_point() +
                           geom_text(hjust=0, vjust=0)
-av<-avgEachSubjectG + geom_point(data=commonScreenResolutions, 
+av<-avgEachSubjectG + geom_point(data=commonScreenResolutions[1:2,], 
                              aes(x=widthPix/2,y=heightPix/2,color=resolution,label=NULL)) +
                 ggtitle('Average fixation location of each participant, with centers of different screen resolutions in color')
 show(av)
 
-deviationFromScreenCenter <- avgFix  -    data.frame( meanX=widthPix/2, meanY= heightPix/2)
-if ( any(abs(deviationFromScreenCenter) >40) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
+overallAvgFix<- fixatns |> summarise(meanX = mean(gavx), meanY = mean(gavy))
+
+avgFix<-avgFix |> mutate(deviatnX = meanX - widthPix/2, deviatnY = meanY - heightPix/2)
+avgFix<-avgFix |> mutate( distFromCtr = sqrt(deviatnX^2 + deviatnY^2) )
+fixatns<-fixatns |> mutate( distFromCtr = 
+                             sqrt( (gavx-widthPix/2)^2 + (gavy-heightPix/2)^2 ) )
+
+#Move date and datehalf to last columns
+avgFix<-avgFix |> relocate(c(date,dateHalf), .after=last_col())
+
+#check if deviation from screen center of average fixation location is greater than criterionDist pixels
+criterionDist<- 40
+distMoreThanCriterion<- avgFix |> filter(distFromCtr > criterionDist)
+if (nrow(distMoreThanCriterion)==0) {
+  msg = paste0("Great! All ", length(unique(avgFix$ID)), " participants' average fixation location",
+      " did not exceed ", criterionDist, " pixels from the center. The worst case was: ")
+  maxDist<- avgFix |> top_n(1,distFromCtr)
+  print(msg)
+  print(maxDist)
+}
+
+if (nrow(distMoreThanCriterion)>0) {
   msg = paste0("Average fixation location should be near screen center (",widthPix/2,",",heightPix/2,") but")
-  msg=paste0(msg," instead it's (",round(avgFix$meanX,1),",",round(avgFix$meanY,1),") so")
-  msg=paste(msg,"either your screen widthPix, heightPix are wrong, the eyetracker sucked, or participant didn't look near center much")
+  msg=paste0(msg,"of the ",nrow(avgFix)," participants, it's more than")
+  msg=paste(msg,criterionDist,"pixels from that for the following",nrow(distMoreThanCriterion),"participants:")
+  print(msg)
+  print(distMoreThanCriterion)
+  msg="This happens because the eyetracker or its calibration was no good, or the participant didn't look near center much."
   print(msg)
 }
 
-avgFix<- $fixations %>% summarise(meanX = mean(gavx), meanY = mean(gavy))  - 
-  data.frame( meanX=widthPix/2,     meanY= heightPix/2)
-if ( any( abs(avgFix) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40 pixels
-  msg = paste0("Average fixation location should be near screen center (",widthPix/2,",",heightPix/2,") but")
-  msg=paste0(msg," instead it's (",round(avgFix$meanX,1),",",round(avgFix$meanY,1),") so")
-  msg=paste(msg,"either your screen widthPix, heightPix are wrong, the eyetracker sucked, or participant didn't look near center much")
-  print(msg)
-}
-
-#Plot blink durations per participant. Anytime the eyetracker loses the eyes the parser labels that as a blink!
-blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
-  coord_cartesian(xlim=c(0, 500)) + xlab('blink duration (ms)') +
-  facet_wrap(vars(ID))
-
-#Caculate distance from fixation
-fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
-
-#What is with A18? Pilot participant
+#EXAMINE INDIVIDUAL PARTICIPANT
+#What is with J33? Worst participant
 library(stringr)
 #Plot distance from fixation over time
-pp<- fixatns %>% filter(sttime_rel>800) %>% filter(str_detect(ID,"A18")) %>%
-  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
+pp<- fixatns %>% filter(sttime_rel>800) %>% filter(str_detect(ID,"J33")) %>%
+  ggplot( aes(x=sttime_rel, y=distFromCtr, color=trial, shape=session) ) +
   geom_point() + geom_line(aes(group=trial)) +
   ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
   ggtitle('Fixation distance from center over each trial') +
-  facet_grid(rows=vars(ID),cols=vars(session)) #
+  facet_grid(rows=vars(IDnum),cols=vars(session)) #
 show(pp)
 plotpath<- file.path('plots')
 ggsave( file.path(plotpath, paste0('A18','.png'))  )
 
-#Discard A18 completely for not fixating
-fixatns <- fixatns %>% filter( !str_detect(ID,"A18") )
-
-#Create subject num integer
-fixatns$subjNum <- match(fixatns$ID, unique(fixatns$ID))  
-
-fixatnsNotPilot<- fixatns %>% filter(pilot==FALSE)
-#re-number so can use to divide up into separate figures
-fixatnsNotPilot$subjNum <- match(fixatnsNotPilot$ID, unique(fixatnsNotPilot$ID))  
-
-#Sample fixation over time plots
-#Graph several Ss at a time. 
-SsPerPlot = 2
-numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
-for (i in 1:numPlots)  {
-  #Plot distance from fixation over time
-  pp<- fixatnsNotPilot %>% filter(subjNum<4) %>%
-    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
-    filter(sttime_rel>800) %>%
-    ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=session) ) +
-    geom_point() + geom_line(aes(group=trial)) +
-    ylab('gavx (pixels)') + xlab('sttime_rel (ms)') +
-    ggtitle('gavx') +
-    #coord_cartesian(ylim=c(0, 200)) +
-    #facet_wrap(vars(ID)) 
-    facet_grid(rows=vars(ID),cols=vars(session)) #
-  show(pp)
-  plotpath<- file.path('plots')
-  ggsave( file.path(plotpath, paste0('gavxSamples',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
-}
-
 #Constrain axis and replace outliers with extreme value on axis
 SsPerPlot = 2
 minValToShow = 250; maxValToShow = 550
-numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
+numPlots = round( max(fixatns$IDnum)/SsPerPlot )
 #numPlots =1
 for (i in 1:numPlots)  {
   #Plot distance from fixation over time
-  pp<- fixatnsNotPilot %>% 
+  pp<- fixatns %>% 
     mutate(outlier = ifelse(gavx<minValToShow | gavx>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
     mutate(gavx =  ifelse(gavx > maxValToShow, maxValToShow, gavx)) %>%     #replace outliers
     mutate(gavx =  ifelse(gavx < minValToShow, minValToShow, gavx)) %>%
-    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
+    filter(idNum <= i*SsPerPlot) %>% filter(idNum > (i-1)*SsPerPlot) %>%
     filter(sttime_rel>800) %>%
     ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=outlier) ) +
     ylim(minValToShow,maxValToShow) + #restrict axes
@@ -242,8 +225,7 @@ for (i in 1:numPlots)  {
   ggsave( file.path(plotpath, paste0('gavxSamples',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
 }  
 
-
-#Wnegative gavx occurs when person seems to look offscreen but eyes aren't lost
+#negative gavx occurs when person seems to look offscreen but eyes aren't lost
 #  E40 session 3 for example
 E403<- fixatnsNotPilot %>% filter(fname=="E403.EDF")
 E403 %>% filter(gavx < 0) %>% 
@@ -253,13 +235,13 @@ E403 %>% filter(gavx < 0) %>%
 #DISTANCE FROM FIXATION
 #Graph 5 Ss at a time. 
 SsPerPlot = 5
-numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
+numPlots = round( max(fixatnsNotPilot$idNum)/SsPerPlot )
 for (i in 1:numPlots)  {
   #Plot distance from fixation over time
   pp<- fixatnsNotPilot %>% 
-    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
+    filter(idNum <= i*SsPerPlot) %>% filter(idNum > (i-1)*SsPerPlot) %>%
     filter(sttime_rel>800) %>%
-    ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial, shape=session) ) +
+    ggplot( aes(x=sttime_rel, y=distFromCtr, color=trial, shape=session) ) +
     geom_point() + geom_line(aes(group=trial)) +
     ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
     ggtitle('Fixation distance from center, columns are sessions') +
@@ -275,7 +257,7 @@ for (i in 1:numPlots)  {
 #So really I don't have to exclude until after 800+1200=2000
 pp<- fixatns %>% filter(pilot==FALSE) %>%
   filter(sttime_rel<2900) %>%
-  ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trial) ) +
+  ggplot( aes(x=sttime_rel, y=distFromCtr, color=trial) ) +
   geom_point() + geom_line(aes(group=trial)) +
   ylab('dist average during fixation (pixels)') + xlab('sttime_rel (ms)') +
   ggtitle('Fixation distance from center over each trial') +
@@ -319,7 +301,7 @@ fixatns %>% filter(sttime_rel<2900) %>%
   geom_point() + geom_smooth() +
   facet_grid(rows=vars(ID),cols=vars(session)) +
   ggtitle('Drift of gavx') 
-  
+
 fixatns %>% filter(sttime_rel<2900) %>%
   group_by(trial,fname) %>%
   summarise(gavy = mean(gavy, na.rm = TRUE)) %>%
@@ -327,13 +309,13 @@ fixatns %>% filter(sttime_rel<2900) %>%
   geom_point() + geom_smooth() +
   facet_grid(rows=vars(fname)) +
   ggtitle('Drift of gavy') 
-  
+
 #Assess how many trials excluded for different criteria
 distCriterion <- 40
-fixatnsNotPilot<- fixatnsNotPilot %>% mutate( tooFar = (distFromFixatn > distCriterion) )
+fixatnsNotPilot<- fixatnsNotPilot %>% mutate( tooFar = (distFromCtr > distCriterion) )
 perTrial <- fixatnsNotPilot %>% filter(sttime_rel>800) %>%
-                  group_by(ID,session,trial) %>%
-                  summarise( tooFar = max(tooFar,na.rm=TRUE) )
+  group_by(ID,session,trial) %>%
+  summarise( tooFar = max(tooFar,na.rm=TRUE) )
 perTrial$subjNum <- match(perTrial$ID, unique(perTrial$ID))  
 
 exclusion<- perTrial %>% group_by(ID) %>% 
@@ -349,3 +331,34 @@ pp<- perTrial %>% filter(subjNum<5) %>%
   ggtitle('Fixation distance from center, columns are sessions') +
   facet_wrap(vars(ID)) 
 show(pp)
+
+##Examine BLINKS
+
+#Plot blink durations per participant. Anytime the eyetracker loses the eyes the parser labels that as a blink!
+#Check for participants with a lot of long blinks for possible investigation
+blinks %>% filter(pilot==FALSE) %>% ggplot(aes(x=duration)) + geom_histogram(binwidth=30) +
+  coord_cartesian(xlim=c(0, 500)) + xlab('blink duration (ms)') +
+  facet_wrap(vars(ID))
+
+#Sample fixation over time plots
+#Graph several Ss at a time. 
+SsPerPlot = 2
+numPlots = round( max(fixatnsNotPilot$subjNum)/SsPerPlot )
+for (i in 1:numPlots)  {
+  #Plot distance from fixation over time
+  pp<- fixatnsNotPilot %>% filter(subjNum<4) %>%
+    filter(subjNum <= i*SsPerPlot) %>% filter(subjNum > (i-1)*SsPerPlot) %>%
+    filter(sttime_rel>800) %>%
+    ggplot( aes(x=sttime_rel, y=gavx, color=trial, shape=session) ) +
+    geom_point() + geom_line(aes(group=trial)) +
+    ylab('gavx (pixels)') + xlab('sttime_rel (ms)') +
+    ggtitle('gavx') +
+    #coord_cartesian(ylim=c(0, 200)) +
+    #facet_wrap(vars(ID)) 
+    facet_grid(rows=vars(ID),cols=vars(session)) #
+  show(pp)
+  plotpath<- file.path('plots')
+  ggsave( file.path(plotpath, paste0('gavxSamples',(i-1)*SsPerPlot+1,'-',i*SsPerPlot,'.png'))  )
+}
+
+

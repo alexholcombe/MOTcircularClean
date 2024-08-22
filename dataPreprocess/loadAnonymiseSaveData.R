@@ -1,6 +1,6 @@
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
 #Gets behavioral data and combines with eyetracking result and anonymises 
-rm(list = ls()) #Clear workspace
+rm(list = ls()) #Clear workspace so that any code executed before won't contaminate this run
 library(dplyr)
 library(stringr)
 library(tidyr); library(readr)

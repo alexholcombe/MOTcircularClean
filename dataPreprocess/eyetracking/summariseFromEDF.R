@@ -6,6 +6,7 @@ library(stringr)
 library(plyr); library(dplyr) #must be done in this order
 library(eyelinkReader)
 library(ggplot2)
+rm(list = ls()) #Clear workspace so that any code executed before won't contaminate this run
 
 EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix) {
   #
@@ -124,7 +125,7 @@ VISUALIZE=TRUE
 if (TESTME && VISUALIZE) {
   EDF_exampleYoungOld <- file.path("dataForTestingOfCode", "K041.EDF") # "A421.EDF" #"/Users/alex/Documents/attention_tempresltn/multiple_object_tracking/newTraj/MOTcircular_repo/dataRaw/circleOrSquare_twoTargets/AM/AM_11Jun2015_11-51.EDF"
   EDFstuff <- read_edf(EDF_exampleYoungOld) #,import_events=TRUE,import_recordings=FALSE
-  trialnum = 2
+  trialnum = 5
   # extracting fixations and saccades for the first trial
   fixations <- EDFstuff$fixations[EDFstuff$fixations$trial == trialnum, ]
   saccades <- EDFstuff$saccades[EDFstuff$saccades$trial == trialnum, ]
