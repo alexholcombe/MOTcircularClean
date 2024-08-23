@@ -4,7 +4,9 @@ format: html
 editor: visual
 ---
 
-Overall the exampleAnalysesWithGoodFixator report showed that for at least 7 trials out of 120, the eyetracker is way off, with X off by 90 pixels. Otherwise, things were reasonable esp. after first 500 ms when fixation period starts. But by reasonable, I mean that drift or something means that X and Y was off by up to \~20 pixels. For the weird 7 trials, there weren't many fixations so I should check how much missing data ("blinks") there was, maybe that helps explain why those trials were weird.
+Overall the exampleAnalysesWithGoodFixator report from that file showed that for at least 7 trials out of 120, the eyetracker is way off, with X off by 90 pixels. Otherwise, things were reasonable esp. after first 500 ms when fixation period starts. But by reasonable, I mean that drift or something means that X and Y was off by up to \~20 pixels. For the weird 7 trials, there weren't many fixations so I should check how much missing data ("blinks") there was, maybe that helps explain why those trials were weird.
+
+To-do: Add a form of drift correction, like maybe the average starting eye position in every 20 trials.
 
 ## Do basic checks
 
@@ -180,7 +182,7 @@ fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
 
 ```
 
-Divide trials into four groups (quartile) and plot for each
+Divide trials into four groups (quartiles) and plot for each
 ```{r}
 #| echo: false
 # Calculate quartiles
@@ -241,7 +243,7 @@ fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
       geom_point(fill='red') + #only the outlier symbol is fillable
       geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
-Visualize how many trials will be excluded under various criteria.
+Calculate and visualize how many trials will be excluded under various criteria.
 
 Want to have criterion on horizontal axis and proportion trials excluded on vertical axis.
 
@@ -251,10 +253,11 @@ One way to do it would be to do a sort of expand_grid where every trial gets dup
 ```{r}
 #| echo: false
 
-distFromCenterCriteria <- seq(20,100,10)
+distFromCenterCriteria <- c(20,30,60,100)
 
 ```
 
+Calculate whether each trial's distFromFixatn is greater than each criteiron
 ```{r}
 #| echo: false
 
@@ -262,49 +265,101 @@ applyCriteria <- function(distFromFixatn) {
   distFromFixatn > distFromCenterCriteria
 }
 
-fixatns %>% rowwise() |>
-  reframe( lookedTooFarAway = applyCriteria(distFromFixatn) ) 
+newColumns<- fixatns %>% rowwise() |>
+  reframe( lookedTooFarAway = applyCriteria(distFromFixatn), 
+           criterion = distFromCenterCriteria ) 
 
+#Duplicate original dataframe, each row repeat number of criteria times
+longer<-fixatns %>% slice(rep(1:n(), each = length(distFromCenterCriteria)))
+
+#Combine the new columns with the old
+eachCriterionCheckedEveryFixatn<- cbind(newColumns,longer)
+
+#Currently it checked every fixation in each trial, now need to collapse to have one row per trial*criterion
+#anyTooFarAway means any fixation on a trial was too far away
+eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel > trialMinTimeCuesOff) |>
+      group_by(trial,criterion) |>
+      summarise(anyTooFarAway = any(lookedTooFarAway), numTooFarAway = sum(lookedTooFarAway))
 ```
+
+Now calculate proportion of trials anyTooFarAway for each criterion
+anyTooFarAway means any fixation on a trial was too far away:
+
+```{r}
+#| echo: false
+proportnEachCriterion <- eachCriterionEveryTrial |> group_by(criterion) |> 
+        summarise( proportnTooFarAway = mean(anyTooFarAway), 
+                   avgNumForTrialsTooFarAway = sum(anyTooFarAway[anyTooFarAway]) )
+#Also want to calculate average numTooFarAway for each that had a trial too far away
+
+print(round(proportnEachCriterion,3))
+```
+
+Visualize proportion of trials too far away for each criterion.
 
 ```{r}
 #| echo: false
 
-applyCriteria <- function(distFromFixatn) {
-  xx<<-distFromFixatn
-  distFromFixatn > distFromCenterCriteria[0]
-}
-
-fixatns %>% rowwise() |>
-  reframe( lookedTooFarAway = applyCriteria(distFromFixatn) ) 
-
+ggplot(proportnEachCriterion, aes(x=criterion,y=proportnTooFarAway)) +
+    geom_point() + xlab('criterion (pixels)') +
+    ggtitle(fname)
 ```
+
+
+Plot by trialnum whether each trial should be excluded, for each criterion.
 
 ```{r}
 #| echo: false
 
-applyCriteria <- function(n) {
-  n>1
-}
-
-tibble(n = 2:0) %>% rowwise |>
-  reframe(out = applyCriteria(n))
-
-tibble(n = 2:0) %>% 
-  rowwise() %>% 
-  reframe(out = applyCriteria(n))
-
+ggplot(eachCriterionEveryTrial, aes(x=trial,y=anyTooFarAway,group=)) +
+    geom_point()  + geom_line() +
+    ggtitle(fname) + facet_grid(criterion~.)
 ```
+
+Generate the list of trials to be excluded for a specific criterion
 
 ```{r}
 #| echo: false
 
-applyCriteria <- function(n) {
-  rep(n, n)
+myCriterion = 40 #pixels
+
+tooFarEachTrial<- fixatns |> filter(sttime_rel > trialMinTimeCuesOff) |>
+        mutate(tooFar = distFromFixatn > myCriterion) |> 
+        group_by(trial) |> 
+        summarise(anyTooFar = any(tooFar)) 
+trialsTooFar <- which(tooFarEachTrial$anyTooFar)
+        
+```
+
+
+Finally, produce a report of whether each character in the Starwars universe is allowed to box in the Olympics in each men's weight class.
+```{r}
+#| echo: false
+
+
+                        #Featherweight,..... Super Heavyweight
+boxingPopularWeightClasses <- c(57,80,92,9999) #kilograms
+boxingWeightClassName<-c("Featherweight","Middleweight","Heavyweight","Super Heavyweight")
+
+checkAllowedToCompeteInEachWeightClass <- function(mass) {
+  mass < boxingPopularWeightClasses
 }
 
-tibble(n = 2:0) %>% 
-  group_by(n) %>% 
-  reframe(out = applyCriteria(n))
+allowed <- starwars %>% rowwise() |>
+  reframe( class = boxingWeightClassName,
+           criterion = boxingPopularWeightClasses, 
+           allowed = checkAllowedToCompeteInEachWeightClass(mass)
+          ) 
 
+#Allowed contains only the calculated columns, not the original.
+#dplyr made this choice because this is a new dataframe, with different number of rows.
+#But it means we don't have the values that were the inputs to generate these new values
+
+#Duplicate original dataframe, each row repeat number of weightclasses times
+longer_starwars<- starwars %>% slice(rep(1:n(), each = length(boxingWeightClassName)))
+
+#Combine the new columns with the old
+starwarsBoxingEligibility<- cbind(longer_starwars[,1:4],allowed)
+
+starwarsBoxingEligibility
 ```
