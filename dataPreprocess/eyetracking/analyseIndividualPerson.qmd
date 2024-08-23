@@ -241,3 +241,70 @@ fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
       geom_point(fill='red') + #only the outlier symbol is fillable
       geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
+Visualize how many trials will be excluded under various criteria.
+
+Want to have criterion on horizontal axis and proportion trials excluded on vertical axis.
+
+This will require creating a new dataframe because for each trial, need to calculate numCriteria things, meaning the number of rows will expand.
+One way to do it would be to do a sort of expand_grid where every trial gets duplicated by numCriteria, with criterion a new column. Then, apply whatever is in the criterion column to each row.
+
+```{r}
+#| echo: false
+
+distFromCenterCriteria <- seq(20,100,10)
+
+```
+
+```{r}
+#| echo: false
+
+applyCriteria <- function(distFromFixatn) {
+  distFromFixatn > distFromCenterCriteria
+}
+
+fixatns %>% rowwise() |>
+  reframe( lookedTooFarAway = applyCriteria(distFromFixatn) ) 
+
+```
+
+```{r}
+#| echo: false
+
+applyCriteria <- function(distFromFixatn) {
+  xx<<-distFromFixatn
+  distFromFixatn > distFromCenterCriteria[0]
+}
+
+fixatns %>% rowwise() |>
+  reframe( lookedTooFarAway = applyCriteria(distFromFixatn) ) 
+
+```
+
+```{r}
+#| echo: false
+
+applyCriteria <- function(n) {
+  n>1
+}
+
+tibble(n = 2:0) %>% rowwise |>
+  reframe(out = applyCriteria(n))
+
+tibble(n = 2:0) %>% 
+  rowwise() %>% 
+  reframe(out = applyCriteria(n))
+
+```
+
+```{r}
+#| echo: false
+
+applyCriteria <- function(n) {
+  rep(n, n)
+}
+
+tibble(n = 2:0) %>% 
+  group_by(n) %>% 
+  reframe(out = applyCriteria(n))
+
+```
