@@ -18,7 +18,7 @@ library(ggplot2)
 widthPix = 800; heightPix = 600
 ```
 
-Read in an EDF file.
+Read in an EDF file,
 
 ```{r}
 #| echo: false
@@ -30,6 +30,13 @@ if (!file.exists(EDFfileWithPath)) {
   message( paste0("File'",EDFfileWithPath,"'not found!") )
   stop('Could not find the file')
 }
+```
+
+EDF file name: `r fname` in directory `r directoryWithDataFile`
+
+```{r}
+#| echo: false
+
 EDFstuff <- eyelinkReader::read_edf(EDFfileWithPath,
                                     import_samples = TRUE,
                                     sample_attributes = c('time', 'gx', 'gy'))
@@ -149,26 +156,22 @@ if (throwAwayFirstTrial) { #Throw away first trial
 }
 ```
 
-Look at first portion of trial before the targets are highlighted for example, when it doesn't matter where participants are looking but we could use some of that portion for drift correction if we trust the participant.
 
 ```{r}
-#| echo: false
-
+#Calculate time by which it matters that they're fixating, which is when targets are no longer cued
+fixationInterval = c(800,1300)
+trackingExtraTime = 1200 #ms, which is how long the blobs are cued, but that's after the fixation interval
+trialMinTimeBeforeCuesOff = min(fixationInterval) + trackingExtraTime
+#Can also look at additional columns in later versions of the program, that show fixationInterval
 ```
 
-Just look after first 2000ms, because first 800-\>1300ms is fixation, then blobs cued for 1200ms So really I don't have to exclude until after 800+1200=2000ms.
+Just look after first 2000 ms, because first `r fixationInterval[1]` ms, up to max of  `r fixationInterval[2]` ms is fixation, then blobs cued for `r `trackingExtraTime` ms so really I don't have to exclude until after `r fixationInterval[1]` + `r trackingExtraTime` = `r trialMinTimeBeforeCuesOff` ms.
 
 For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
 
 From previous exploring, I know that lots of occasional bad stuff happens over the first 100ms.
 
-```{r}
-#Calculate time by which it matters that they're fixating, which is when targets are no longer cued
-fixationInterval = c(800,1300)
-trackingExtraTime = 1.2 #seconds, which is how long the blobs are cued, but that's after the fixation interval
-trialMinTimeBeforeCuesOff = min(fixationInterval) + trackingExtraTime
-#Can also look at additional columns in later versions of the program, that show fixationInterval
-```
+
 
 Plot to see how average fixation x changes over time across trials, after minimum fixation interval, to look for possible drift (gradual trend of calibration getting more and more wrong).
 
@@ -263,6 +266,11 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
 
+
+Look at first portion of trial before the targets are highlighted for example, when it doesn't matter where participants are looking but we could use some of that portion for drift correction if we trust the participant.
+
+For young/old this is very OK because it doesn't matter where the participants are looking as long as they don't move their eyes, whereas for Momo it's not so kosher because absolute value of the deviation is important.
+
 Plot distance from fixation over time. Actually show first period where cues are still always on to see if that is the most reliable time of fixation.
 
 ```{r}
@@ -281,8 +289,9 @@ The first 300 ms or so look very bad, so exclude that and only show first 1000 m
 
 ```{r}
 #| echo: false
-overTime + xlim(350,2000)
+overTime + xlim(350,1300)
 ```
+Based on participant M471, minimum distance occurs from about 400 to 800 ms. So we could do drift correction based on that interval.
 
 Zoom in but show outliers in red to indicate they'd be off the scale.
 
@@ -301,6 +310,100 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
       scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
       geom_point(fill='red') + #only the outlier symbol is fillable
       geom_line(aes(group=trial)) + facet_wrap(.~quartile)
+```
+
+## Consider drift correction options
+
+```{r}
+doDriftCorrection = TRUE
+```
+
+```{r}
+intervalToAssumeWasCentral<- c(300,800)
+```
+
+Use intervalToAssumeWasCentral by calculating the average sample position during that interval for each trial. Then subtract that from all the other samples during the trial.
+
+However, should also probably add a check that that value isn't too far from the center according to the eyetracker, as that would be a sign that probably the person did look away from there on that particular trial.
+
+A more sophisticated algorithm would calculate a running average across several trials to be more robust to eye movements occuring during individual trials.
+
+(could alternatively use the average fixation position rather than sample)
+
+Can't use samples because it doesn't have sttime_rel, it only has time_rel which is since the beginning of the recording session so I'd have to get the time markers.
+
+A problem is that some trials have fixations that didn't start within the interval but did extend into the interval, so shouldn't just test against sttime_rel. So a criterion to catch fixations that either start or end in the interval can be:
+  * start time being in the interval, or
+  * end time being in the interval,
+
+That still won't catch fixations that span the entire interval. To catch those, have to test for:
+  * start time being less than interval start AND
+  * end time being greater than interval end
+
+```{r}
+avgPosDuringInterval<- fixatns %>% 
+  filter( (sttime_rel < intervalToAssumeWasCentral[2]    |
+          entime_rel < intervalToAssumeWasCentral[1] ) |  #These catch fixations that started or ended during the interval
+          (sttime_rel < intervalToAssumeWasCentral[1] &
+           entime_rel > intervalToAssumeWasCentral[2]) #These catch fixations that spanned the interval
+        )
+
+```
+         
+         | 
+           entime_rel < interval) %>%
+  filter(sttime_rel < intervalToAssumeWasCentral[2] |
+           
+         ) %>%
+  group_by(trial) %>% 
+  summarise(meanX = mean(gavx), meanY = mean(gavy))
+
+avgPosDuringInterval$distFromFixatn<- sqrt( (avgPosDuringInterval$meanX - widthPix/2)^2 + (avgPosDuringInterval$meanY - heightPix/2)^2 )
+```
+
+Show the results.
+
+```{r}
+#| echo: false
+
+avgPosDuringInterval %>% 
+  ggplot( aes(x=trial, y=distFromFixatn) ) + geom_point()
+```
+
+Based on what I see above for M471, there are a few trials where fiation is more than 40 pixels off during that interval where we can think that probably drift correction based on that is inappropriate, but the vast majority are within 30 pixels, so maybe it's ok to do drift correction based on them, or based on a running average of them.
+
+Show the results, zoomed in but show outliers in red to indicate they'd be off the scale.
+
+```{r}
+#| echo: false
+
+minValToShow = 0
+maxValToShow = 50
+  
+avgPosDuringInterval %>% 
+  mutate(outlier = ifelse(distFromFixatn<minValToShow | distFromFixatn>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
+  mutate(distFromFixatn =  ifelse(distFromFixatn > maxValToShow, maxValToShow, distFromFixatn)) %>%     #replace outliers
+  mutate(distFromFixatn =  ifelse(distFromFixatn < minValToShow, minValToShow, distFromFixatn)) %>%
+  ggplot( aes(x=trial, y=distFromFixatn, shape=outlier) ) +
+      ylim(minValToShow,maxValToShow) + #restrict axes
+      scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
+      geom_point(fill='red')  #only the outlier symbol is fillable
+```
+
+## Do drift correction
+
+For each trial's fixations, subtract the drift correction result from the coordinates.
+
+```{r}
+#| echo: false
+
+#Need to expand avgPosDuringInterval to provide one row per trial.
+avgDuringInterval<- avgPosDuringInterval %>% select(-distFromFixatn) #get rid of this column because there's also one in fixatns
+
+out <- left_join(fixatns, avgDuringInterval, by=join_by(trial)) 
+
+fixatns$driftCorrect1<- fixatns$gavx - 
+
 ```
 
 ## Consider effect of different criteria for excluding trials
