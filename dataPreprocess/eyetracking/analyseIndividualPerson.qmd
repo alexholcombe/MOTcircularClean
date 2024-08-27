@@ -35,23 +35,53 @@ EDFstuff <- eyelinkReader::read_edf(EDFfileWithPath,
                                     sample_attributes = c('time', 'gx', 'gy'))
 ```
 
+Check which eye was tracked, and create new x and y columns based on which eye it was.
+```{r whichEye}
+#| echo: false
+
+samples<- EDFstuff$samples
+numNotNArightEye <- sum( !is.na(samples$gxR) )
+numNotNAleftEye <- sum( !is.na(samples$gxL) )
+if (numNotNArightEye>0 & numNotNAleftEye==0) {
+  message("The right eye was tracked exclusively.")
+  samples$x <- samples$gxR
+  samples$y <- samples$gyR
+}
+if (numNotNAleftEye>0 & numNotNArightEye==0) {
+  message("The left eye was tracked exclusively.")
+  samples$x <- samples$gxL
+  samples$y <- samples$gyL
+}
+if (numNotNAleftEye>0 & numNotNArightEye>0) {
+  message("Sometimes the left eye was tracked and on others the right, and I'm not set up to handle that. You should check each trial.")
+}
+
+```
 ## Graphs
 
 Assuming screen width is `r widthPix` pixels and screen height is `r heightPix` pixels,
 
-check mean gX in and mean gY in samples (raw eyetracker record of where person was looking) to see where it is relative to screen center.
+check mean x in and mean y in samples (raw eyetracker record of where person was looking) to see where it is relative to screen center.
 
 ```{r}
 #| echo: false
 
 screenCtr <-  data.frame( x=widthPix/2, y= heightPix/2)
 criterionDist<-40
-samples<- EDFstuff$samples
 avgSampleRelCtr<- samples %>%
-                summarise(x = mean(gxR,na.rm=TRUE), y = mean(gyR,na.rm=TRUE)) - screenCtr
-                            
+                summarise(x = mean(x,na.rm=TRUE), y = mean(y,na.rm=TRUE)) - screenCtr
 
-if ( any( abs(avgSampleRelCtr) > 40 ) ) { #check if deviation from screen center of average fixation location is greater than 40
+# Function to check for any TRUE values but return FALSE if all are NaN, as will occur if no values because the other eye was tracked or there is no data.
+any_true_except_all_nan <- function(x) {
+  if (all(is.nan(x))) {
+    return(FALSE)
+  } else {
+    return(any(x, na.rm = TRUE))
+  }
+}
+deviationLarge<- any_true_except_all_nan( abs(avgSampleRelCtr) > 40 )
+
+if ( deviationLarge ) { #check if deviation from screen center of average fixation location is greater than 40
   msg = paste0("Average eye location should be near screen center (",widthPix/2,",",heightPix/2,") but")
   msg=paste0(msg,"for this participant, it's more than")
   msg=paste(msg,criterionDist,"pixels from the center, on average the eye position relative to center was (x,y)")
@@ -76,7 +106,7 @@ screenResolutions <- data.frame( widthPix = c(800,1024,1512,1600,1600)-widthPix/
                     resolution=c("800x600","1024x768","1512x982","1600x900","1600x1200"))
 commonScrnResolutns<- screenResolutions[1:2,]
 
-samples<-samples |> mutate(xDev = gxR - widthPix/2, yDev = gyR - heightPix/2)
+samples<-samples |> mutate(xDev = x - widthPix/2, yDev = y - heightPix/2)
 
 # Calculate quartiles
 quartiles <- quantile(samples$trial)
@@ -102,6 +132,30 @@ avgPlot<-avgPlot +
 show(avgPlot)
 ```
 
+
+For Momo's program downstairs, the first trial doesn't work for some reason, so for her we should throw away the first trial. (If don't want to do that, set to FALSE)
+
+```{r}
+throwAwayFirstTrial = TRUE
+```
+
+
+```{r}
+#| echo: false
+
+fixatns<- EDFstuff$fixations
+if (throwAwayFirstTrial) { #Throw away first trial
+  fixatns<- fixatns %>% filter(trial > 1)
+}
+```
+
+Look at first portion of trial before the targets are highlighted for example, when it doesn't matter where participants are looking but we could use some of that portion for drift correction if we trust the participant.
+
+```{r}
+#| echo: false
+
+```
+
 Just look after first 2000ms, because first 800-\>1300ms is fixation, then blobs cued for 1200ms So really I don't have to exclude until after 800+1200=2000ms.
 
 For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
@@ -109,12 +163,10 @@ For participants after 1 June, added record of fixatnPeriodFrames, so for them o
 From previous exploring, I know that lots of occasional bad stuff happens over the first 100ms.
 
 ```{r}
-#| echo: false
-
 #Calculate time by which it matters that they're fixating, which is when targets are no longer cued
 fixationInterval = c(800,1300)
 trackingExtraTime = 1.2 #seconds, which is how long the blobs are cued, but that's after the fixation interval
-trialMinTimeCuesOff = min(fixationInterval) + trackingExtraTime
+trialMinTimeBeforeCuesOff = min(fixationInterval) + trackingExtraTime
 #Can also look at additional columns in later versions of the program, that show fixationInterval
 ```
 
@@ -122,10 +174,9 @@ Plot to see how average fixation x changes over time across trials, after minimu
 
 ```{r}
 #| echo: false
-fixatns<- EDFstuff$fixations
 
 #Plot to see how it changes over time across trials
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavx = mean(gavx, na.rm = TRUE)) %>%
   ggplot(aes(x = trial, y = gavx)) +
@@ -139,7 +190,7 @@ Plot to see how average fixation y changes over time across trials, to look poss
 ```{r}
 #| echo: false
 
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavy = mean(gavy, na.rm = TRUE)) %>%
   ggplot(aes(x = trial, y = gavy)) +
@@ -152,7 +203,7 @@ Look for possible drift (gradual trend of calibration getting more and more wron
 
 ```{r}
 #| echo: false
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   group_by(trial) %>%
   summarise(gavx = mean(gavx, na.rm = TRUE), gavy = mean(gavy, na.rm = TRUE)) %>%
   ggplot(aes(x = gavx, y = gavy)) +
@@ -172,7 +223,7 @@ Look at x and y traces of trials for first 50 trials
 ```{r}
 #| echo: false
 
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   filter(trial<50) %>% 
   ggplot( aes(x=sttime_rel, y=gavx, color=trial) ) +
   ylab('average x during fixation') + xlab('sttime_rel (ms)') +
@@ -192,7 +243,7 @@ fixatns <- fixatns %>%
   mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
 fixatns<- fixatns |> mutate(trialWithinQuartile = trial-(quartile-1)*max(samples$trial)/max(fixatns$quartile))
 
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>% 
   ggplot( aes(x=sttime_rel, y=gavx, color=trialWithinQuartile) ) +
   ylab('average x during fixation') + xlab('sttime_rel (ms)') +
   ggtitle('') +
@@ -204,7 +255,7 @@ Do it for y
 ```{r}
 #| echo: false
 
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>% 
   ggplot( aes(x=sttime_rel, y=gavy, color=trialWithinQuartile) ) +
   ylab('average y during fixation') + xlab('sttime_rel (ms)') +
   ggtitle('') +
@@ -212,20 +263,28 @@ fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
   geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
 
-Plot distance from fixation over time
+Plot distance from fixation over time. Actually show first period where cues are still always on to see if that is the most reliable time of fixation.
 
 ```{r}
 #| echo: false
 fixatns$distFromFixatn = sqrt( (fixatns$gavx - widthPix/2)^2 + (fixatns$gavy - heightPix/2)^2 )
 
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
+overTime<- fixatns %>%
   ggplot( aes(x=sttime_rel, y=distFromFixatn, color=trialWithinQuartile) ) +
   geom_point() + geom_line(aes(group=trial)) +
+  geom_vline(xintercept=trialMinTimeBeforeCuesOff) +
   ggtitle('Distance from fixation over each trial') + facet_wrap(.~quartile)
-
+show(overTime)
 ```
 
-Zoom in but show outliers off-scale in red.
+The first 300 ms or so look very bad, so exclude that and only show first 1000 ms to further zoom in.
+
+```{r}
+#| echo: false
+overTime + xlim(350,2000)
+```
+
+Zoom in but show outliers in red to indicate they'd be off the scale.
 
 ```{r}
 #| echo: false
@@ -233,7 +292,7 @@ Zoom in but show outliers off-scale in red.
 minValToShow = 0
 maxValToShow = 50
   
-fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>% 
+fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>% 
   mutate(outlier = ifelse(distFromFixatn<minValToShow | distFromFixatn>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn > maxValToShow, maxValToShow, distFromFixatn)) %>%     #replace outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn < minValToShow, minValToShow, distFromFixatn)) %>%
@@ -243,6 +302,9 @@ fixatns %>% filter(sttime_rel > trialMinTimeCuesOff) %>%
       geom_point(fill='red') + #only the outlier symbol is fillable
       geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
+
+## Consider effect of different criteria for excluding trials
+
 Calculate and visualize how many trials will be excluded under various criteria.
 
 Want to have criterion on horizontal axis and proportion trials excluded on vertical axis.
@@ -277,7 +339,7 @@ eachCriterionCheckedEveryFixatn<- cbind(newColumns,longer)
 
 #Currently it checked every fixation in each trial, now need to collapse to have one row per trial*criterion
 #anyTooFarAway means any fixation on a trial was too far away
-eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel > trialMinTimeCuesOff) |>
+eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
       group_by(trial,criterion) |>
       summarise(anyTooFarAway = any(lookedTooFarAway), numTooFarAway = sum(lookedTooFarAway))
 ```
@@ -316,14 +378,18 @@ ggplot(eachCriterionEveryTrial, aes(x=trial,y=anyTooFarAway,group=)) +
     ggtitle(fname) + facet_grid(criterion~.)
 ```
 
+## Lists of trials
+
 Generate the list of trials to be excluded for a specific criterion
+
+```{r}
+myCriterion = 40 #pixels
+```
 
 ```{r}
 #| echo: false
 
-myCriterion = 40 #pixels
-
-tooFarEachTrial<- fixatns |> filter(sttime_rel > trialMinTimeCuesOff) |>
+tooFarEachTrial<- fixatns |> filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
         mutate(tooFar = distFromFixatn > myCriterion) |> 
         group_by(trial) |> 
         summarise(anyTooFar = any(tooFar)) 
@@ -331,35 +397,9 @@ trialsTooFar <- which(tooFarEachTrial$anyTooFar)
         
 ```
 
+The trials in which the person had fixatns farther than `r myCriterion` pixels from fixation, fater the initial `r trialMinTimeBeforeCuesOff` seconds before the cues are no longer on, was:
 
-Finally, produce a report of whether each character in the Starwars universe is allowed to box in the Olympics in each men's weight class.
 ```{r}
 #| echo: false
-
-
-                        #Featherweight,..... Super Heavyweight
-boxingPopularWeightClasses <- c(57,80,92,9999) #kilograms
-boxingWeightClassName<-c("Featherweight","Middleweight","Heavyweight","Super Heavyweight")
-
-checkAllowedToCompeteInEachWeightClass <- function(mass) {
-  mass < boxingPopularWeightClasses
-}
-
-allowed <- starwars %>% rowwise() |>
-  reframe( class = boxingWeightClassName,
-           criterion = boxingPopularWeightClasses, 
-           allowed = checkAllowedToCompeteInEachWeightClass(mass)
-          ) 
-
-#Allowed contains only the calculated columns, not the original.
-#dplyr made this choice because this is a new dataframe, with different number of rows.
-#But it means we don't have the values that were the inputs to generate these new values
-
-#Duplicate original dataframe, each row repeat number of weightclasses times
-longer_starwars<- starwars %>% slice(rep(1:n(), each = length(boxingWeightClassName)))
-
-#Combine the new columns with the old
-starwarsBoxingEligibility<- cbind(longer_starwars[,1:4],allowed)
-
-starwarsBoxingEligibility
+print(trialsTooFar)
 ```

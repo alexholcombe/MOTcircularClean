@@ -6,14 +6,6 @@ library(stringr)
 library(tidyr); library(readr)
 library(ggplot2)
 
-#The raw data, both Psychopy files and EDF files, are downloaded from Sharepoint place linked from the MOTyoungOld GoogleDrive folder
-
-#To match up Psychopy files and EDF files?
-#There will always be a Psychopy file, but not always an EDF file, so start with Psychopy files
-#to parse out subject name and session number.
-#Then look for matching EDF file. 
-#Lots of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
-
 expFoldersPrefix= file.path("..","dataRaw")
 expFolder <- "youngOld"
 anonymizedDir<-"dataAnonymized" #where the anonymized data will be exported to
@@ -21,6 +13,46 @@ destinationStudyFolderName = "youngOld"
 destinationName = "youngOld"
 
 thisExpFolder = file.path(expFoldersPrefix,expFolder)
+
+#The raw data, both Psychopy files and EDF files, are downloaded from Sharepoint place linked from the MOTyoungOld GoogleDrive folder
+#As is the participant datasheet
+
+#Read in participant information
+participantInfoFname<- "Participant Information.xlsx"
+participantInfoFileWithPath<- file.path(thisExpFolder,participantInfoFname)
+if (!file.exists(participantInfoFileWithPath)) {
+  message(paste('Participant info file not found; expected to be',participantInfoFileWithPath))
+}
+library(readxl)
+participantInfo<- readxl::read_excel(participantInfoFileWithPath)
+#Temporarily (for ACNS abstract, at least) reduce to just ID, Age, and Gender
+#And add a small random number to the age for privacy protection
+#Change all column names to lower case
+participantInfo <- participantInfo |> rename_with(tolower)
+
+pInfo_ID_age_gender<- participantInfo |> select("participant id","age","gender")
+#Create new ID column that doesn't include first letter
+pInfo_ID_age_gender<- pInfo_ID_age_gender |> mutate( ID = substr(`participant id`,2,3) )
+pInfo_ID_age_gender$`participant id` <- NULL   #Delete ID column that included letter
+
+#Add random number to age to protect privacy
+pInfo_ID_age_gender<- pInfo_ID_age_gender |> 
+  mutate( agePerturbed = age + 
+            round( runif(1,min=-3,max=3) ) )
+pInfo_ID_age_gender$age<- NULL #Delete exact age column
+
+#Change all values of gender to all lower case
+pInfo_ID_age_gender$gender<- tolower(pInfo_ID_age_gender$gender)
+
+
+
+#Match up Psychopy files and EDF files
+#There will always be a Psychopy file, but not always an EDF file, so start with Psychopy files
+#to parse out subject name and session number.
+#Then look for matching EDF file. 
+#Lots of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
+
+
 thisExpFolderPsychopy = file.path(thisExpFolder,"Psychopy") #As opposed to EDF folder
   #paste0(expFoldersPrefix,expFolder,"Psychopy",expFoldersPostfix)
 print(paste0("Finding files in '",thisExpFolderPsychopy,"'"))
