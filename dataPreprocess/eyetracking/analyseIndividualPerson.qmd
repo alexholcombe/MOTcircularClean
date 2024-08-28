@@ -457,7 +457,7 @@ fixatnsAndCorrectn$xDevCorrectd<- fixatnsAndCorrectn$gavx - fixatnsAndCorrectn$m
 fixatnsAndCorrectn$yDevCorrectd<- fixatnsAndCorrectn$gavy - fixatnsAndCorrectn$meanY
 
 fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
-            distCorrected = sqrt( (xDevCorrectd)^2 + (yDevCorrectd)^2 )
+            distCorrectd = sqrt( (xDevCorrectd)^2 + (yDevCorrectd)^2 )
          )
 ```
 
@@ -490,7 +490,7 @@ fixatnsAndCorrectn %>% group_by(trial) %>%
 #Distance plot
 fixatnsAndCorrectn %>% 
   ggplot( aes(x=trial, y=distCorrectd) ) + geom_point() +
-  ggtitle('Drift-corrected') + 
+  ggtitle('Drift-corrected distance of each fixation') + 
   geom_smooth(method='lm',formula='y~x')
 ```
 
@@ -515,19 +515,21 @@ Calculate whether each trial's distFromFixatn is greater than each criterion
 #| echo: false
 
 #xDevCorrected is corrected one, now calculate uncorrected deviation
-fixatnsAndCorrectn$xDev <- fixatnsAndCorrectn$xDev - widthPix/2
-fixatnsAndCorrectn$yDev <- fixatnsAndCorrectn$yDev - heightPix/2
+fixatnsAndCorrectn$xDev <- fixatnsAndCorrectn$gavx - widthPix/2
+fixatnsAndCorrectn$yDev <- fixatnsAndCorrectn$gavy - heightPix/2
 
-applyCriteria <- function(distFromFixatn) {
-  distFromFixatn > distFromCenterCriteria
-}
+fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
+            distNotDriftCorrectd = sqrt( (xDev)^2 + (yDev)^2 )
+         )
 
-newColumns<- fixatns %>% rowwise() |>
-  reframe( lookedTooFarAway = applyCriteria(distFromFixatn), 
+#Calculate effect of applying each criterion on each row, yielding nrows*numCriteria rows
+newColumns<- fixatnsAndCorrectn %>% rowwise() |>
+  reframe( lookedTooFarAway = distNotDriftCorrectd>distFromCenterCriteria, 
            criterion = distFromCenterCriteria ) 
 
 #Duplicate original dataframe, each row repeat number of criteria times
-longer<-fixatns %>% slice(rep(1:n(), each = length(distFromCenterCriteria)))
+longer<-fixatnsAndCorrectn %>% 
+          slice(rep(1:n(), each = length(distFromCenterCriteria)))
 
 #Combine the new columns with the old
 eachCriterionCheckedEveryFixatn<- cbind(newColumns,longer)
@@ -536,7 +538,8 @@ eachCriterionCheckedEveryFixatn<- cbind(newColumns,longer)
 #anyTooFarAway means any fixation on a trial was too far away
 eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
       group_by(trial,criterion) |>
-      summarise(anyTooFarAway = any(lookedTooFarAway), numTooFarAway = sum(lookedTooFarAway))
+      summarise(anyTooFarAway = any(lookedTooFarAway),
+                numTooFarAway = sum(lookedTooFarAway))
 ```
 
 Now calculate proportion of trials anyTooFarAway for each criterion
