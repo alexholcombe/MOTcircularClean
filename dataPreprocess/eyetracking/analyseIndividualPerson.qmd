@@ -24,7 +24,7 @@ Read in an EDF file,
 #| echo: false
 
 directoryWithDataFile<-"dataForTestingOfCode"
-fname<-"M471.EDF"
+fname<-"S451.EDF"
 EDFfileWithPath<-file.path(directoryWithDataFile,fname)
 if (!file.exists(EDFfileWithPath)) {
   message( paste0("File'",EDFfileWithPath,"'not found!") )
@@ -143,7 +143,7 @@ show(avgPlot)
 For Momo's program downstairs, the first trial doesn't work for some reason, so for her we should throw away the first trial. (If don't want to do that, set to FALSE)
 
 ```{r}
-throwAwayFirstTrial = TRUE
+throwAwayFirstTrial = FALSE
 ```
 
 
@@ -418,11 +418,11 @@ avgPosDuringInterval %>%
 ```
 We still have some large values of greater than e.g. 40 that we shouldn't use for drift correction, so we just won't use those.
 
-## Do drift correction
+## Set up parameters for optional drift correction
 
-Calculate the desired drift correction amount, just excluding ones larger than 
+Calculate the desired drift correction amount, just excluding ones larger than: 
 ```{r}
-maxDriftCorrectn<- 30
+maxDistanceToDriftCorrect<- 30
 ```
 
 ```{r}
@@ -434,18 +434,66 @@ maxDriftCorrectn<- 30
 #Need to expand avgPosDuringInterval to provide one row per trial.
 avgDuringInterval<- avgPosDuringInterval %>% select(-distFromFixatn) #get rid of this column because there's also one in fixatns
 
-out <- left_join(fixatns, avgDuringInterval, by=join_by(trial)) 
+fixatnsAndCorrectn <- left_join(fixatns, avgDuringInterval, by=join_by(trial)) 
 
-#fixatns$driftCorrect1<- fixatns$gavx - 
+#Trials where there is no drift correction had no entry in avgDuringInterval,
+#so it gets an NA for xCorrectd,yCorrectd
+#Thus in case of NA, don't want to drift correct,
+#assuming center is actual center, widthPix/2, heightPix/2 (no drift correction)
+#So find all NAs and replace meanX and meanY with widthPix/2, heightPix/2
+fixatnsAndCorrectn<- fixatnsAndCorrectn %>% 
+  mutate(meanX = case_when( is.na(x) ~ widthPix/2,
+                            TRUE ~ x ),
+         meanY = case_when( is.na(y) ~ heightPix/2,
+                            TRUE ~ y ) )
 
 ```
 
-For each trial's fixations, subtract the drift correction result from the coordinates, 
+For each trial's fixations, subtract the drift correction result from the coordinates.
 
 ```{r}
 #| echo: false
+fixatnsAndCorrectn$xDevCorrectd<- fixatnsAndCorrectn$gavx - fixatnsAndCorrectn$meanX
+fixatnsAndCorrectn$yDevCorrectd<- fixatnsAndCorrectn$gavy - fixatnsAndCorrectn$meanY
+
+fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
+            distCorrected = sqrt( (xDevCorrectd)^2 + (yDevCorrectd)^2 )
+         )
+```
+
+```{r}
+#| echo: false
+#Sanity-check by calculating the average
+avgX <- round(mean(fixatnsAndCorrectn$xDevCorrectd),1)
+avgY <- round(mean(fixatnsAndCorrectn$yDevCorrectd),1)
+message("After drift correction, average xDevCorrectd,yDevCorrectd = ",avgX,",",avgY)
+if ( abs(avgX) > 15   |  abs(avgY) > 15 ) {
+  message("Because it's bigger than 15, it suggests the drift correction went very wrong")
+}
 
 ```
+
+```{r}
+#| echo: false
+#Plots to sanity-check the result of the correction,
+
+#Create a 2-dimensional plot
+#Plot to see how it changes over time across trials
+fixatnsAndCorrectn %>% group_by(trial) %>%
+  ggplot(aes(x = xDevCorrectd, y = yDevCorrectd)) +
+  geom_point(aes(color=trial)) + coord_fixed(ratio = 1)
+
+```
+
+```{r}
+#| echo: false
+#Distance plot
+fixatnsAndCorrectn %>% 
+  ggplot( aes(x=trial, y=distCorrectd) ) + geom_point() +
+  ggtitle('Drift-corrected') + 
+  geom_smooth(method='lm',formula='y~x')
+```
+
 
 ## Consider effect of different criteria for excluding trials
 
@@ -456,16 +504,19 @@ Want to have criterion on horizontal axis and proportion trials excluded on vert
 This will require creating a new dataframe because for each trial, need to calculate numCriteria things, meaning the number of rows will expand.
 One way to do it would be to do a sort of expand_grid where every trial gets duplicated by numCriteria, with criterion a new column. Then, apply whatever is in the criterion column to each row.
 
+Criteria to show the effect of:
+
 ```{r}
-#| echo: false
-
-distFromCenterCriteria <- c(20,30,60,100)
-
+distFromCenterCriteria <- c(20,30,40,60,100)
 ```
 
-Calculate whether each trial's distFromFixatn is greater than each criteiron
+Calculate whether each trial's distFromFixatn is greater than each criterion
 ```{r}
 #| echo: false
+
+#xDevCorrected is corrected one, now calculate uncorrected deviation
+fixatnsAndCorrectn$xDev <- fixatnsAndCorrectn$xDev - widthPix/2
+fixatnsAndCorrectn$yDev <- fixatnsAndCorrectn$yDev - heightPix/2
 
 applyCriteria <- function(distFromFixatn) {
   distFromFixatn > distFromCenterCriteria

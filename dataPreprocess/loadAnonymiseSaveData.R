@@ -43,7 +43,12 @@ pInfo_ID_age_gender$age<- NULL #Delete exact age column
 
 #Change all values of gender to all lower case
 pInfo_ID_age_gender$gender<- tolower(pInfo_ID_age_gender$gender)
+#Now that the file has been anonymized, can save in the anonymized folder
+#save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
+destination_fname<- file.path(destinationDir,destinationName)
 
+readr::write_tsv(pInfo_ID_age_gender, file = paste0(destination_fname,".tsv"))
+message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
 
 #Match up Psychopy files and EDF files
@@ -259,7 +264,7 @@ datafiles$session <- substr(datafiles$IDsession,4,4)
 
 #The mouseClickArea problem was fixed on 10 May (SHA:802a331b80c544348da255ce61827583759bb879),
 #prior to that it would sometimes attribute a response to the wrong ring if participant didn't click in the best place
-#Affecting all participants < 31, in other words: 22,23,24,26,27,28,29,30,31
+#Affecting all participants <= 31, in other words: 22,23,24,26,27,28,29,30,31
 datafiles<- datafiles %>% filter(IDnum>31)
 
 #To match to the EDF files, they will
