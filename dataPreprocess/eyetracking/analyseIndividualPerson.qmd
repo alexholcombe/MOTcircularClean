@@ -416,21 +416,34 @@ avgPosDuringInterval %>%
   geom_smooth(method='lm',formula='y~x')
 
 ```
-We still have some large values of greater than 40 that we shouldn't use for drift correction, so we just won't use those.
+We still have some large values of greater than e.g. 40 that we shouldn't use for drift correction, so we just won't use those.
 
 ## Do drift correction
 
-For each trial's fixations, subtract the drift correction result from the coordinates.
+Calculate the desired drift correction amount, just excluding ones larger than 
+```{r}
+maxDriftCorrectn<- 30
+```
 
 ```{r}
 #| echo: false
+#Maybe if I replace large values with NA, I can do simple subtraction and nothing will happen to the corresponding values. But actually there is the possibility of some trials not having a row at all, so I need to deal with that anyway.
+#So maybe do the join first and then see where we are at.
+
 
 #Need to expand avgPosDuringInterval to provide one row per trial.
 avgDuringInterval<- avgPosDuringInterval %>% select(-distFromFixatn) #get rid of this column because there's also one in fixatns
 
 out <- left_join(fixatns, avgDuringInterval, by=join_by(trial)) 
 
-fixatns$driftCorrect1<- fixatns$gavx - 
+#fixatns$driftCorrect1<- fixatns$gavx - 
+
+```
+
+For each trial's fixations, subtract the drift correction result from the coordinates, 
+
+```{r}
+#| echo: false
 
 ```
 
