@@ -420,7 +420,7 @@ We still have some large values of greater than e.g. 40 that we shouldn't use fo
 
 ## Set up parameters for optional drift correction
 
-Calculate the desired drift correction amount, just excluding ones larger than: 
+Calculate the desired drift corrections, excluding ones larger than: 
 ```{r}
 maxDistanceToDriftCorrect<- 30
 ```
@@ -456,9 +456,13 @@ For each trial's fixations, subtract the drift correction result from the coordi
 fixatnsAndCorrectn$xDevCorrectd<- fixatnsAndCorrectn$gavx - fixatnsAndCorrectn$meanX
 fixatnsAndCorrectn$yDevCorrectd<- fixatnsAndCorrectn$gavy - fixatnsAndCorrectn$meanY
 
+#Change the above to a case_when where don't do it if exceeds maxDistanceToDriftCorrect
+
 fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
             distCorrectd = sqrt( (xDevCorrectd)^2 + (yDevCorrectd)^2 )
          )
+
+
 ```
 
 ```{r}
@@ -524,33 +528,37 @@ fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
 
 #Calculate effect of applying each criterion on each row, yielding nrows*numCriteria rows
 newColumns<- fixatnsAndCorrectn %>% rowwise() |>
-  reframe( lookedTooFarAway = distNotDriftCorrectd>distFromCenterCriteria, 
+  reframe( lookedAway = distNotDriftCorrectd>distFromCenterCriteria,
+           lookedAwayDriftCorrectd = distCorrectd>distFromCenterCriteria,
            criterion = distFromCenterCriteria ) 
 
-#Duplicate original dataframe, each row repeat number of criteria times
-longer<-fixatnsAndCorrectn %>% 
+#Duplicate original dataframe, repeat each row number of criteria times. Or better, https://stackoverflow.com/a/78904367/302378555. 
+longerVersion<-fixatnsAndCorrectn %>% 
           slice(rep(1:n(), each = length(distFromCenterCriteria)))
 
 #Combine the new columns with the old
-eachCriterionCheckedEveryFixatn<- cbind(newColumns,longer)
+eachCriterionCheckedEveryFixatn<- cbind(newColumns,longerVersion)
 
-#Currently it checked every fixation in each trial, now need to collapse to have one row per trial*criterion
-#anyTooFarAway means any fixation on a trial was too far away
+#It checked every fixation in each trial, now need to collapse to have one row per trial*criterion
+#anyTooFar means any fixation on a trial was too far away
 eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
       group_by(trial,criterion) |>
-      summarise(anyTooFarAway = any(lookedTooFarAway),
-                numTooFarAway = sum(lookedTooFarAway))
+      summarise(anyTooFar = any(lookedAway), anyTooFarCorrctd = any(lookedAwayDriftCorrectd),
+                numTooFar = sum(lookedAway), numTooFarCorrcted =sum(lookedAwayDriftCorrectd),
+                .groups="keep") #just to avoid the output saying which group is used
 ```
 
-Now calculate proportion of trials anyTooFarAway for each criterion
-anyTooFarAway means any fixation on a trial was too far away:
+Now calculate proportion of trials tooFar for each criterion.
+anyTooFar means at least one fixation on a trial was too far away:
 
 ```{r}
 #| echo: false
 proportnEachCriterion <- eachCriterionEveryTrial |> group_by(criterion) |> 
-        summarise( proportnTooFarAway = mean(anyTooFarAway), 
-                   avgNumForTrialsTooFarAway = sum(anyTooFarAway[anyTooFarAway]) )
-#Also want to calculate average numTooFarAway for each that had a trial too far away
+        summarise( proportnTooFar = mean(anyTooFar), 
+                   proportnTooFarC= mean(anyTooFarCorrctd),
+                   avgNumForTrialsTooFar = sum(anyTooFar[anyTooFar]),
+                   avgNumForTrialsTooFarC = sum(anyTooFarCorrctd[anyTooFarCorrctd])
+                   )
 
 print(round(proportnEachCriterion,3))
 ```
@@ -560,8 +568,9 @@ Visualize proportion of trials too far away for each criterion.
 ```{r}
 #| echo: false
 
-ggplot(proportnEachCriterion, aes(x=criterion,y=proportnTooFarAway)) +
+ggplot(proportnEachCriterion, aes(x=criterion,y=proportnTooFar)) +
     geom_point() + xlab('criterion (pixels)') +
+    geom_point(aes(x=criterion,y=proportnTooFarC),color="green") +
     ggtitle(fname)
 ```
 
@@ -571,9 +580,9 @@ Plot by trialnum whether each trial should be excluded, for each criterion.
 ```{r}
 #| echo: false
 
-ggplot(eachCriterionEveryTrial, aes(x=trial,y=anyTooFarAway,group=)) +
+ggplot(eachCriterionEveryTrial, aes(x=trial,y=anyTooFar,group=)) +
     geom_point()  + geom_line() +
-    ggtitle(fname) + facet_grid(criterion~.)
+    ggtitle(paste(fname,"not drift corrected")) + facet_grid(criterion~.)
 ```
 
 ## Lists of trials
@@ -595,9 +604,17 @@ trialsTooFar <- which(tooFarEachTrial$anyTooFar)
         
 ```
 
-The trials in which the person had fixatns farther than `r myCriterion` pixels from fixation, fater the initial `r trialMinTimeBeforeCuesOff` seconds before the cues are no longer on, was:
+The trials in which the person had fixatns farther than `r myCriterion` pixels from fixation, after the initial `r trialMinTimeBeforeCuesOff` seconds before the cues are no longer on, was:
 
 ```{r}
 #| echo: false
 print(trialsTooFar)
+```
+Print them in a column format for Momo or anyone who wants to copy-paste as a column into Excel
+```{r}
+#| echo: false
+onesAndZeroes<- tooFarEachTrial$anyTooFar * 1.0
+# Print the values of the list with implicit line breaks and no numbers
+cat(unlist(onesAndZeroes), sep = "\n")
+
 ```
