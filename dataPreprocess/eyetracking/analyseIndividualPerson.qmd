@@ -341,36 +341,40 @@ That still won't catch fixations that span the entire interval. To catch those, 
   * end time being greater than interval end
 
 ```{r}
-avgPosDuringInterval<- fixatns %>% 
-  filter( (sttime_rel < intervalToAssumeWasCentral[2]    |
-          entime_rel < intervalToAssumeWasCentral[1] ) |  #These catch fixations that started or ended during the interval
+intervalFixatns<- fixatns %>% 
+  filter( (sttime_rel > intervalToAssumeWasCentral[1] & sttime_rel < intervalToAssumeWasCentral[2])    |     #started during interval
+          (entime_rel < intervalToAssumeWasCentral[2] & entime_rel > intervalToAssumeWasCentral[1]) |  #ended during interval
           (sttime_rel < intervalToAssumeWasCentral[1] &
-           entime_rel > intervalToAssumeWasCentral[2]) #These catch fixations that spanned the interval
+           entime_rel > intervalToAssumeWasCentral[2]) #spanned the interval
         )
 
-```
-         
-         | 
-           entime_rel < interval) %>%
-  filter(sttime_rel < intervalToAssumeWasCentral[2] |
-           
-         ) %>%
-  group_by(trial) %>% 
-  summarise(meanX = mean(gavx), meanY = mean(gavy))
+# Label each fixation based on which type it is
+intervalFixatns <- intervalFixatns %>%
+  mutate(
+    category = case_when(
+      (sttime_rel > intervalToAssumeWasCentral[1]) & (entime_rel < intervalToAssumeWasCentral[2]) ~ "entirelyInInterval",
+      (sttime_rel > intervalToAssumeWasCentral[1] & sttime_rel < intervalToAssumeWasCentral[2]) ~ "startedInInterval",
+      (entime_rel < intervalToAssumeWasCentral[2] & entime_rel > intervalToAssumeWasCentral[1])  ~ "endedInInterval",
+      sttime_rel < intervalToAssumeWasCentral[1] & entime_rel > intervalToAssumeWasCentral[2] ~ "spannedInterval",
+      TRUE ~ NA_character_  # Default case if none of the conditions are met
+    )
+  )
 
-avgPosDuringInterval$distFromFixatn<- sqrt( (avgPosDuringInterval$meanX - widthPix/2)^2 + (avgPosDuringInterval$meanY - heightPix/2)^2 )
 ```
 
-Show the results.
+Plot.
 
 ```{r}
 #| echo: false
 
-avgPosDuringInterval %>% 
-  ggplot( aes(x=trial, y=distFromFixatn) ) + geom_point()
+intervalFixatns %>% 
+  ggplot( aes(x=trial, y=distFromFixatn, color=category) ) + geom_point() +
+  theme_classic() + ggtitle('Fixations of interval')
 ```
 
-Based on what I see above for M471, there are a few trials where fiation is more than 40 pixels off during that interval where we can think that probably drift correction based on that is inappropriate, but the vast majority are within 30 pixels, so maybe it's ok to do drift correction based on them, or based on a running average of them.
+Based on what I see above for M471, the category of ending in the interval is no good, probably because participanat was looking elsewhere at very beginning and shifted to start looking in the right place, lots of large distFromFixatn values, whereas other categories ar OK, although entirelyInInterval not great.
+
+there are a few trials where fiation is more than 40 pixels off during that interval where we can think that probably drift correction based on that is inappropriate, but the vast majority are within 30 pixels, so maybe it's ok to do drift correction based on them, or based on a running average of them.
 
 Show the results, zoomed in but show outliers in red to indicate they'd be off the scale.
 
@@ -380,15 +384,39 @@ Show the results, zoomed in but show outliers in red to indicate they'd be off t
 minValToShow = 0
 maxValToShow = 50
   
-avgPosDuringInterval %>% 
+intervalFixatns %>% 
   mutate(outlier = ifelse(distFromFixatn<minValToShow | distFromFixatn>maxValToShow, TRUE, FALSE)) %>%  #determine outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn > maxValToShow, maxValToShow, distFromFixatn)) %>%     #replace outliers
   mutate(distFromFixatn =  ifelse(distFromFixatn < minValToShow, minValToShow, distFromFixatn)) %>%
-  ggplot( aes(x=trial, y=distFromFixatn, shape=outlier) ) +
+  ggplot( aes(x=trial, y=distFromFixatn, shape=outlier, color=category) ) +
       ylim(minValToShow,maxValToShow) + #restrict axes
       scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
-      geom_point(fill='red')  #only the outlier symbol is fillable
+      geom_point(fill='yellow',size=3) + #only the outlier symbol is fillable
+      theme_classic()
 ```
+
+Average fixations of interval for each trial.
+```{r}
+#| echo: false
+avgPosDuringInterval <- intervalFixatns %>% filter(category != "endedInInterval") %>%
+  group_by(trial) %>%
+  summarise(x=mean(gavx), y=mean(gavy))
+
+avgPosDuringInterval$distFromFixatn<- sqrt( (avgPosDuringInterval$x - widthPix/2)^2 +
+                                            (avgPosDuringInterval$y - heightPix/2)^2 )
+```
+
+Plot
+
+```{r}
+#| echo: false
+avgPosDuringInterval %>% 
+  ggplot( aes(x=trial, y=distFromFixatn) ) + geom_point() +
+  theme_classic() + ggtitle('Average of fixations of interval') + 
+  geom_smooth(method='lm',formula='y~x')
+
+```
+We still have some large values of greater than 40 that we shouldn't use for drift correction, so we just won't use those.
 
 ## Do drift correction
 
