@@ -410,9 +410,20 @@ Plot
 
 ```{r}
 #| echo: false
+#Create a 2-dimensional plot
+avgPosDuringInterval %>% group_by(trial) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point(aes(color=trial)) + coord_fixed(ratio = 1) +
+  geom_point(data=tibble(x=widthPix/2,y=heightPix/2), #add center point for reference
+               aes(x=x,y=y,label=NULL),color="darkred",shape=3,size=5) +
+            ggtitle('Average fixation position during early interval, excluding endedInInterval')
+```
+
+```{r}
+#| echo: false
 avgPosDuringInterval %>% 
   ggplot( aes(x=trial, y=distFromFixatn) ) + geom_point() +
-  theme_classic() + ggtitle('Average of fixations of interval') + 
+  theme_classic() + ggtitle('Average of fixations of early interval') + 
   geom_smooth(method='lm',formula='y~x')
 
 ```
@@ -427,12 +438,18 @@ maxDistanceToDriftCorrect<- 30
 
 ```{r}
 #| echo: false
-#Maybe if I replace large values with NA, I can do simple subtraction and nothing will happen to the corresponding values. But actually there is the possibility of some trials not having a row at all, so I need to deal with that anyway.
-#So maybe do the join first and then see where we are at.
+#Exclude ones too large
+avgDuringInterval <- avgPosDuringInterval %>% filter(distFromFixatn < maxDistanceToDriftCorrect)
+```
 
+```{r}
+#| echo: false
+#there is the possibility of some trials not having a row at all
+#Do the join first and then deal with that.
 
 #Need to expand avgPosDuringInterval to provide one row per trial.
-avgDuringInterval<- avgPosDuringInterval %>% select(-distFromFixatn) #get rid of this column because there's also one in fixatns
+avgDuringInterval<- avgDuringInterval |> select(-distFromFixatn) #get rid of this column because there's also one in fixatns
+avgDuringInterval<-avgDuringInterval |> rename( xForCorrectn=x, yForCorrectn=y )
 
 fixatnsAndCorrectn <- left_join(fixatns, avgDuringInterval, by=join_by(trial)) 
 
@@ -442,10 +459,10 @@ fixatnsAndCorrectn <- left_join(fixatns, avgDuringInterval, by=join_by(trial))
 #assuming center is actual center, widthPix/2, heightPix/2 (no drift correction)
 #So find all NAs and replace meanX and meanY with widthPix/2, heightPix/2
 fixatnsAndCorrectn<- fixatnsAndCorrectn %>% 
-  mutate(meanX = case_when( is.na(x) ~ widthPix/2,
-                            TRUE ~ x ),
-         meanY = case_when( is.na(y) ~ heightPix/2,
-                            TRUE ~ y ) )
+  mutate(xForCorrectn = case_when( is.na(xForCorrectn) ~ widthPix/2,
+                            TRUE ~ xForCorrectn ),
+         yForCorrectn = case_when( is.na(yForCorrectn) ~ heightPix/2,
+                            TRUE ~ yForCorrectn ) )
 
 ```
 
@@ -453,15 +470,12 @@ For each trial's fixations, subtract the drift correction result from the coordi
 
 ```{r}
 #| echo: false
-fixatnsAndCorrectn$xDevCorrectd<- fixatnsAndCorrectn$gavx - fixatnsAndCorrectn$meanX
-fixatnsAndCorrectn$yDevCorrectd<- fixatnsAndCorrectn$gavy - fixatnsAndCorrectn$meanY
-
-#Change the above to a case_when where don't do it if exceeds maxDistanceToDriftCorrect
+fixatnsAndCorrectn$xDevCorrectd<- fixatnsAndCorrectn$gavx - fixatnsAndCorrectn$xForCorrectn
+fixatnsAndCorrectn$yDevCorrectd<- fixatnsAndCorrectn$gavy - fixatnsAndCorrectn$yForCorrectn
 
 fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
             distCorrectd = sqrt( (xDevCorrectd)^2 + (yDevCorrectd)^2 )
          )
-
 
 ```
 
@@ -475,7 +489,22 @@ if ( abs(avgX) > 15   |  abs(avgY) > 15 ) {
   message("Because it's bigger than 15, it suggests the drift correction went very wrong")
 }
 
+reduction<- mean( fixatnsAndCorrectn$distFromFixatn - fixatnsAndCorrectn$distCorrectd  )
+message("Average reduction of distance from fixation= ",round(reduction,2))
+
 ```
+
+Plot histogram of how many pixels distance from fixation reduced thanks to drift correction.
+
+```{r}
+#| echo: false
+#Calculate histogram of reduction in distance
+ggplot(fixatnsAndCorrectn, aes(x= distFromFixatn - distCorrectd)) + geom_histogram(binwidth=1) +
+        labs(title = "Reduction in distance from fixation thanks to drift correction",
+             x = "reduction (pixels)" )
+
+```
+For S451.EDF there are plenty of trials where the reduction is substantial, even though the overwhelming majority of trials is only a few pixels, which is why the average reduction is very small.
 
 ```{r}
 #| echo: false
@@ -485,7 +514,10 @@ if ( abs(avgX) > 15   |  abs(avgY) > 15 ) {
 #Plot to see how it changes over time across trials
 fixatnsAndCorrectn %>% group_by(trial) %>%
   ggplot(aes(x = xDevCorrectd, y = yDevCorrectd)) +
-  geom_point(aes(color=trial)) + coord_fixed(ratio = 1)
+  geom_point(color="green",alpha=.3) + coord_fixed(ratio = 1) +
+  geom_point(aes(x=gavx-widthPix/2, y=gavy-heightPix/2),color="black",alpha=.3) + #original uncorrected
+  geom_hline(yintercept=0) + geom_vline(xintercept=0) +
+  xlim(-250,250) + ylim(-250,250)
 
 ```
 
