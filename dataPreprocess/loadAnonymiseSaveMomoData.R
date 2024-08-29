@@ -62,7 +62,7 @@ datafiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
 #REMOVE/HANDLE DYSFUNCTIONAL RUNS
 #S26 has two files with zero rows, Loretta confirmed they should be thrown out rather than being lost data. 
-datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
+#datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
 #Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
 #So Loretta advises throwing out the first session with 40 trials because it was re-done
 #datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-21.tsv")), by="fname")
@@ -353,13 +353,14 @@ if ( !dir.exists(destinationDir) ) {
 
 #Get the two kinds of column specification,for the early files with only timingBlips and the later with more columns
 # to check against each file as it comes in
-earlyFileWithoutSessionColumn<- "M22a_05Apr2024_11-02.tsv"
-earlyFileWithSessionColumn<- "S381_1_17May2024_09-08.tsv"
-lateFile<- "D61_a_25Jun2024_11-12.tsv"
+earlyFileWithoutSessionColumn<- "a03_1_26Jul2024_14-59.tsv"
+earlyFileWithSessionColumn<- "j02_3_24Jul2024_17-58.tsv"
+lateFile<- "a03_1_26Jul2024_14-59.tsv"
 
 columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithoutSessionColumn)     )
 columns_spec_early_file_with_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
 columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
+differences <- all.equal(columns_spec_early_file_without_session, columns_spec_early_file_with_session)
 
 #Debug why one with comment ends up with just 53 rows
 #thisRow<- joined %>% filter(fname=="M321_1_10May2024_13-43.tsv")
@@ -371,7 +372,8 @@ for (i in 1:nrow(joined)) {
   thisFile<- file.path(thisExpFolderPsychopy,thisRow$fname)
   
   rawDataLoad=tryCatch( 
-    readr::read_table(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
+    readr::read_tsv(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
+#    readr::read_table(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
       error=function(e) { 
         stop( paste0("ERROR reading the file ",fname," :",e) )
       } 
@@ -499,8 +501,7 @@ message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
 #If staircases work, average correct should be 0.794 in each condition.
 avgCorrOverall<- rawData |> group_by(IDnum) |> summarise(correct=mean(orderCorrect==3),n=n())
 pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
-#Originally subjects 23 to 31 have below 70% accuracy indicating that staircases didn't work.
-#due to the mouseClickArea problem making the program malfunction, data now thrown out above.
+show(pCorrPlot)
 
 #Saved anonymised data for loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationName)

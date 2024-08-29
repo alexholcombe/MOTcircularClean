@@ -7,6 +7,7 @@ if (!("speed" %in% colnames(psychometrics))) { #psychometrics must have been fit
   psychometrics$speed = psychometrics$tf / psychometrics$numObjects #because always plot them in terms of speed
 }
 
+#(expName,datForThisPlot,psychometricsForThisPlot,factorsForPlot)
 #function that plots the psychometric functions for a dataset / experiment /criterion,
 plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapOrGrid=TRUE,xmin=NULL,xmax=NULL) {
   #wrapOrGrid means facet_grid. facet_wrap is better if have lots of participants
@@ -19,9 +20,9 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapO
   title<-paste0(expName,' individual Ss data')
   quartz(title,width=6,height=7)
   #print( table(df[colorF],df[colF],df[rowF) ) #debug
-  g=ggplot(data=df,
-           aes_string(x='speed',y='correct',color=colorF,shape=colF))
-  g=g+stat_summary(fun.y=mean,geom="point", position=position_jitter(w=0.01,h=0.01),alpha=.95)
+  g=ggplot(df, aes(x=speed,y=correct,color=.data[[colorF]],shape=.data[[colF]]) )
+  #g=ggplot(df,aes_string(x='speed',y='correct',color=colorF,shape=colF)) )
+  g=g+stat_summary(fun=mean,geom="point", position=position_jitter(w=0.01,h=0.01),alpha=.95)
   if (colF != "" | rowF != "") {
     if (colF=="") { colF='.' }
     if (rowF=="") { rowF='.'}

@@ -52,13 +52,15 @@ for (numObjectsThis in unique(numObjects)) {
     psychometricThis<- subset(psychometrics,objects==numObjectsThis)
     calcThreshForPredictn<- FALSE  #because tracking-two prediction for 6, 9 objects never gets that high. Anyway this is to address
     if (!calcThreshForPredictn)  
-      psychometricThis <- subset(psychometricThis,targets!="2P")
+      if ("targets" %in% colnames(psychometricThis)) {
+        psychometricThis <- subset(psychometricThis,targets!="2P")
+      }
     #Don't do it where criterion corresponds to below chance
     #psychometricThis <- subset(psychometricThis, numObjects > 1/threshCriterion) #For these numObjects conditions, chance is above the current criterion
     
     if (threshCriterion==0.625) {
-      temp<- filter(psychometrics,subject==27 & targets==2 & objects==4 )
-      print(temp)
+      #temp<- filter(psychometrics,subject==27 & targets==2 & objects==4 )
+      #print(temp)
       #STOP
     }
     threshesThisNumeric<- psychometricThis |>  group_by( !!!syms(factorsPlusSubject) ) |>
@@ -101,7 +103,6 @@ h<-h+ stat_summary(fun.y=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
 h
 
 #######Go back and vet trials based on eyetracking
-
 
 h<-ggplot(data=midpointThreshes,   
           aes(x=targets,y=thresh,color=factor(objects)))

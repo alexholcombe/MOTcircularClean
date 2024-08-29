@@ -471,7 +471,7 @@ for (i in 1:nrow(joined)) {
   thisFile<- file.path(thisExpFolderPsychopy,thisRow$fname)
   
   rawDataLoad=tryCatch( 
-    readr::read_table(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
+    readr::read_tsv(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
       error=function(e) { 
         stop( paste0("ERROR reading the file ",fname," :",e) )
       } 
