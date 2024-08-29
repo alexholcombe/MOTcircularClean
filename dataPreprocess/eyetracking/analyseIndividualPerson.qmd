@@ -391,7 +391,7 @@ intervalFixatns %>%
   ggplot( aes(x=trial, y=distFromFixatn, shape=outlier, color=category) ) +
       ylim(minValToShow,maxValToShow) + #restrict axes
       scale_shape_manual(values = c(16, 21)) + #filled circle and unfilled, for outliers
-      geom_point(fill='yellow',size=3) + #only the outlier symbol is fillable
+      geom_point(fill='yellow',size=2,stroke=2) + #only the outlier symbol is fillable
       theme_classic()
 ```
 
