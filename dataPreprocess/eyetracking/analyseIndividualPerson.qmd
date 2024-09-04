@@ -628,10 +628,16 @@ myCriterion = 40 #pixels
 ```{r}
 #| echo: false
 
-tooFarEachTrial<- fixatns |> filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
-        mutate(tooFar = distFromFixatn > myCriterion) |> 
-        group_by(trial) |> 
-        summarise(anyTooFar = any(tooFar)) 
+#distCorrectd
+tooFarEachTrial<- fixatnsAndCorrectn |> filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
+         mutate(tooFar = distCorrectd > myCriterion) |> 
+         group_by(trial) |> 
+         summarise(anyTooFar = any(tooFar)) 
+
+# tooFarEachTrial<- fixatns |> filter(sttime_rel > trialMinTimeBeforeCuesOff) |>
+#         mutate(tooFar = distFromFixatn > myCriterion) |> 
+#         group_by(trial) |> 
+#         summarise(anyTooFar = any(tooFar)) 
 trialsTooFar <- which(tooFarEachTrial$anyTooFar)
         
 ```
@@ -640,6 +646,8 @@ The trials in which the person had fixatns farther than `r myCriterion` pixels f
 
 ```{r}
 #| echo: false
+message('Number of trials too far=',length(trialsTooFar), ' which is this proportion of trials:',
+        round( length(trialsTooFar) / length(unique(fixatnsAndCorrectn$trial)) ,3) )
 print(trialsTooFar)
 ```
 Print them in a column format for Momo or anyone who wants to copy-paste as a column into Excel
