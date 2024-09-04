@@ -42,6 +42,31 @@ EDFstuff <- eyelinkReader::read_edf(EDFfileWithPath,
                                     sample_attributes = c('time', 'gx', 'gy'))
 ```
 
+For Momo's program downstairs, the first trial doesn't work for some reason, so for her we should throw away the first trial. (If don't want to do that, set to FALSE)
+
+```{r}
+throwAwayFirstTrial = FALSE
+throwAwayLastTrial = FALSE #Sarah ran into an EDF file where the last trial lasted 10 min, so somehow the eyetracker got stuck on
+```
+
+
+```{r}
+#| echo: false
+
+fixatns<- EDFstuff$fixations
+samples<- EDFstuff$samples
+
+if (throwAwayFirstTrial) { #Throw away first trial
+  fixatns<- fixatns %>% filter(trial > 1)
+  samples<- samples %>% filter(trial > 1)
+}
+if (throwAwayLastTrial) { #Throw away first trial
+  fixatns<- fixatns %>% filter(trial < max(fixatns$trial))
+  samples<- samples %>% filter(trial < max(samples$trial))
+}
+```
+
+
 Check which eye was tracked, and create new x and y columns based on which eye it was.
 ```{r whichEye}
 #| echo: false
@@ -116,7 +141,7 @@ commonScrnResolutns<- screenResolutions[1:2,]
 samples<-samples |> mutate(xDev = x - widthPix/2, yDev = y - heightPix/2)
 
 # Calculate quartiles
-quartiles <- quantile(samples$trial)
+quartiles <- quantile( unique(samples$trial) ) #divide up based on trials, not sample number (which may differ between trials)
 # Create the new column 'quartile'
 samples <- samples %>%
   mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
@@ -137,23 +162,6 @@ avgPlot<-avgPlot +
   theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
 
 show(avgPlot)
-```
-
-
-For Momo's program downstairs, the first trial doesn't work for some reason, so for her we should throw away the first trial. (If don't want to do that, set to FALSE)
-
-```{r}
-throwAwayFirstTrial = FALSE
-```
-
-
-```{r}
-#| echo: false
-
-fixatns<- EDFstuff$fixations
-if (throwAwayFirstTrial) { #Throw away first trial
-  fixatns<- fixatns %>% filter(trial > 1)
-}
 ```
 
 
@@ -240,7 +248,7 @@ Divide trials into four groups (quartiles) and plot for each
 ```{r}
 #| echo: false
 # Calculate quartiles
-quartiles <- quantile(samples$trial)
+quartiles <- quantile( unique(samples$trial) ) #divide up based on trials, not sample number (which may differ between trials)
 # Create the new column 'quartile'
 fixatns <- fixatns %>%
   mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
