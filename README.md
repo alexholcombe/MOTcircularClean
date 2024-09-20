@@ -4,9 +4,10 @@ This program is super-complicated, legacy of many different papers using trackin
 
 In the long term, want to set up exchange of objects among rings. Necessary to conduct an identity-tracking experiment. Can also push harder on speed limit that way.
 
-### Issues
--Improve anonymisation algorithm
+## Analysis workflow
 
+	*	In the [dataPreprocess](dataPreprocess) folder, its Rproj loadAnonymiseSaveData.R is used to match up Psychopy datafiles with EDF files, and possibly combine multiple sessions together.
+	*	the [analysis](analysis) directory with its Rproj is used to analyze the data.
 
 
 ## Eyetracking

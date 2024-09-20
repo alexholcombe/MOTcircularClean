@@ -124,15 +124,11 @@ criterionProportnNumTimingBlipsForThrowingOutTrial = .02
 
 if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsForThrowingOutTrial, na.rm=T)) {
   message('Some files actually had trials with more than ',criterionProportnNumTimingBlipsForThrowingOutTrial,
-          'timing blips after the cue! So you need to write code to delete those.')
+          ' timing blips after the cue! You can delete those after this file, when you analyze the pre-processed data using the analysis.Rproj.')
 }
 
-#There might be one participant without enough columns in the header, maybe the one Yuenchen ran that we can't find the data for
 
-#Consider removing files with very few rows.  All good as of 10 Jul 2024
-#datafiles<- datafiles %>% arrange(nrows)
-#head(datafiles)
-
+####################################################
 #MATCHING UP PSYCHOPY DATAFILES WITH EDF FILES
 #Get ready to match up Psychopy datafiles with EDF files
 
@@ -522,6 +518,3 @@ write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
 #To get rid of first initial from EDF files, would have to save them with a new name
 #, simply with the first initial stripped
-
-
-
