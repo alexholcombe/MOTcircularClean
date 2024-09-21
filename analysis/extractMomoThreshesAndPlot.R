@@ -72,8 +72,6 @@ for (numObjectsThis in unique(numObjects)) {
     threshes<- rbind(threshes, threshesThis)
   }
 }
-#ERROR occurred with subject= 69  objects= 8  targets= 2, which looks appropriate, subject getting 25% wrong at
-#slow speeds with objects = 8
 
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
   theme(axis.line = element_line(linewidth=.3, color = "grey"), 

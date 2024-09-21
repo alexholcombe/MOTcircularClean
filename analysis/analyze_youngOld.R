@@ -1,5 +1,5 @@
 #This file analyses anonymized data provided by "loadAnonymiseSaveData.R" in exp-specific directory
-#This script expects the working directory to be "newTraj_repo/analysis"
+#This script expects the working directory to be "analysis"
 rm(list = ls()) #Clear workspace
 library(tidyverse)
 

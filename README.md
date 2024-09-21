@@ -6,8 +6,8 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 
 ## Analysis workflow
 
-	*	In the [dataPreprocess](dataPreprocess) folder, its Rproj loadAnonymiseSaveData.R is used to match up Psychopy datafiles with EDF files, and possibly combine multiple sessions together.
-	*	the [analysis](analysis) directory with its Rproj is used to analyze the data.
+*	In the [dataPreprocess](dataPreprocess) folder, its Rproj loadAnonymiseSaveData.R is used to match up Psychopy datafiles with EDF files, and possibly combine multiple sessions together.
+*	the [analysis](analysis) directory with its Rproj is used to analyze the data.
 
 
 ## Eyetracking

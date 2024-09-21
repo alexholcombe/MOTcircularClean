@@ -49,7 +49,6 @@ throwAwayFirstTrial = FALSE
 throwAwayLastTrial = FALSE #Sarah ran into an EDF file where the last trial lasted 10 min, so somehow the eyetracker got stuck on
 ```
 
-
 ```{r}
 #| echo: false
 
@@ -66,8 +65,8 @@ if (throwAwayLastTrial) { #Throw away first trial
 }
 ```
 
-
 Check which eye was tracked, and create new x and y columns based on which eye it was.
+
 ```{r whichEye}
 #| echo: false
 
@@ -89,6 +88,7 @@ if (numNotNAleftEye>0 & numNotNArightEye>0) {
 }
 
 ```
+
 ## Graphs
 
 Assuming screen width is `r widthPix` pixels and screen height is `r heightPix` pixels,
@@ -164,7 +164,6 @@ avgPlot<-avgPlot +
 show(avgPlot)
 ```
 
-
 ```{r}
 #Calculate time by which it matters that they're fixating, which is when targets are no longer cued
 fixationInterval = c(800,1300)
@@ -173,13 +172,11 @@ trialMinTimeBeforeCuesOff = min(fixationInterval) + trackingExtraTime
 #Can also look at additional columns in later versions of the program, that show fixationInterval
 ```
 
-Just look after first 2000 ms, because first `r fixationInterval[1]` ms, up to max of  `r fixationInterval[2]` ms is fixation, then blobs cued for `r `trackingExtraTime` ms so really I don't have to exclude until after `r fixationInterval[1]` + `r trackingExtraTime` = `r trialMinTimeBeforeCuesOff` ms.
+Just look after first 2000 ms, because first `r fixationInterval[1]` ms, up to max of `r fixationInterval[2]` ms is fixation, then blobs cued for `r`trackingExtraTime`ms so really I don't have to exclude until after`r fixationInterval\[1\]`+`r trackingExtraTime`=`r trialMinTimeBeforeCuesOff\` ms.
 
 For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
 
 From previous exploring, I know that lots of occasional bad stuff happens over the first 100ms.
-
-
 
 Plot to see how average fixation x changes over time across trials, after minimum fixation interval, to look for possible drift (gradual trend of calibration getting more and more wrong).
 
@@ -245,6 +242,7 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
 ```
 
 Divide trials into four groups (quartiles) and plot for each
+
 ```{r}
 #| echo: false
 # Calculate quartiles
@@ -261,6 +259,7 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   geom_hline(yintercept = widthPix/2,col="black") +  
   geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
+
 Do it for y
 
 ```{r}
@@ -273,7 +272,6 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   geom_hline(yintercept = heightPix/2,col="black") +  
   geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
-
 
 Look at first portion of trial before the targets are highlighted for example, when it doesn't matter where participants are looking but we could use some of that portion for drift correction if we trust the participant.
 
@@ -299,6 +297,7 @@ The first 300 ms or so look very bad, so exclude that and only show first 1000 m
 #| echo: false
 overTime + xlim(350,1300)
 ```
+
 Based on participant M471, minimum distance occurs from about 400 to 800 ms. So we could do drift correction based on that interval.
 
 Zoom in but show outliers in red to indicate they'd be off the scale.
@@ -340,13 +339,9 @@ A more sophisticated algorithm would calculate a running average across several 
 
 Can't use samples because it doesn't have sttime_rel, it only has time_rel which is since the beginning of the recording session so I'd have to get the time markers.
 
-A problem is that some trials have fixations that didn't start within the interval but did extend into the interval, so shouldn't just test against sttime_rel. So a criterion to catch fixations that either start or end in the interval can be:
-  * start time being in the interval, or
-  * end time being in the interval,
+A problem is that some trials have fixations that didn't start within the interval but did extend into the interval, so shouldn't just test against sttime_rel. So a criterion to catch fixations that either start or end in the interval can be: \* start time being in the interval, or \* end time being in the interval,
 
-That still won't catch fixations that span the entire interval. To catch those, have to test for:
-  * start time being less than interval start AND
-  * end time being greater than interval end
+That still won't catch fixations that span the entire interval. To catch those, have to test for: \* start time being less than interval start AND \* end time being greater than interval end
 
 ```{r}
 intervalFixatns<- fixatns %>% 
@@ -404,6 +399,7 @@ intervalFixatns %>%
 ```
 
 Average fixations of interval for each trial.
+
 ```{r}
 #| echo: false
 avgPosDuringInterval <- intervalFixatns %>% filter(category != "endedInInterval") %>%
@@ -435,11 +431,13 @@ avgPosDuringInterval %>%
   geom_smooth(method='lm',formula='y~x')
 
 ```
+
 We still have some large values of greater than e.g. 40 that we shouldn't use for drift correction, so we just won't use those.
 
 ## Set up parameters for optional drift correction
 
-Calculate the desired drift corrections, excluding ones larger than: 
+Calculate the desired drift corrections, excluding ones larger than:
+
 ```{r}
 maxDistanceToDriftCorrect<- 30
 ```
@@ -512,6 +510,7 @@ ggplot(fixatnsAndCorrectn, aes(x= distFromFixatn - distCorrectd)) + geom_histogr
              x = "reduction (pixels)" )
 
 ```
+
 For S451.EDF there are plenty of trials where the reduction is substantial, even though the overwhelming majority of trials is only a few pixels, which is why the average reduction is very small.
 
 ```{r}
@@ -538,15 +537,13 @@ fixatnsAndCorrectn %>%
   geom_smooth(method='lm',formula='y~x')
 ```
 
-
 ## Consider effect of different criteria for excluding trials
 
 Calculate and visualize how many trials will be excluded under various criteria.
 
 Want to have criterion on horizontal axis and proportion trials excluded on vertical axis.
 
-This will require creating a new dataframe because for each trial, need to calculate numCriteria things, meaning the number of rows will expand.
-One way to do it would be to do a sort of expand_grid where every trial gets duplicated by numCriteria, with criterion a new column. Then, apply whatever is in the criterion column to each row.
+This will require creating a new dataframe because for each trial, need to calculate numCriteria things, meaning the number of rows will expand. One way to do it would be to do a sort of expand_grid where every trial gets duplicated by numCriteria, with criterion a new column. Then, apply whatever is in the criterion column to each row.
 
 Criteria to show the effect of:
 
@@ -555,6 +552,7 @@ distFromCenterCriteria <- c(20,30,40,60,100)
 ```
 
 Calculate whether each trial's distFromFixatn is greater than each criterion
+
 ```{r}
 #| echo: false
 
@@ -588,8 +586,7 @@ eachCriterionEveryTrial <- eachCriterionCheckedEveryFixatn |>  filter(sttime_rel
                 .groups="keep") #just to avoid the output saying which group is used
 ```
 
-Now calculate proportion of trials tooFar for each criterion.
-anyTooFar means at least one fixation on a trial was too far away:
+Now calculate proportion of trials tooFar for each criterion. anyTooFar means at least one fixation on a trial was too far away:
 
 ```{r}
 #| echo: false
@@ -613,7 +610,6 @@ ggplot(proportnEachCriterion, aes(x=criterion,y=proportnTooFar)) +
     geom_point(aes(x=criterion,y=proportnTooFarC),color="green") +
     ggtitle(fname)
 ```
-
 
 Plot by trialnum whether each trial should be excluded, for each criterion.
 
@@ -658,7 +654,9 @@ message('Number of trials too far=',length(trialsTooFar), ' which is this propor
         round( length(trialsTooFar) / length(unique(fixatnsAndCorrectn$trial)) ,3) )
 print(trialsTooFar)
 ```
+
 Print them in a column format for Momo or anyone who wants to copy-paste as a column into Excel
+
 ```{r}
 #| echo: false
 onesAndZeroes<- tooFarEachTrial$anyTooFar * 1.0
