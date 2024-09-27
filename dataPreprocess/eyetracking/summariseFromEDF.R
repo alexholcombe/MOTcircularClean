@@ -87,8 +87,9 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   #Check what proportion of the time the eye was lost completely
   #When the eye cannot be tracked (for example during blinks) null values (".") are returned for the gaze X,Y data, and the Pupil Size data is zero
   #Can check this by looking at rate of samples being NA, or by ?
-  proportn_na <- samples |> summarise( proportnNA = mean( is.na(x) ) )
-  results$pSamplesFailed <- proportn_na
+  proportnSamplesFailed <- samples |> summarise( proportnNA = mean( is.na(x) ) )
+  message('proportnSamplesFailed$proportnNA=',proportnSamplesFailed$proportnNA)
+  results$pSamplesFailed <- proportnSamplesFailed$proportnNA
   
   ##########################################################################################
   #Check how often eye ridiculously far from screen center, suggesting something went wrong
@@ -122,11 +123,11 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   }
   
   #Check for events$type=='LOST_DATA_EVENT'
-  events<- EDFstuff$events %>% mutate(lostData = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
-  results$lostData <- FALSE
-  if (any(events$lostData)) { #Check whether lost data ever occurred
+  events<- EDFstuff$events %>% mutate(dataLost = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
+  results$anyDataLost <- FALSE
+  if (any(events$dataLost)) { #Check whether lost data ever occurred
     warning( "data was lost! A LOST_DATA_EVENT occurred somewhere in this EDF file")
-    results$lostData <- TRUE
+    results$anyDataLost <- TRUE
   }
     
   #Set duration after which care whether fixation was elsewhere

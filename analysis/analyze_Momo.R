@@ -79,6 +79,9 @@ EDFmatchTable<- readr::read_tsv(withPath,  show_col_types=FALSE)
 
 datWithEyeTracking <- datAnalyze |> filter(EDFmatchExists == TRUE)
 
+#Delete session (which might have letters instead of numbers) because redundant with sessionNum 
+datWithEyeTracking$session<-NULL; EDFmatchTable$session<- NULL
+
 #Join with EDFmatchTable so know the EDF file for each participant
 datWithEyeTracking<- datWithEyeTracking |> 
   left_join(EDFmatchTable, 
@@ -119,28 +122,67 @@ intervalToAssumeGazeCentral<-c(0,0) #Currently not implemented
 #The problem with doing it this way is that reading and analysing the EDF file takes a long time,
 #   and dies if there is a problem with an EDF file, so it's probably better to do it incrementally
 #   with a for loop!
-datWithEyeMetrics<- datWithEyeTracking |> rowwise() |>
-  reframe( EDFsummarise(pick(EDF_name),widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
-                        initialDurToExclude,driftCorrect,intervalToAssumeGazeCentral)         ) 
+#datWithEyeMetrics<- datWithEyeTracking |> rowwise() |>
+#  reframe( EDFsummarise(pick(EDF_name),widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
+#                        initialDurToExclude,driftCorrect,intervalToAssumeGazeCentral)         ) 
+
 #Rather than doing it the fancy way above, do it separately so can save the result of analyzing all the 
 #eyetracking files separately.
-#Run EDF summarise on each row of the list of EDF names,
+#Run EDF summarise on each row of the list of EDF names, https://gist.github.com/alexholcombe/2ec141beec36ac7640fa296dd236203c
+EDFsToAnalyze<-  datWithEyeTracking |> 
+                      group_by(IDnum,sessionNum) |>
+                      summarize(EDF_name = first(EDF_name), .groups = 'drop')
+pathsOnly<- EDFsToAnalyze$EDF_name
+#pathsOnly<-pathsOnly[1:3] #Shorten for test run
 
-#Now I should have the following columns thanks to EDFsummarise:
-#   trial longestDist outOfCentralArea totalBlinkDur blinksTooLong
+# Call the function with each element of the list as the first parameter and concatenate the results into a tibble, https://gist.github.com/alexholcombe/2ec141beec36ac7640fa296dd236203c
+EDFresults <- map_dfr(pathsOnly, ~ EDFsummarise(.x, widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
+                                                    initialDurToExclude,driftCorrect,intervalToAssumeGazeCentral)   )
+#It returns a weirdly-structured list actually, because some things only one value per file, others different value each trial,
+#   which is in the perTrialStuff
+eachTrialEDFs<- EDFresults$perTrialStuff
+#Now add in the things that were not calculated for each trial, but I do want them as columns
+#Isolate them by getting rid of the perTrialStuff
+EDFresults$perTrialStuff <- NULL
+#Now can combine them
+EDFresults<- cbind(eachTrialEDFs,EDFresults)
+  
+#Add in the other columns (IDnum, sessionNum) from EDFsToAnalyze
+EDFresults<- EDFsToAnalyze |> right_join(EDFresults, by=join_by(EDF_name) )
+#table(EDFresults$outOfCentralArea,useNA="ifany")
+
+#Now I have the following columns thanks to EDFsummarise:
+# IDnum sessionNum  trial longestDist outOfCentralArea totalBlinkDur blinksTooLong pSamplesFailed anyDataLost
+
+#Join these EDF results with the behavioral data, so can then start excluding trials.
+datWithEyeMetrics<- datWithEyeTracking |> 
+                      left_join(EDFresults, by=join_by(EDF_name,IDnum,sessionNum, trialnum==trial))
 
 
+#RUN WITH TIMINGBLIPS ONLY EXCLUDED AND WITH BOTH TIMINGBLIPS AND EYEMOVMENET EXCLUSIONS
 
-#Find the match in datAnalyze based on datAnalyze$IDnum==EDFmatchTable$IDnum,
-# datAnalyze$sessionNum==EDFmatchTable$sessionNum
+#Report on timingBlips
+blipsSummary<- datWithEyeMetrics |> 
+                  group_by(IDnum) |> 
+                  summarise(pTrialsTooManyBlips =  mean(timingBlips > maxTimingBlipsToIncludeTrial) )
+write_tsv(blipsSummary, file.path(dataDir,expName,"blipsSummary.tsv"))
 
-dat <- datAnalyze |> left_join(EDFmatchTable,by=c("IDnum,sessionNum"))
+#Report on outOfCentralArea
+#Work out how much data is missing - because eyetracker didn't work? But I already filtered by 
+outOfCentralAreaNA<- datWithEyeMetrics |> 
+        group_by(IDnum,sessionNum) |> 
+        summarise(NAs = is.na( first(outOfCentralArea) ) )
+
+#summarize(EDF_name = first(EDF_name), .groups = 'drop')
 
 
-datAnalyze |> left_join(EDFmatchTable)
-#run EDFsummarise on that file, $EDF_name
-#First, work out EDF filename to add to the data structure
-
+outOfCentralAreaSummary<- datWithEyeMetrics |> 
+    group_by(IDnum) |> 
+    summarise( pOutOfCentralArea =  mean(outOfCentralArea > 0) )
+write_tsv(outOfCentralAreaSummary, file.path(dataDir,expName,"outOfCentralAreaSummary.tsv")
+          
+                    
+#Calculate number of trials per participant with timingBlips and with outOfCentralArea, save as .tsv for Momo
 
 #Then get summariseFromEDF to tell me various metrics about the eyemovements on each trial
 #Merge that with datAnalyze
