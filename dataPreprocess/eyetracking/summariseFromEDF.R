@@ -7,7 +7,7 @@
 library(tidyverse)
 library(eyelinkReader)
 
-EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
+EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
                         initialDurToExclude,driftCorrect,intervalToAssumeGazeCentral) {
   #In results, this will return the following variables which reflect all trials combined:
   #   pSamplesFailed , proportion of samples across all trials NA because eye couldn't be tracked, which includes blinks
@@ -20,17 +20,19 @@ EDFsummarise<- function(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZ
   # total time outside the designated area
   # number of fixations outside the designated area
   results <- list()
+  message("EDF_name=", EDF_name)
+  results$EDF_name<- EDF_name
   
   #If first parameter passed came in various ways from tidyverse functions such as reframe, will be list
-  if (typeof(inputEDF)=='list') { 
+  if (typeof(EDF_name)=='list') { 
     # Reduce list to an unnamed simple variable
-    inputEDF <- inputEDF[[1]]
+    EDF_name <- EDF_name[[1]]
   }
-  if (!file.exists(inputEDF)) {
-    stop( paste0("ERROR the inputEDF file ",inputEDF," does NOT exist") )
+  if (!file.exists(EDF_name)) {
+    stop( paste0("ERROR the EDF_name file ",EDF_name," does NOT exist") )
   }
 
-  EDFstuff <- eyelinkReader::read_edf(inputEDF,
+  EDFstuff <- eyelinkReader::read_edf(EDF_name,
                                   import_samples = TRUE,
                                   sample_attributes = c('time', 'gx', 'gy'))
 
