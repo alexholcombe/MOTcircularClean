@@ -77,7 +77,9 @@ if (!file.exists(withPath)) {
 }
 EDFmatchTable<- readr::read_tsv(withPath,  show_col_types=FALSE)
 
-datWithEyeTracking <- datAnalyze |> filter(EDFmatchExists == TRUE)
+#Delete P01 because something is screwy with subject ID 01, who somehow has 4 session 2's acccording to my derived records, whereas all others don’t have such duplicates
+#       Momo: sorry i totally forgot but P01 I had a problem with running session 2 where I ran it for 1 trials worth on the first run so ran another session with 3 trials worth to make it up to normal (4 trials per session). Also this was when there was a problem with running sessions titled ‘2’ so i believe the 1 trial session would have been P013 and the 3 trial session would have been P014.
+datWithEyeTracking<- datAnalyze |> filter(datAnalyze$IDnum != "01")
 
 #Delete session (which might have letters instead of numbers) because redundant with sessionNum 
 datWithEyeTracking$session<-NULL; EDFmatchTable$session<- NULL
@@ -110,10 +112,9 @@ datWithEyeTracking$EDF_name<- str_c(datWithEyeTracking$EDF_name,".EDF")
 #Add path for EDF file
 datWithEyeTracking$EDF_name<- file.path(dataDir,expName,"AllEdfData",datWithEyeTracking$EDF_name)
                          
-#Function that runs EDFsummarise on each EDF file
+#Get function that runs EDFsummarise on each EDF file
 # then for each EDF file, we have whether to exclude every trial
 # After all that, join with datAnalyze
-
 source( file.path('..','dataPreprocess','eyetracking','summariseFromEDF.R') ) #defines EDFsummarise function
 
 driftCorrect<- FALSE #Currently not implemented
@@ -146,10 +147,15 @@ eachTrialEDFs<- EDFresults$perTrialStuff
 EDFresults$perTrialStuff <- NULL
 #Now can combine them
 EDFresults<- cbind(eachTrialEDFs,EDFresults)
-  
+#Eyelink counts from 1 for trialnum, whereas Psychopy starts with zero, need to subtract one from every trial
+#In future, should use message sent to eyetracker of trial number.
+EDFresults$trial <- EDFresults$trial - 1
+
 #Add in the other columns (IDnum, sessionNum) from EDFsToAnalyze
 EDFresults<- EDFsToAnalyze |> right_join(EDFresults, by=join_by(EDF_name) )
 #table(EDFresults$outOfCentralArea,useNA="ifany")
+
+#EDFresults |> filter(trial<3) #No NAs
 
 #Now I have the following columns thanks to EDFsummarise:
 # IDnum sessionNum  trial longestDist outOfCentralArea totalBlinkDur blinksTooLong pSamplesFailed anyDataLost
@@ -157,43 +163,42 @@ EDFresults<- EDFsToAnalyze |> right_join(EDFresults, by=join_by(EDF_name) )
 #Join these EDF results with the behavioral data, so can then start excluding trials.
 datWithEyeMetrics<- datWithEyeTracking |> 
                       left_join(EDFresults, by=join_by(EDF_name,IDnum,sessionNum, trialnum==trial))
-
+#table(datWithEyeMetrics$outOfCentralArea,useNA="ifany")
+#datWithEyeMetrics |> filter(trialnum<3) |> select(trialnum,IDnum,sessionNum,timingBlips,EDFmatchExists,outOfCentralArea,longestDist) 
 
 #RUN WITH TIMINGBLIPS ONLY EXCLUDED AND WITH BOTH TIMINGBLIPS AND EYEMOVMENET EXCLUSIONS
 
+#Calculate number of trials per participant with timingBlips and with outOfCentralArea, save as .tsv for Momo
 #Report on timingBlips
 blipsSummary<- datWithEyeMetrics |> 
                   group_by(IDnum) |> 
                   summarise(pTrialsTooManyBlips =  mean(timingBlips > maxTimingBlipsToIncludeTrial) )
 write_tsv(blipsSummary, file.path(dataDir,expName,"blipsSummary.tsv"))
 
-#Report on outOfCentralArea
+#Report on eye metrics per participant and session
 #Work out how much data is missing - because eyetracker didn't work? But I already filtered by 
-outOfCentralAreaNA<- datWithEyeMetrics |> 
-        group_by(IDnum,sessionNum) |> 
-        summarise(NAs = is.na( first(outOfCentralArea) ) )
+eyeTrackingSummary<- datWithEyeMetrics |> 
+    group_by(IDnum,sessionNum) |> 
+    summarise(pNAs = mean( is.na( outOfCentralArea)  ), #How often could outOfCentralArea not be calculated? Dunno if no fixations can cause that
+              pTrialsInCentralArea = 1 - mean(outOfCentralArea>0, na.rm=T),
+              goodTrials = sum(outOfCentralArea==0))
+write_tsv(eyeTrackingSummary, file.path(dataDir,expName,"eyeTrackingSummary.tsv"))
 
-#summarize(EDF_name = first(EDF_name), .groups = 'drop')
+#Exclude timingBlips, maybe also trials where moved eyes
+datAnalyze <- datWithEyeMetrics |> 
+                filter(timingBlips <= maxTimingBlipsToIncludeTrial) |>
+                filter(outOfCentralArea == 0)
 
+#Report on how many trials per participant left after exclusions
+numGoodTrials<- datAnalyze |> 
+  group_by(IDnum) |> 
+  summarise(goodTrials = sum(outOfCentralArea==0))
+write_tsv(numGoodTrials, file.path(dataDir,expName,"numGoodTrialsPerParticipant.tsv"))
 
-outOfCentralAreaSummary<- datWithEyeMetrics |> 
-    group_by(IDnum) |> 
-    summarise( pOutOfCentralArea =  mean(outOfCentralArea > 0) )
-write_tsv(outOfCentralAreaSummary, file.path(dataDir,expName,"outOfCentralAreaSummary.tsv")
-          
-                    
-#Calculate number of trials per participant with timingBlips and with outOfCentralArea, save as .tsv for Momo
+#Don't even try to curve fit if number of good trials is less than 30
+participantsWithTooFewTrials <- numGoodTrials |> filter(goodTrials < 30) |> select(IDnum)
 
-#Then get summariseFromEDF to tell me various metrics about the eyemovements on each trial
-#Merge that with datAnalyze
-#Perform exclusions
-#fixatnPeriod varies 0.8 to 1.3 
-
-  
-
-  proportnTrialsOutside = as.numeric( (eachTrial$outOfCentralArea > 0) )
-  msg = paste("Proportion of trials for this participant with any sample outside the central zone =", mean(proportnTrialsOutside))
-  message(msg)
+datAnalyze<- datAnalyze |> filter( !(IDnum %in% participantsWithTooFewTrials$IDnum ) )
   
 #https://github.com/alexholcombe/speed-tf-VSS14/blob/master/analyseExps/doAllAnalyses_E4ab.R
 iv<-"speed"
@@ -201,18 +206,21 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   cat('Fitting data, extracting threshes, plotting with iv=',iv)
   
   source('analyzeMakeReadyForPlot.R') #returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
+  #It crapped out on subject 30
+  
   fitParms$iv<- iv
-  #Get the plotIndividDataAndCurves function from another file
+  #Get the plotIndividDataAndCurves function from executing the below file
   source('individDataWithPsychometricCurves.R') 
+  
   factorsForPlot <- tibble( colorF = "offset", colF = "objects", rowF = "subject" )
   
-  #Make a few plots of psychometric functions prior to extracting threshes 
+  #Make a few plots of psychometric functions prior to extracting threshes
   datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 27 ) |>
         filter(  as.numeric(as.character(subject)) <= 999 )
   psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >=27  ) |>
     filter(  as.numeric(as.character(subject)) <= 999 )
   
-  #Plot all psychometric functions
+  #Plot psychometric functions
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) 
   plt<-plt+facet_wrap(vars(subject))
@@ -226,7 +234,6 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #                         psychometricsForThisPlot |> filter(subject==69),
   #                         tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
   #                         wrapOrGrid=T,xmin=0,xmax=1.5)
-  
   #show(s69)
   
   thrAll<-tibble()
