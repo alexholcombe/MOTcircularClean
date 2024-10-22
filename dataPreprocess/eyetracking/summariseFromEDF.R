@@ -247,7 +247,8 @@ return (fixatnsAndCorrectn)
 #############################################################################################################
 ################################################################################################################
 EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
-                        initialDurToExclude,driftCorrect,intervalAssumeGazeCentral,maxDistToDriftCorrect) {
+                        initialDurToExclude,driftCorrect,intervalAssumeGazeCentral,
+                        maxDistToDriftCorrect,plotQuartiles) {
   #############################################################################################################
   #In results, this will return the following variables which reflect all trials combined:
   #   pSamplesFailed , proportion of samples across all trials NA because eye couldn't be tracked, which includes blinks
@@ -353,7 +354,6 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
                             group_by(trial) |> 
                             summarise(longestDist = max(distFromFixatn))
   #ggplot(fixatnsTrialReport, aes(x=longestDist)) + geom_histogram()
-  plotQuartiles<- TRUE
   if (plotQuartiles) {
     # Calculate quartiles
     quartiles <- quantile( unique(samples$trial) ) #divide up based on trials, not fixation number (which differs across trials)
@@ -433,19 +433,21 @@ TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have t
 if (TESTME) {
 
   #data(gaze) #to use built-in dataset
-  EDF_name<- file.path("dataForTestingOfCode", "Y481.EDF") #A421.EDF A20b.EDF Y481.EDF 
+  EDF_name<- file.path("dataForTestingOfCode", "A421.EDF") #A421.EDF A20b.EDF Y481.EDF 
+  #Y481 has zero trials that meet the 30-pixels criterion, and 60!
     
   widthPix = 800 #1024
   heightPix = 600 #768
   EDFstuff<- EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
   
-  centralZoneHeightPix = 30 #10
-  centralZoneWidthPix = 30 #10
+  centralZoneHeightPix = 60 #10
+  centralZoneWidthPix = 60 #10
   initialDurToExclude<- 1
   doDriftCorrect = T; intervalAssumeGazeCentral <- c(.1,.9); maxDistToDriftCorrect<-20
     
   EDFsummary<- EDFsummarise(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
-                            initialDurToExclude,doDriftCorrect,intervalAssumeGazeCentral,maxDistToDriftCorrect)
+                            initialDurToExclude,doDriftCorrect,intervalAssumeGazeCentral,
+                            maxDistToDriftCorrect,plotQuartiles)
   #Check proportion of trials with a fixation outOfCentralArea
   pOut <- EDFsummary$perTrialStuff |> summarise(pOut = mean(numOutOfCentralAreaCorrected>0))
   message("Proportion of trials with a fixation outside the central area =",round(pOut,3))
