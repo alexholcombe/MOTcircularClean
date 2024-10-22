@@ -7,6 +7,120 @@
 library(tidyverse)
 library(eyelinkReader)
 
+EDFreadAndCheckResolution<- function(EDF_name,widthPix,heightPix) {
+  
+  #If first parameter passed came in various ways from tidyverse functions such as reframe, will be list
+  if (typeof(EDF_name)=='list') { 
+    # Reduce list to an unnamed simple variable
+    EDF_name <- EDF_name[[1]]
+  }
+  if (!file.exists(EDF_name)) {
+    stop( paste0("ERROR the EDF_name file ",EDF_name," does NOT exist") )
+  }
+  
+  EDFstuff <- eyelinkReader::read_edf(EDF_name,
+                                      import_saccades=FALSE,import_blinks=FALSE,import_recordings=FALSE,
+                                      import_fixations = TRUE, import_events = TRUE,
+                                      import_samples = TRUE,
+                                      sample_attributes = c('time', 'gx', 'gy'),
+                                      verbose=FALSE)
+  if (length(EDFstuff)==0) {
+    cat('Failure to read EDF file with eyelinkReader!')
+  }
+  
+  #Try to find eyetracker message that says what it thinks the resolution of the screen is
+  #widthPix is width of screen 
+  #DISPLAY_COORDS is usually the first message
+  first_message<- EDFstuff$events$message[1]
+  # Split the string into an array based on whitespace
+  message_parts<- stringr::str_split(first_message, "\\s+")[[1]]
+  if (message_parts[1] == "DISPLAY_COORDS") { #What I'm expecting
+    widthPix_according_to_eyetracker = message_parts[4]
+    heightPix_according_to_eyetracker = message_parts[5]
+    if (widthPix != widthPix_according_to_eyetracker) {
+      message('Eyetracker thinks widthPix = ',widthPix_according_to_eyetracker,' not ',widthPix,' like you said.')
+    }
+    if (heightPix != heightPix_according_to_eyetracker) {
+      message('Eyetracker thinks heightPix = ',heightPix_according_to_eyetracker,' not ',heightPix,' like you said.')
+    }
+  } else {
+    message('Did not find DISPLAY_COORDS')
+  }
+  
+  ##########################################################################################
+  #Check which eye was tracked
+  # EDFstuff$samples contains the x,y locations but before parsing into saccades, blinks
+  samples<- EDFstuff$samples
+  
+  #Check which eye was tracked
+  numNotNArightEye <- sum( !is.na(samples$gxR) )
+  numNotNAleftEye <- sum( !is.na(samples$gxL) )
+  if (numNotNArightEye>0 & numNotNAleftEye==0) {
+    #message("The right eye was tracked exclusively.")
+    samples$x <- samples$gxR
+    samples$y <- samples$gyR
+  }
+  if (numNotNAleftEye>0 & numNotNArightEye==0) {
+    #message("The left eye was tracked exclusively.")
+    samples$x <- samples$gxL
+    samples$y <- samples$gyL
+  }
+  if (numNotNAleftEye>0 & numNotNArightEye>0) {
+    message("Sometimes the left eye was tracked and on others the right, and I'm not set up to handle that. You should check each trial.")
+  }
+  
+  #Check whether average sample position very far from what expect to be screen center.
+  screenCtrTold <-  data.frame( x=widthPix/2, y= heightPix/2)
+  ridiculouslyFarFromCenterCriterion = 100
+  avgSampleRelCtr<- samples |>
+    summarise(x = mean(x,na.rm=TRUE), y = mean(y,na.rm=TRUE)) - 
+    screenCtrTold
+  
+  if ( !is.nan(avgSampleRelCtr$x) & !is.nan(avgSampleRelCtr$y) ) {
+    deviationLarge<- sqrt(avgSampleRelCtr$x^2 + avgSampleRelCtr$y^2)  > 
+                     ridiculouslyFarFromCenterCriterion
+  }
+  else {
+    deviationLarge<- FALSE
+  }
+  
+  # #Function to check for any TRUE values but return FALSE if all are NaN, as will occur if there are
+  # #  no values because the other eye was tracked or there is no data.
+  # any_true_except_all_nan <- function(x) {
+  #   if (all(is.nan(x))) {
+  #     return(FALSE)
+  #   } else {
+  #     return(any(x, na.rm = TRUE))
+  #   }
+  # }
+  # #Find out whether average position ()
+  # deviationLarge<- any_true_except_all_nan( 
+  #                     abs(avgSampleRelCtr) > ridiculouslyFarFromCenterCriterion      )
+  
+  #If average position large deviations from expected screen center, tell user.
+  if ( deviationLarge ) { 
+    msg = paste0("Average eye location should be near screen center (",widthPix/2,",",heightPix/2,") but")
+    msg=paste0(msg,"for this participant, it's more than")
+    msg=paste(msg,ridiculouslyFarFromCenterCriterion,"pixels from the center, on average the eye position relative to center was (x,y)")
+    msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
+    msg=paste(msg,"This happens because the eyetracker or its calibration was no good, or the participant didn't look near center much.")
+    message(msg)
+  } else {
+    if ( is.nan(avgSampleRelCtr$x) | is.nan(avgSampleRelCtr$y) ) {
+      msg<- "There seems to be no samples in this file."
+    } else {
+      msg="Good! Average sample dx,dy="
+      msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
+      msg=paste0(msg,' relative to believed widthPix,heightPix reasonable ')
+      msg=paste0(msg,' because not very far from center')
+      message(msg)
+    } 
+  }
+  
+  return (EDFstuff)
+}
+
+#################################################################################################
 driftCorrect<- function(fixatns, intervalAssumeGazeCentral, maxDistToDriftCorrect,samplingRate) {
 #Internal function for EDFsummarise
   
@@ -115,7 +229,7 @@ avgOldY <- round(mean(fixatnsAndCorrectn$dy),1)
 #Calculate how much drift correction helped, in terms of (assumed) distance from fixation
 distReduction<-mean( sqrt(fixatnsAndCorrectn$dx^2 + fixatnsAndCorrectn$dy^2) -
   sqrt(fixatnsAndCorrectn$dxCorrectd^2 + fixatnsAndCorrectn$dyCorrectd^2) )
-message("Drift correction reduced average fixation offset by ",round(distReduction,1),
+message("Drift correction reduced average fixation offset by ",round(distReduction,2),
         " pixels. Average x,y = ",avgNewX,",",avgNewY, "; before, =",avgOldX,",",avgOldY)
 if ( abs(avgNewX) > 20   |  abs(avgNewY) > 20 ) {
   message("Because it's bigger than 15, it suggests the drift correction not effective or person didn't fixate")
@@ -124,45 +238,7 @@ if ( abs(avgNewX) > 20   |  abs(avgNewY) > 20 ) {
 return (fixatnsAndCorrectn)
 }
 
-EDFreadAndCheckResolution<- function(EDF_name,widthPix,heightPix) {
 
-  #If first parameter passed came in various ways from tidyverse functions such as reframe, will be list
-  if (typeof(EDF_name)=='list') { 
-    # Reduce list to an unnamed simple variable
-    EDF_name <- EDF_name[[1]]
-  }
-  if (!file.exists(EDF_name)) {
-    stop( paste0("ERROR the EDF_name file ",EDF_name," does NOT exist") )
-  }
-  
-  EDFstuff <- eyelinkReader::read_edf(EDF_name,
-                                      import_samples = TRUE,
-                                      sample_attributes = c('time', 'gx', 'gy'))
-  if (length(EDFstuff)==0) {
-    cat('Failure to read EDF file with eyelinkReader!')
-  }
-  
-  #Try to find eyetracker message that says what it thinks the resolution of the screen is
-  #widthPix is width of screen 
-  #DISPLAY_COORDS is usually the first message
-  first_message<- EDFstuff$events$message[1]
-  # Split the string into an array based on whitespace
-  message_parts<- stringr::str_split(first_message, "\\s+")[[1]]
-  if (message_parts[1] == "DISPLAY_COORDS") { #What I'm expecting
-    widthPix_according_to_eyetracker = message_parts[4]
-    heightPix_according_to_eyetracker = message_parts[5]
-    if (widthPix != widthPix_according_to_eyetracker) {
-      message('Eyetracker thinks widthPix = ',widthPix_according_to_eyetracker,' not ',widthPix,' like you said.')
-    }
-    if (heightPix != heightPix_according_to_eyetracker) {
-      message('Eyetracker thinks heightPix = ',heightPix_according_to_eyetracker,' not ',heightPix,' like you said.')
-    }
-  } else {
-    message('Did not find DISPLAY_COORDS')
-  }
-  
-  return (EDFstuff)
-}
 
 #For testing
 #EDFsummarise(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
@@ -186,15 +262,22 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   results <- list()
   message("EDF_name=", EDF_name)
   
-  EDFstuff<- EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
+  EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
 
+  EDFstuff <- eyelinkReader::read_edf(EDF_name,
+                                      import_blinks=TRUE,
+                                      import_saccades=FALSE,import_recordings=FALSE,
+                                      import_fixations = TRUE, import_events = TRUE,
+                                      import_samples = TRUE,
+                                      sample_attributes = c('time', 'gx', 'gy'),
+                                      verbose=FALSE)
+  
   results$EDF_name<- EDF_name
   
   #Assume that sampling rate is 1000 Hz
   samplingRate<- 1000 #Hz 
   #If wanted to get it from the file, would need to search messages for the message that is like this: 
-  #   "RECCFG CR 1000 1 0 R" , which is the 38th message in the file I looked at. EDFstuff$events$message[40]
-  
+  #   "RECCFG CR 1000 1 0 R" , the 38th message in the file I looked at. EDFstuff$events$message[40]
   
   #Eyelink reports eye position in pixels
   leftLimitPixel = widthPix/2 - centralZoneWidthPix/2
@@ -227,39 +310,8 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   #When the eye cannot be tracked (for example during blinks) null values (".") are returned for the gaze X,Y data, and the Pupil Size data is zero
   #Can check this by looking at rate of samples being NA, or by ?
   proportnSamplesFailed <- samples |> summarise( proportnNA = mean( is.na(x) ) )
-  message('proportnSamplesFailed$proportnNA= ',mean(proportnSamplesFailed$proportnNA,1))
+  message('proportnSamplesFailed$proportnNA= ',round(mean(proportnSamplesFailed$proportnNA),3))
   results$pSamplesFailed <- proportnSamplesFailed$proportnNA
-  
-  ##########################################################################################
-  #Check how often eye ridiculously far from screen center, suggesting something went wrong
-  screenCtr <-  data.frame( x=widthPix/2, y= heightPix/2)
-  ridiculouslyFarFromCenterCriterion = 100
-  avgSampleRelCtr<- samples |>
-    summarise(x = mean(x,na.rm=TRUE), y = mean(y,na.rm=TRUE)) - screenCtr
-  
-  #Function to check for any TRUE values but return FALSE if all are NaN, as will occur if there are
-  #  no values because the other eye was tracked or there is no data.
-  any_true_except_all_nan <- function(x) {
-    if (all(is.nan(x))) {
-      return(FALSE)
-    } else {
-      return(any(x, na.rm = TRUE))
-    }
-  }
-  deviationLarge<- any_true_except_all_nan( abs(avgSampleRelCtr) > ridiculouslyFarFromCenterCriterion )
-  
-  if ( deviationLarge ) { #check if deviation from screen center of average fixation location is greater than ridiculouslyFarFromCenterCriterion
-    msg = paste0("Average eye location should be near screen center (",widthPix/2,",",heightPix/2,") but")
-    msg=paste0(msg,"for this participant, it's more than")
-    msg=paste(msg,ridiculouslyFarFromCenterCriterion,"pixels from the center, on average the eye position relative to center was (x,y)")
-    msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
-    msg=paste(msg,"This happens because the eyetracker or its calibration was no good, or the participant didn't look near center much.")
-    message(msg)
-  } else {
-    msg="Average eye position was pretty close to screen center, deviated on average: (x,y) "
-    msg=paste0(msg,'(',round(avgSampleRelCtr$x,1),',',round(avgSampleRelCtr$y,1),')')
-    #message(msg)
-  }
   
   #Check for events$type=='LOST_DATA_EVENT'
   events<- EDFstuff$events %>% mutate(dataLost = ifelse(type == "LOST_DATA_EVENT", TRUE, FALSE))
@@ -301,7 +353,31 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
                             group_by(trial) |> 
                             summarise(longestDist = max(distFromFixatn))
   #ggplot(fixatnsTrialReport, aes(x=longestDist)) + geom_histogram()
-  
+  plotQuartiles<- TRUE
+  if (plotQuartiles) {
+    # Calculate quartiles
+    quartiles <- quantile( unique(samples$trial) ) #divide up based on trials, not fixation number (which differs across trials)
+    # Create the new column 'quartile'
+    fixatns <- fixatns %>%
+      mutate(quartile = cut(trial, breaks = quartiles, include.lowest = TRUE, labels = FALSE))
+    
+    avgFixatnPosEachQuartile<- fixatns |> group_by(quartile) |> 
+      summarise(meanX = mean(dx, na.rm=T), meanY = mean(dy, na.rm=T))
+    
+    avgPlot<- ggplot(avgFixatnPosEachQuartile, aes(x= meanX, y= meanY, label=quartile))+  
+      geom_point() +geom_text(hjust=0, vjust=0)
+    #Add cross at center
+    avgPlot<-avgPlot +
+      geom_point(data=tibble(x=0,y=0),
+                 aes(x=x,y=x,label=NULL),color="darkred",shape=3) 
+    #Add title and set graph limits
+    avgPlot<-avgPlot +  
+      ggtitle('Average fixation position of each quartile', subtitle=', with red cross showing screen center') +
+      xlim(-widthPix/2,widthPix/2) + ylim(-heightPix/2,heightPix/2) +
+      theme_bw() + theme( panel.grid.minor=element_blank(),panel.grid.major=element_blank() )
+    
+    show(avgPlot)
+  }
   #Calculate num fixations per trial outside of centralZoneWidthPix, centralZoneHeightPix
   #For some studies like Momo's, vertical eye position doesn't matter as much as horizontal
   outOfCentral<- fixatns |> filter(sttime_rel > initialDurToExclude*samplingRate) |> 
@@ -313,7 +389,7 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   outOfCentral<- outOfCentral |> group_by(trial) |>
         summarize( numOutOfCentralArea = sum(outOfCentralArea, na.rm=T) )
   outOfCentral$numOutOfCentralArea
-  #ggplot(outOfCentral, aes(x=outOfCentralArea)) + geom_histogram()
+  #ggplot(outOfCentral, aes(x=numOutOfCentralArea)) + geom_histogram()
   
   perTrialStuff <- fixatnsTrialReport |> full_join(outOfCentral, by="trial")
 
@@ -344,9 +420,8 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
     toThrowOutDriftCorrected<- sum(perTrialStuff$numOutOfCentralAreaCorrected > 0, na.rm=T)
     reductionTrialsToThrowOut<- toThrowOutOriginal - toThrowOutDriftCorrected
                                  
-    message("Drift correction avoided having to exclude ",reductionTrialsToThrowOut,", of ",
-            toThrowOutOriginal, " to be thrown out without drift correction, of ",
-            nrow(perTrialStuff), " trials total." )
+    message("Implementing drift correction avoided having to exclude ",reductionTrialsToThrowOut," trials, of ",
+            toThrowOutOriginal, " otherwise to be thrown out, of ", nrow(perTrialStuff), " trials total." )
   } 
 
   results$perTrialStuff <- perTrialStuff
@@ -372,9 +447,12 @@ if (TESTME) {
   EDFsummary<- EDFsummarise(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
                             initialDurToExclude,doDriftCorrect,intervalAssumeGazeCentral,maxDistToDriftCorrect)
   #Check proportion of trials with a fixation outOfCentralArea
-  pOut <- EDFsummary$perTrialStuff |> summarise(pOut = mean(outOfCentral>0))
+  pOut <- EDFsummary$perTrialStuff |> summarise(pOut = mean(numOutOfCentralAreaCorrected>0))
   message("Proportion of trials with a fixation outside the central area =",round(pOut,3))
-  
+  #Plot histogram of number out of central area
+  #EDFsummary$perTrialStuff |> ggplot( aes(x=numOutOfCentralAreaCorrected)) + geom_histogram()
+  #Plot number out of central area against trialnum
+  #EDFsummary$perTrialStuff |> ggplot( aes(x=trial,y=numOutOfCentralAreaCorrected)) + geom_point()
 }
 
 VISUALIZE=FALSE

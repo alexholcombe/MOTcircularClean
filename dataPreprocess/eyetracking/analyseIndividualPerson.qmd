@@ -172,9 +172,9 @@ trialMinTimeBeforeCuesOff = min(fixationInterval) + trackingExtraTime
 #Can also look at additional columns in later versions of the program, that show fixationInterval
 ```
 
-Just look after first 2000 ms, because first `r fixationInterval[1]` ms, up to max of `r fixationInterval[2]` ms is fixation, then blobs cued for `r`trackingExtraTime`ms so really I don't have to exclude until after`r fixationInterval\[1\]`+`r trackingExtraTime`=`r trialMinTimeBeforeCuesOff\` ms.
+Just look after first 2000 ms, because first `r fixationInterval[1]` ms, up to max of `r fixationInterval[2]` ms is fixation, then blobs cued for `r`trackingExtraTime`ms so really I don't have to exclude until after`r fixationInterval[1]`+`r trackingExtraTime`=`r trialMinTimeBeforeCuesOff` ms.
 
-For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames\*refreshRate + 1200.
+For participants after 1 June, added record of fixatnPeriodFrames, so for them only have to exclude after fixatnPeriodFrames*refreshRate + 1200.
 
 From previous exploring, I know that lots of occasional bad stuff happens over the first 100ms.
 
