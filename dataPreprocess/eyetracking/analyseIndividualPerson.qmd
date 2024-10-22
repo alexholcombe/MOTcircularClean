@@ -24,7 +24,7 @@ Read in an EDF file,
 #| echo: false
 
 directoryWithDataFile<-"dataForTestingOfCode"
-fname<-"S451.EDF"
+fname<-"A421.EDF"
 EDFfileWithPath<-file.path(directoryWithDataFile,fname)
 if (!file.exists(EDFfileWithPath)) {
   message( paste0("File'",EDFfileWithPath,"'not found!") )
@@ -596,7 +596,7 @@ proportnEachCriterion <- eachCriterionEveryTrial |> group_by(criterion) |>
                    avgNumForTrialsTooFar = sum(anyTooFar[anyTooFar]),
                    avgNumForTrialsTooFarC = sum(anyTooFarCorrctd[anyTooFarCorrctd])
                    )
-
+message('Ignoring fixations before trialMinTimeBeforeCuesOff=',trialMinTimeBeforeCuesOff,'. Drift correction=',doDriftCorrection,'with intervalToAssumeWasCentral=',intervalToAssumeWasCentral[1],',',intervalToAssumeWasCentral[2]) 
 print(round(proportnEachCriterion,3))
 ```
 

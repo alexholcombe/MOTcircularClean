@@ -435,26 +435,36 @@ if (TESTME) {
   #data(gaze) #to use built-in dataset
   EDF_name<- file.path("dataForTestingOfCode", "A421.EDF") #A421.EDF A20b.EDF Y481.EDF 
   #Y481 has zero trials that meet the 30-pixels criterion, and 60!
-    
+  #Why does analyseIndividualPerson.qmd yield <18% of trials excluded?
+  #Check whether parameters are the same
+  #initalDurToExclude
+  
   widthPix = 800 #1024
   heightPix = 600 #768
   EDFstuff<- EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
   
-  centralZoneHeightPix = 60 #10
-  centralZoneWidthPix = 60 #10
-  initialDurToExclude<- 1
+  centralZoneHeightPix = 100 #10
+  centralZoneWidthPix = 100 #10
+  initialDurToExclude<- 2000 #analyseIndiv uses trialMinTimeBeforeCuesOff=2
   doDriftCorrect = T; intervalAssumeGazeCentral <- c(.1,.9); maxDistToDriftCorrect<-20
-    
+  intervalToAssumeWasCentral<- c(300,800) #analyseIndiv uses same
+  
+  plotQuartiles<-TRUE #sanity check show meanX, mean Y
   EDFsummary<- EDFsummarise(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
                             initialDurToExclude,doDriftCorrect,intervalAssumeGazeCentral,
                             maxDistToDriftCorrect,plotQuartiles)
   #Check proportion of trials with a fixation outOfCentralArea
-  pOut <- EDFsummary$perTrialStuff |> summarise(pOut = mean(numOutOfCentralAreaCorrected>0))
+  pOut <- EDFsummary$perTrialStuff |> 
+            summarise(pOut = mean(numOutOfCentralAreaCorrected>0, na.rm=TRUE))
   message("Proportion of trials with a fixation outside the central area =",round(pOut,3))
+  #A421 with 100 pixels, 75% of trials excluded
+  #A421 with 100 pixels, analyseIndividualPerson.qmd yield 18% of trials excluded, 12% with drift correction
+  
+  
   #Plot histogram of number out of central area
   #EDFsummary$perTrialStuff |> ggplot( aes(x=numOutOfCentralAreaCorrected)) + geom_histogram()
   #Plot number out of central area against trialnum
-  #EDFsummary$perTrialStuff |> ggplot( aes(x=trial,y=numOutOfCentralAreaCorrected)) + geom_point()
+  EDFsummary$perTrialStuff |> ggplot( aes(x=trial,y=numOutOfCentralAreaCorrected)) + geom_point()
 }
 
 VISUALIZE=FALSE
