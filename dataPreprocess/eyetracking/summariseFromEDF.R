@@ -429,19 +429,14 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
 TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
 if (TESTME) {
 
-  #data(gaze) #to use built-in dataset
-  EDF_name<- file.path("dataForTestingOfCode", "A421.EDF") #A421.EDF A20b.EDF Y481.EDF 
-  #Y481 has zero trials that meet the 30-pixels criterion, and 60!
-  #Why does analyseIndividualPerson.qmd yield <18% of trials excluded?
-  #Check whether parameters are the same
-  #initalDurToExclude
+  EDF_name<- file.path("dataForTestingOfCode", "C55b.EDF") #C55b.EDF A421.EDF A20b.EDF Y481.EDF 
   
   widthPix = 800 #1024
   heightPix = 600 #768
   EDFstuff<- EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
   
-  centralZoneHeightPix = 200 #10
-  centralZoneWidthPix = 200 #10
+  centralZoneHeightPix = 100 #10
+  centralZoneWidthPix = 100 #10
   initialDurToExclude<- 2000 #analyseIndiv uses trialMinTimeBeforeCuesOff=2
   doDriftCorrect = FALSE; intervalAssumeGazeCentral <- c(300,800); maxDistToDriftCorrect<-30
 
@@ -463,13 +458,13 @@ if (TESTME) {
           centralZoneHeightPix,") pixel area without vs with drift correction:",
           round(pOut$pOut,3), ',', round(pOut$pOutDriftC,3))
   
-  #A421 with 100 pixels, 75% of trials excluded
-  #A421 with 100 pixels, analyseIndividualPerson.qmd yield 18% of trials excluded, 12% with drift correction
-  
   #Plot histogram of number out of central area
   #EDFsummary$perTrialStuff |> ggplot( aes(x=numOutOfCentralAreaCorrected)) + geom_histogram()
+  
   #Plot number out of central area against trialnum
-  EDFsummary$perTrialStuff |> ggplot( aes(x=trial,y=numOutOfCentralAreaCorrected)) + geom_point()
+  EDFsummary$perTrialStuff |> ggplot( aes(x=trial,y=numOutOfCentralAreaCorrected) ) +
+              geom_point(color="green",alpha=.5) + 
+              geom_point( aes(x=trial,y=numOutOfCentralArea),color="black",alpha=.5 )
 }
 
 VISUALIZE=FALSE
