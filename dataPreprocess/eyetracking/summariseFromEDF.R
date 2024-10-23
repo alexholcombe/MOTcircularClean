@@ -121,7 +121,7 @@ EDFreadAndCheckResolution<- function(EDF_name,widthPix,heightPix) {
 }
 
 #################################################################################################
-driftCorrect<- function(fixatns, intervalAssumeGazeCentral, maxDistToDriftCorrect,samplingRate) {
+driftCorrect<- function(fixatns, intervalAssumeGazeCentral, maxDistToDriftCorrect) {
 #Internal function for EDFsummarise
   
 #Assume that fixatns$dx, fixatns$dy are the coordinates relative to screen center
@@ -143,7 +143,7 @@ driftCorrect<- function(fixatns, intervalAssumeGazeCentral, maxDistToDriftCorrec
 #   start time being less than interval start AND end time being greater than interval end
 
 #Find all the fixations that started during, ended during, or spanned the intervalAssumeGazeCentral
-samplesAssumeGazeCentral<- intervalAssumeGazeCentral*samplingRate
+samplesAssumeGazeCentral<- intervalAssumeGazeCentral
 
 intervalFixatns<- fixatns %>% 
   filter( (sttime_rel > samplesAssumeGazeCentral[1] & sttime_rel < samplesAssumeGazeCentral[2])    |     #started during interval
@@ -211,11 +211,11 @@ fixatnsAndCorrectn$dyCorrectd<- fixatnsAndCorrectn$dy - fixatnsAndCorrectn$dyFor
 #ggplot(fixatnsAndCorrectn,aes(x=dxCorrectd,y=dyCorrectd)) + geom_point(color="green",alpha=0.5) +
 #              geom_point( aes(x=dx,y=dy), color="black", alpha=0.4 ) #+xlim(-50,50)+ylim(-50,50)
 
-# tt<- fixatnsAndCorrectn |> filter(sttime_rel > initialDurToExclude*samplingRate) |> 
+# tt<- fixatnsAndCorrectn |> filter(sttime_rel > initialDurToExclude) |> 
 #   group_by(trial) |> 
 #   transmute( outOfCentralArea =  (abs(dx) >= centralZoneWidthPix/2)   |
 #                (abs(dy) >= centralZoneWidthPix/2)   )
-# cc<-fixatnsAndCorrectn |> filter(sttime_rel > initialDurToExclude*samplingRate) |> 
+# cc<-fixatnsAndCorrectn |> filter(sttime_rel > initialDurToExclude) |> 
 #   group_by(trial) |> 
 #   transmute( outOfCentralArea =  (abs(dxCorrectd) >= centralZoneWidthPix/2)   |
 #                (abs(dyCorrectd) >= centralZoneWidthPix/2)   )
@@ -242,7 +242,7 @@ return (fixatnsAndCorrectn)
 
 #For testing
 #EDFsummarise(inputEDF,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
-#            initialDurToExclude,driftCorrect,intervalAssumeGazeCentral,samplingRate)
+#            initialDurToExclude,driftCorrect,intervalAssumeGazeCentral)
 #EDF_name<-inputEDF; maxDistToDriftCorrect<- 50
 #############################################################################################################
 ################################################################################################################
@@ -275,9 +275,7 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   
   results$EDF_name<- EDF_name
   
-  #Assume that sampling rate is 1000 Hz
-  samplingRate<- 1000 #Hz 
-  #If wanted to get it from the file, would need to search messages for the message that is like this: 
+  #If wanted to get samplingRate from the file, would need to search messages for the message that is like this: 
   #   "RECCFG CR 1000 1 0 R" , the 38th message in the file I looked at. EDFstuff$events$message[40]
   
   #Eyelink reports eye position in pixels
@@ -311,7 +309,7 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   #When the eye cannot be tracked (for example during blinks) null values (".") are returned for the gaze X,Y data, and the Pupil Size data is zero
   #Can check this by looking at rate of samples being NA, or by ?
   proportnSamplesFailed <- samples |> summarise( proportnNA = mean( is.na(x) ) )
-  message('proportnSamplesFailed$proportnNA= ',round(mean(proportnSamplesFailed$proportnNA),3))
+  #message('proportnSamplesFailed$proportnNA= ',round(mean(proportnSamplesFailed$proportnNA),3))
   results$pSamplesFailed <- proportnSamplesFailed$proportnNA
   
   #Check for events$type=='LOST_DATA_EVENT'
@@ -350,7 +348,7 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
                                  fixatns$dy^2  )
   
   #Calculate max distFromFixatn each trial
-  fixatnsTrialReport<- fixatns |> filter(sttime_rel > initialDurToExclude*samplingRate) |> 
+  fixatnsTrialReport<- fixatns |> filter(sttime_rel > initialDurToExclude) |> 
                             group_by(trial) |> 
                             summarise(longestDist = max(distFromFixatn))
   #ggplot(fixatnsTrialReport, aes(x=longestDist)) + geom_histogram()
@@ -380,10 +378,10 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   }
   #Calculate num fixations per trial outside of centralZoneWidthPix, centralZoneHeightPix
   #For some studies like Momo's, vertical eye position doesn't matter as much as horizontal
-  outOfCentral<- fixatns |> filter(sttime_rel > initialDurToExclude*samplingRate) |> 
+  outOfCentral<- fixatns |> filter(sttime_rel > initialDurToExclude) |> 
         group_by(trial) |> 
         transmute( outOfCentralArea =  (abs(dx) >= centralZoneWidthPix/2)   |
-                                       (abs(dy) >= centralZoneWidthPix/2)          )
+                                       (abs(dy) >= centralZoneHeightPix/2)          )
   #table(outOfCentral$outOfCentralArea)
   #Calculate num fixations outOfCentralArea for each trial
   outOfCentral<- outOfCentral |> group_by(trial) |>
@@ -395,15 +393,14 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
 
   #add blinks information, which likely has NAs, so we won't bother checking for NAs after
   perTrialStuff<- perTrialStuff |> full_join(blinksPerTrial, by="trial")
-  perTrialStuff$numOutOfCentralArea
-  
+
   #Do my own drift correction
   if (doDriftCorrect) {
-    fixatnsDriftCorrected<- driftCorrect(fixatns, intervalAssumeGazeCentral,maxDistToDriftCorrect,samplingRate)
+    fixatnsDriftCorrected<- driftCorrect(fixatns, intervalAssumeGazeCentral,maxDistToDriftCorrect)
     #This should still have multiple fixations per trial.
     #Calculate which trials are outside central area on basis of drift-corrected coordinates rather than raw
     outOfCentralCorrected<- fixatnsDriftCorrected |> 
-              filter(sttime_rel > initialDurToExclude*samplingRate) |> 
+              filter(sttime_rel > initialDurToExclude) |> 
               group_by(trial) |> 
               transmute( outOfCentralAreaCorrected =  (abs(dxCorrectd) >= centralZoneWidthPix/2)   |
                                                       (abs(dyCorrectd) >= centralZoneHeightPix/2)          )
@@ -443,23 +440,31 @@ if (TESTME) {
   heightPix = 600 #768
   EDFstuff<- EDFreadAndCheckResolution(EDF_name,widthPix,heightPix)
   
-  centralZoneHeightPix = 100 #10
-  centralZoneWidthPix = 100 #10
+  centralZoneHeightPix = 200 #10
+  centralZoneWidthPix = 200 #10
   initialDurToExclude<- 2000 #analyseIndiv uses trialMinTimeBeforeCuesOff=2
-  doDriftCorrect = T; intervalAssumeGazeCentral <- c(.1,.9); maxDistToDriftCorrect<-20
-  intervalToAssumeWasCentral<- c(300,800) #analyseIndiv uses same
-  
+  doDriftCorrect = FALSE; intervalAssumeGazeCentral <- c(300,800); maxDistToDriftCorrect<-30
+
   plotQuartiles<-TRUE #sanity check show meanX, mean Y
+  doDriftCorrect = TRUE; intervalAssumeGazeCentral <- c(300,800); #analyseIndiv uses 300,800
+  maxDistToDriftCorrect<-30 #analyseIndiv uses 30
+  plotQuartiles<-FALSE #sanity check show meanX, mean Y
+  
+  #Do the calculations, returns answers both without and with drift correction if doDriftCorrect TRUE
   EDFsummary<- EDFsummarise(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZoneHeightPix,
                             initialDurToExclude,doDriftCorrect,intervalAssumeGazeCentral,
                             maxDistToDriftCorrect,plotQuartiles)
-  #Check proportion of trials with a fixation outOfCentralArea
+  
+  #Calculate proportion of trials with a fixation outOfCentralArea
   pOut <- EDFsummary$perTrialStuff |> 
-            summarise(pOut = mean(numOutOfCentralAreaCorrected>0, na.rm=TRUE))
-  message("Proportion of trials with a fixation outside the central area =",round(pOut,3))
+        summarise( pOut = mean(numOutOfCentralArea>0, na.rm=TRUE), 
+                   pOutDriftC = mean(numOutOfCentralAreaCorrected>0, na.rm=TRUE) ) 
+  message("Proportion of trials with a fixation outside the central (",centralZoneWidthPix,",",
+          centralZoneHeightPix,") pixel area without vs with drift correction:",
+          round(pOut$pOut,3), ',', round(pOut$pOutDriftC,3))
+  
   #A421 with 100 pixels, 75% of trials excluded
   #A421 with 100 pixels, analyseIndividualPerson.qmd yield 18% of trials excluded, 12% with drift correction
-  
   
   #Plot histogram of number out of central area
   #EDFsummary$perTrialStuff |> ggplot( aes(x=numOutOfCentralAreaCorrected)) + geom_histogram()

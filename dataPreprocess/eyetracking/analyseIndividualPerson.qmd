@@ -1,12 +1,10 @@
 ---
-title: "Examine eyetracking data for an individual participant"
+title: "Examine eyetracking data for an individual participant, and work out how to do drift correction"
 format: html
 editor: visual
 ---
 
 Overall the exampleAnalysesWithGoodFixator report from that file showed that for at least 7 trials out of 120, the eyetracker is way off, with X off by 90 pixels. Otherwise, things were reasonable esp. after first 500 ms when fixation period starts. But by reasonable, I mean that drift or something means that X and Y was off by up to \~20 pixels. For the weird 7 trials, there weren't many fixations so I should check how much missing data ("blinks") there was, maybe that helps explain why those trials were weird.
-
-To-do: Add a form of drift correction, like maybe the average starting eye position in every 20 trials.
 
 ## Do basic checks
 
@@ -51,7 +49,6 @@ throwAwayLastTrial = FALSE #Sarah ran into an EDF file where the last trial last
 
 ```{r}
 #| echo: false
-
 fixatns<- EDFstuff$fixations
 samples<- EDFstuff$samples
 
@@ -219,12 +216,9 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   geom_vline(xintercept = widthPix/2,col="black") +  
   geom_point(aes(color=trial))
 
-#ggplot(fixatns, aes(x=gavx, y=gavy, color=trial) ) +
-#  stat_summary(fun="mean",geom="point")
-
-#Implement drift correction,
-# by taking average of every trial? Need to decide on limited interval at beginning of trial.
 ```
+
+Will implement drift correction, but need to decide on limited interval at beginning of trial to assume gaze is central.
 
 Look at x and y traces of trials for first 50 trials
 
@@ -271,6 +265,30 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
   ggtitle('') +
   geom_hline(yintercept = heightPix/2,col="black") +  
   geom_point() + geom_line(aes(group=trial)) + facet_wrap(.~quartile)
+```
+## Calculate exclusions before drift correction
+
+This is mainly to check there is no discrepancy with summariseFromEDF.R
+
+```{r}
+#| echo: false
+centralZoneWidthPix<- 200
+centralZoneHeightPix<- 200
+initialDurToExclude<- 2000 #analyseIndiv uses trialMinTimeBeforeCuesOff=2
+
+fixatns$dx <- fixatns$gavx - widthPix/2
+fixatns$dy <- fixatns$gavy - heightPix/2
+
+#Calculate whether each fixation was outside of central area
+outOfCentral<- fixatns |> filter(sttime_rel > initialDurToExclude) |> 
+        group_by(trial) |> 
+        transmute( outOfCentralArea =  (abs(dx) >= centralZoneWidthPix/2)   |
+                                       (abs(dy) >= centralZoneHeightPix/2)          )
+#Calculate whether *any* fixations on each trial was outside of central area
+outOfCentral<- outOfCentral |> group_by(trial) |>
+      summarise(anyTooFar = any(outOfCentralArea))
+mean(outOfCentral$anyTooFar)
+
 ```
 
 Look at first portion of trial before the targets are highlighted for example, when it doesn't matter where participants are looking but we could use some of that portion for drift correction if we trust the participant.
@@ -319,7 +337,6 @@ fixatns %>% filter(sttime_rel > trialMinTimeBeforeCuesOff) %>%
       geom_line(aes(group=trial)) + facet_wrap(.~quartile)
 ```
 
-## Consider drift correction options
 
 ```{r}
 doDriftCorrection = TRUE
@@ -383,7 +400,6 @@ Show the results, zoomed in but show outliers in red to indicate they'd be off t
 
 ```{r}
 #| echo: false
-
 minValToShow = 0
 maxValToShow = 50
   
@@ -434,7 +450,7 @@ avgPosDuringInterval %>%
 
 We still have some large values of greater than e.g. 40 that we shouldn't use for drift correction, so we just won't use those.
 
-## Set up parameters for optional drift correction
+## Do drift correction
 
 Calculate the desired drift corrections, excluding ones larger than:
 
@@ -537,6 +553,18 @@ fixatnsAndCorrectn %>%
   geom_smooth(method='lm',formula='y~x')
 ```
 
+```{r}
+#| echo: false
+
+#xDevCorrected is corrected one, now calculate uncorrected deviation
+fixatnsAndCorrectn$xDev <- fixatnsAndCorrectn$gavx - widthPix/2
+fixatnsAndCorrectn$yDev <- fixatnsAndCorrectn$gavy - heightPix/2
+
+fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
+            distNotDriftCorrectd = sqrt( (xDev)^2 + (yDev)^2 )
+         )
+```
+
 ## Consider effect of different criteria for excluding trials
 
 Calculate and visualize how many trials will be excluded under various criteria.
@@ -548,21 +576,13 @@ This will require creating a new dataframe because for each trial, need to calcu
 Criteria to show the effect of:
 
 ```{r}
-distFromCenterCriteria <- c(20,30,40,60,100)
+distFromCenterCriteria <- c(20,40,60,100,200)
 ```
 
 Calculate whether each trial's distFromFixatn is greater than each criterion
 
 ```{r}
 #| echo: false
-
-#xDevCorrected is corrected one, now calculate uncorrected deviation
-fixatnsAndCorrectn$xDev <- fixatnsAndCorrectn$gavx - widthPix/2
-fixatnsAndCorrectn$yDev <- fixatnsAndCorrectn$gavy - heightPix/2
-
-fixatnsAndCorrectn<-fixatnsAndCorrectn %>% mutate(
-            distNotDriftCorrectd = sqrt( (xDev)^2 + (yDev)^2 )
-         )
 
 #Calculate effect of applying each criterion on each row, yielding nrows*numCriteria rows
 newColumns<- fixatnsAndCorrectn %>% rowwise() |>
