@@ -10,8 +10,7 @@ expFoldersPrefix= file.path("..","dataRaw")
 expFolder <- "youngOld"
 anonymizedDir<-"dataAnonymized" #where the anonymized data will be exported to
 destinationStudyFolderName = "youngOld"
-destinationName = "youngOld"
-
+destinationName="youngOld"
 thisExpFolder = file.path(expFoldersPrefix,expFolder)
 if (!dir.exists(thisExpFolder)) {
   message("Your data folder doesn't exist.")
@@ -27,33 +26,34 @@ if (!file.exists(participantInfoFileWithPath)) {
 }
 library(readxl)
 participantInfo<- readxl::read_excel(participantInfoFileWithPath)
-#Temporarily, at least reduce to just ID, Age, and Gender
+#Temporarily, at least reduce to just ID, Age, Gender, and the acuity and crowding test info
 #And add a small random number to the age for privacy protection
 #Change all column names to lower case
 participantInfo <- participantInfo |> rename_with(tolower)
 
-pInfo_ID_age_gender<- participantInfo |> select("participant id","age","gender")
+pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,crowding:"crowding exp notes")
+
 #Create new ID column that doesn't include first letter
-pInfo_ID_age_gender<- pInfo_ID_age_gender |> mutate( ID = substr(`participant id`,2,3) )
-pInfo_ID_age_gender$`participant id` <- NULL   #Delete ID column that included letter
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( ID = substr(`participant id`,2,3) )
+pInfo_reducedForPrivacy$`participant id` <- NULL   #Delete ID column that included letter
 
 #Add random number to age to protect privacy
-pInfo_ID_age_gender<- pInfo_ID_age_gender |> 
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> 
   mutate( agePerturbed = age + 
             round( runif(1,min=-3,max=3) ) )
-pInfo_ID_age_gender$age<- NULL #Delete exact age column
+pInfo_reducedForPrivacy$age<- NULL #Delete exact age column
 
 #Change all values of gender to all lower case
-pInfo_ID_age_gender$gender<- tolower(pInfo_ID_age_gender$gender)
+pInfo_reducedForPrivacy$gender<- tolower(pInfo_reducedForPrivacy$gender)
 #Now that the file has been anonymized, can save in the anonymized folder
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
-destination_fname<- file.path(destinationDir,destinationName)
 
-readr::write_tsv(pInfo_ID_age_gender, file = paste0(destination_fname,".tsv"))
+destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,destinationName="youngOld")
+readr::write_tsv(pInfo_reducedForPrivacy, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
-#Match up Psychopy files and EDF files
-#There will always be a Psychopy file, but not always an EDF file, so start with Psychopy files
+#Match up Psychopy datafiles and EDF files
+#There will always be a Psychopy datafile, but not always an EDF file, so start with Psychopy files
 #to parse out subject name and session number.
 #Then look for matching EDF file. 
 #Lots of one-off intervention for early false starts with naming, plus a separate column for pilot/real participant
@@ -70,7 +70,7 @@ print(paste0("Finding files in '",thisExpFolderPsychopy,"'"))
 
 #Create list of subjects from file names
 datafiles <- dir(path=thisExpFolderPsychopy,pattern='.tsv')  #find all data files in this directory
-message("Found ",length(datafiles)," Psychopy data files.")
+message("Found ",length(datafiles)," Psychopy data files (4 or 5 files are created for each run).")
 #remove the "trialHandler.tsv" files from the list. That gets created when you call the function that gets the data in Psychopy in tibble form
 datafiles <- datafiles[  !grepl("trialHandler.tsv$", datafiles)   ]
 #fileSizes <- file.size( file.path(thisExpFolderPsychopy,datafiles) )
@@ -83,14 +83,78 @@ datafiles$comment <- "None" #Create a comment field to preserve notes about weir
 #Data about practice sessions is manual in the Google Sheet
 datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 
+#Got warnings below when reading J55b,c; J56a,b; J57a,b,c, but ok by participant 58
+#There is an error in the code so it doesn't print fixatnPeriodFrames column label
+#I can see someone must have accidentally deleted that part of the code after running
+#first session of J55a, because it's there for J55a but not b
+#The column names should be:
+"trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
+#For all files with J55_b, J55_c, or J56_ in their name with suffix .tsv,
+#replace the first line of the file with "trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
+#and then re-save the file.
+# List all files matching the pattern J55_b, J55_c, or J56_ with the suffix .tsv
+missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
+# Define the new header
+new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
+# Loop through each file
+for (file in missingColumnName_datafiles$fname) {
+  # Read the file
+  file_content <- read_lines( file.path(thisExpFolderPsychopy,fname)  )
+  
+  # Replace the first line with the new header
+  file_content[1] <- new_header
+  
+  # Write the modified content back to the file
+  write_lines(file_content, file)
+}
+
+#Define function for when need to catch warnings and errors, https://stackoverflow.com/questions/4948361/how-do-i-save-warnings-and-errors-as-output-from-a-function
+myTryCatch <- function(expr) { 
+  warn <- err <- NULL
+  value <- withCallingHandlers(
+    tryCatch(expr, error=function(e) {
+      err <<- e
+      NULL
+    }), warning=function(w) {
+      warn <<- w
+      invokeRestart("muffleWarning")
+    })
+  list(value=value, warning=warn, error=err)
+}
+
+new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
+# Split the string based on the \t delimiter and unlist to get a character vector
+correctColumnNames <- str_split(new_header, "\t") %>% unlist()
+
+missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
+thisdatafile<- file.path(thisExpFolderPsychopy,missingColumnName_datafiles$fname[1])
+testt <- readr::read_tsv(thisdatafile, col_names = correctColumnNames , skip=1)
+                 
+str_detect(fname, "J55_b|J55_c|J56_")
+                        
+                        
 #Determine number of trials in each file, then can consider files that are very short
 nRowsOfTsv <- function(fname) {
   file_path <- file.path(thisExpFolderPsychopy,fname)  
-  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
-  nrows<- nrow(mydf)
-  return (nrows)
+  #message("About to read ",fname)
+  #read file
+  #mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
+  dfWithWarnings<- myTryCatch( readr::read_tsv(file_path, show_col_types=FALSE) )
+  if (!(is.null(dfWithWarnings$warning))) {
+    message("Warning when tried to read ",fname)
+    print(dfWithWarnings$warning)
+  }
+  mydf <- dfWithWarnings$value
+  
+  #determine how many rows in dataframe read from file
+  nrowWithWarnings<- tryCatch ( nrow(mydf), 
+                                warning=function(w) return(list(nrow(mydf),w)) )
+  if (length(nrowWithWarnings)>1) {
+      message(nrowWithWarnings[2])
+  }
+  return (nrowWithWarnings[1])
 }
-datafiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
+dfiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
 #REMOVE/HANDLE DYSFUNCTIONAL RUNS
 #S26 has two files with zero rows, Loretta confirmed they should be thrown out rather than being lost data. 
@@ -603,7 +667,7 @@ pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
 #due to the mouseClickArea problem making the program malfunction, data now thrown out above.
 
 #Saved anonymised data for loading by doAllAnalyses.R
-destination_fname<- file.path(destinationDir,destinationName)
+destination_fname<- file.path(destinationDir,destinationStudyFolderName)
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )

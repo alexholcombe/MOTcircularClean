@@ -201,7 +201,6 @@ participantsWithTooFewTrials <- numGoodTrials |> filter(goodTrials < 30) |> sele
 datAnalyze<- datAnalyze |> filter( !(IDnum %in% participantsWithTooFewTrials$IDnum ) )
 write_tsv(datAnalyze, file.path(dataDir,expName,"dataAfterExcludingTimingblipsEyemovementsAndThoseWithFewTrialsLeft.tsv"))
 
-
 #https://github.com/alexholcombe/speed-tf-VSS14/blob/master/analyseExps/doAllAnalyses_E4ab.R
 iv<-"speed"
 for (iv in c("speed","tf")) { #"logTf","logSpd"
