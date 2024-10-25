@@ -31,7 +31,7 @@ participantInfo<- readxl::read_excel(participantInfoFileWithPath)
 #Change all column names to lower case
 participantInfo <- participantInfo |> rename_with(tolower)
 
-pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,crowding:"crowding exp notes")
+pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,"edf transfered":"crowding exp notes")
 
 #Create new ID column that doesn't include first letter
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( ID = substr(`participant id`,2,3) )
@@ -90,23 +90,14 @@ datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 #The column names should be:
 "trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
 #For all files with J55_b, J55_c, or J56_ in their name with suffix .tsv,
-#replace the first line of the file with "trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
-#and then re-save the file.
-# List all files matching the pattern J55_b, J55_c, or J56_ with the suffix .tsv
-missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
-# Define the new header
+#need special handling, like this:
 new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
-# Loop through each file
-for (file in missingColumnName_datafiles$fname) {
-  # Read the file
-  file_content <- read_lines( file.path(thisExpFolderPsychopy,fname)  )
-  
-  # Replace the first line with the new header
-  file_content[1] <- new_header
-  
-  # Write the modified content back to the file
-  write_lines(file_content, file)
-}
+# Split the string based on the \t delimiter and unlist to get a character vector
+correctColumnNames <- str_split(new_header, "\t") %>% unlist()
+#missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
+#thisdatafile<- file.path(thisExpFolderPsychopy,missingColumnName_datafiles$fname[1])
+#testt <- readr::read_tsv(thisdatafile, col_names = correctColumnNames , skip=1) #skip incorrect header
+
 
 #Define function for when need to catch warnings and errors, https://stackoverflow.com/questions/4948361/how-do-i-save-warnings-and-errors-as-output-from-a-function
 myTryCatch <- function(expr) { 
@@ -122,24 +113,24 @@ myTryCatch <- function(expr) {
   list(value=value, warning=warn, error=err)
 }
 
-new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
-# Split the string based on the \t delimiter and unlist to get a character vector
-correctColumnNames <- str_split(new_header, "\t") %>% unlist()
-
-missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
-thisdatafile<- file.path(thisExpFolderPsychopy,missingColumnName_datafiles$fname[1])
-testt <- readr::read_tsv(thisdatafile, col_names = correctColumnNames , skip=1)
-                 
-str_detect(fname, "J55_b|J55_c|J56_")
-                        
-                        
 #Determine number of trials in each file, then can consider files that are very short
+# but need special handling of four participants with files with missing column name
 nRowsOfTsv <- function(fname) {
-  file_path <- file.path(thisExpFolderPsychopy,fname)  
-  #message("About to read ",fname)
-  #read file
-  #mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
-  dfWithWarnings<- myTryCatch( readr::read_tsv(file_path, show_col_types=FALSE) )
+  file_path <- file.path(thisExpFolderPsychopy,fname)
+  #Check whether this is one of the files with the missing column label
+  if (str_detect(fname, "J55_b|J55_c|J56_|J57_")) { #One of the files with the missing column label
+    #So supply correct column labels when read the file
+    #message("special:",fname)
+    dfWithWarnings<- myTryCatch( 
+        readr::read_tsv(file_path, show_col_types=FALSE, col_names=correctColumnNames, skip=1) #skip incorrect header
+      )
+  } else { #normal file
+    #message(fname)
+    dfWithWarnings<- myTryCatch( 
+        readr::read_tsv(file_path, show_col_types=FALSE) 
+      )
+  }
+  
   if (!(is.null(dfWithWarnings$warning))) {
     message("Warning when tried to read ",fname)
     print(dfWithWarnings$warning)
@@ -150,79 +141,92 @@ nRowsOfTsv <- function(fname) {
   nrowWithWarnings<- tryCatch ( nrow(mydf), 
                                 warning=function(w) return(list(nrow(mydf),w)) )
   if (length(nrowWithWarnings)>1) {
-      message(nrowWithWarnings[2])
+      message("warning from nrow:", nrowWithWarnings[2])
   }
-  return (nrowWithWarnings[1])
+  ans <- nrowWithWarnings[1]
+  #message("ans=",ans)
+  return (ans)
 }
-dfiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
+#fname<-"J55_b_18Jun2024_12-20.tsv"
+#nRowsOfTsv(fname)
+
+datfiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
 #REMOVE/HANDLE DYSFUNCTIONAL RUNS
 #S26 has two files with zero rows, Loretta confirmed they should be thrown out rather than being lost data. 
-datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
+datfiles<- rows_delete(datfiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
 #Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
 #So Loretta advises throwing out the first session with 40 trials because it was re-done
-datafiles<- rows_delete(datafiles, tibble(fname=c("S26_1_01May2024_11-21.tsv")), by="fname")
+datfiles<- rows_delete(datfiles, tibble(fname=c("S26_1_01May2024_11-21.tsv")), by="fname")
 #so, S26_1_01May2024_11-21.tsv  and the other S26s are all good
 
 #S45 has 3 and 0 trials for two files. Other files are good and all 3 sessions are there
 #S45 "fatigued during and after second MOT trial, especially during the third MOT trial" - Sarah
-datafiles<- rows_delete(datafiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")), by="fname")
+datfiles<- rows_delete(datfiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45_1_27May2024_11-43.tsv")), by="fname")
 
 #N64 stella's comment when running: "found the outer ring very difficult, most of the time guessed (could not see it) + found the task very draining (fatigued)". partcipant also reported macula repair + cataracts
 #Also overall percent correct not much above 50%, unlike everyone else who got closer to
 #the staircase-converging values of 79% correct
-datafiles<- rows_delete(datafiles, tibble(fname=c("N64_a_27Jun2024_10-21.tsv","N64_b_27Jun2024_10-59.tsv","N64_c_27Jun2024_11-38.tsv")), by="fname")
+datfiles<- rows_delete(datfiles, tibble(fname=c("N64_a_27Jun2024_10-21.tsv","N64_b_27Jun2024_10-59.tsv","N64_c_27Jun2024_11-38.tsv")), by="fname")
 
 #K341 has two files with 0 rows
-#datafiles %>% filter(str_starts(fname,"K34"))
+#datfiles %>% filter(str_starts(fname,"K34"))
 #Said her eyes felt dry towards the end of the trials, and that it was hard to focus.
 #"First session 60Hz, new monitor (second and third trials run at the correct Hz)
 #Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials"
 #Delete 0-row files of K347
-datafiles<- rows_delete( datafiles, tibble(fname=c("K341_1_15May2024_09-29.tsv","K341_1_15May2024_09-30.tsv")), by="fname") 
+datfiles<- rows_delete( datfiles, tibble(fname=c("K341_1_15May2024_09-29.tsv","K341_1_15May2024_09-30.tsv")), by="fname") 
 
 #Delete 0-row file of M323 that was run again to replace it (false start)
-datafiles<- rows_delete( datafiles, tibble(fname=c("M323_3_10May2024_14-22.tsv")), by="fname") 
+datfiles<- rows_delete( datfiles, tibble(fname=c("M323_3_10May2024_14-22.tsv")), by="fname") 
 #Delete 0-row file of S392 that was run again to replace it (false start)
-datafiles<- rows_delete( datafiles, tibble(fname=c("S392_2_17May2024_11-42.tsv")), by="fname") 
+datfiles<- rows_delete( datfiles, tibble(fname=c("S392_2_17May2024_11-42.tsv")), by="fname") 
 
 #Add comment to anomalous run
-datafiles<- datafiles %>% 
+datfiles<- datfiles %>% 
   mutate(comment = ifelse(str_starts(fname,"M32"),
        "skipped practice trial, because practice.py was not able to open at this time. Did visual acuity and intelligence firsts before doing any trials.", comment) )
 
 #Add comment to anomalous run
-datafiles<- datafiles %>% 
+datfiles<- datfiles %>% 
   mutate(comment = ifelse(fname=="K341_1_15May2024_09-31.tsv", 
                               "Mistakenly run at 60Hz", 
                               comment) )
 
+datfiles <- datfiles %>% filter(!str_starts(fname, "temp")) #Delete files that start with temp
+datfiles <- datfiles %>% filter(!str_starts(fname, "te_a")) #Delete files that start with te_a
 #Delete 0-row files.  I believe I checked all of them with Loretta
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02 - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
-datafiles<- rows_delete( datafiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
 
-#“J55_a_18Jun2024_11-32.tsv” this is a one-off J55 (there is no b and c), but more importantly,
+datfiles<- rows_delete( datfiles, tibble(fname=c("J51a_a_03Jun2024_13-14.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("J51a_a_03Jun2024_13-16.tsv")), by="fname")
+datfiles<- datfiles %>% filter(!str_starts(fname, "J562_2")) #Delete three 0-row files
+datfiles<- rows_delete( datfiles, tibble(fname=c("A92_b_14Oct2024_09-54.tsv")), by="fname") #false start
+datfiles<- rows_delete( datfiles, tibble(fname=c("A92_c_14Oct2024_10-19.tsv")), by="fname") #false start
+datfiles<- rows_delete( datfiles, tibble(fname=c("L84_b_28Aug2024_10-08.tsv")), by="fname") #false start
+datfiles<- rows_delete( datfiles, tibble(fname=c("N79_a_08Aug2024_09-10.tsv")), by="fname") #false start
+datfiles<- rows_delete( datfiles, tibble(fname=c("R91_b_23Sep2024_11-45.tsv")), by="fname") #false start
+datfiles<- rows_delete( datfiles, tibble(fname=c("S75_c_24Jul2024_13-25.tsv")), by="fname") #false start
+#Loretta says lxx was just a test of the program, not a participant
+datfiles<- rows_delete( datfiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
+#Loretta says lor was just a test of the program, not a participant
+datfiles<- rows_delete( datfiles, tibble(fname=c("lor_a_12Jun2024_11-32.tsv")), by="fname")
+
 #there is a C55 with 3 sessions so let me know why you think there are two ID=55 participants
 #Josh: those are two separate participants
-#It screws up my code so until I hear from LORETTA about sessions b and c, delete
-datafiles<- rows_delete( datafiles, tibble(fname=c("J55_a_18Jun2024_11-32.tsv")), by="fname")
-
-#Loretta says lxx was just a test of the program, not a participant
-datafiles<- rows_delete( datafiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
-#Loretta says lor was just a test of the program, not a participant
-datafiles<- rows_delete( datafiles, tibble(fname=c("lor_a_12Jun2024_11-32.tsv")), by="fname")
 
 #See if any remaining files have few rows
-almostNoTrials <- datafiles %>% filter( nrows < 10 )
+almostNoTrials <- datfiles %>% filter( nrows < 10 )
 if ( nrow(almostNoTrials) ) {
-  message("Hey, these datafiles you haven't taken note of have fewer than 10 trials:")
+  message("Hey, these data files you haven't taken note of have fewer than 10 trials:")
   print( almostNoTrials$fname )
 }
 
@@ -257,24 +261,24 @@ calcTimingBlips <- function(fname) {
   return(timingStuff)
 }
 
-#Send all datafiles to the timingBlips analysis function to create summary columns
-datafiles<- datafiles %>% rowwise() %>% 
+#Send all datfiles to the timingBlips analysis function to create summary columns
+datfiles<- datfiles %>% rowwise() %>% 
                 mutate( timingStuff = list(calcTimingBlips(fname)) ) %>%
                 unnest_wider( timingStuff ) #unpack list of different timingBlip metrics
 
 #Plenty of trials with a bunch of timingBlips
-#ggplot(datafiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+#ggplot(datfiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
 #But most of them are at very beginning of trial so should have separate column to report only later timingBlips
 
 #Looking at this on 9 Jul, zero timingBlips after fixation! which suggests that's also true for
 #earlier data runs before I programmed this facility.
-#ggplot(datafiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-#ggplot(datafiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-#table(datafiles$pTrialsBlipsAfterFixatn)
+#ggplot(datfiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+#ggplot(datfiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
+#table(datfiles$pTrialsBlipsAfterFixatn)
 
 criterionProportnNumTimingBlipsForThrowingOutTrial = .02 
 
-if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsForThrowingOutTrial, na.rm=T)) {
+if (any(datfiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsForThrowingOutTrial, na.rm=T)) {
   message('Some files actually had trials with more than ',criterionProportnNumTimingBlipsForThrowingOutTrial,
           'timing blips after the cue! So you need to write code to delete those.')
 }
@@ -282,8 +286,8 @@ if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsFor
 #There might be one participant without enough columns in the header, maybe the one Yuenchen ran that we can't find the data for
 
 #Consider removing files with very few rows.  All good as of 10 Jul 2024
-#datafiles<- datafiles %>% arrange(nrows)
-#head(datafiles)
+#datfiles<- datfiles %>% arrange(nrows)
+#head(datfiles)
 
 #MATCHING UP PSYCHOPY DATAFILES WITH EDF FILES
 #Get ready to match up Psychopy datafiles with EDF files
@@ -292,61 +296,61 @@ if (any(datafiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsFor
 #Validate that they all start with a letter followed by two numbers (the subject ID)
 library(stringr)
 grepForUppercaseLetterFollowedByTwoDigits <- "[A-Z]\\d{2}"
-validEachFname<- str_detect(datafiles$fname, grepForUppercaseLetterFollowedByTwoDigits)
-datafiles$validEachFname <- validEachFname
+validEachFname<- str_detect(datfiles$fname, grepForUppercaseLetterFollowedByTwoDigits)
+datfiles$validEachFname <- validEachFname
 # invalid: "j33_3_13May2024_13-18.tsv"
 #j33_3 is a typo and should be uppercase J, as certified by Loretta.
 # Change it manually to valid
-datafiles<- datafiles %>% mutate(validEachFname = ifelse(fname == "j33_3_13May2024_13-18.tsv", TRUE, validEachFname))
-if ( length( which(!(datafiles$validEachFname)) ) ) {
+datfiles<- datfiles %>% mutate(validEachFname = ifelse(fname == "j33_3_13May2024_13-18.tsv", TRUE, validEachFname))
+if ( length( which(!(datfiles$validEachFname)) ) ) {
   message("The following files are not valid in that they don't start with letter and two digits:")
-  datafiles$fname[ !(datafiles$validEachFname) ]
+  datfiles$fname[ !(datfiles$validEachFname) ]
 }
-datafiles$validEachFname <- NULL #Delete because don't need this column anymore
+datfiles$validEachFname <- NULL #Delete because don't need this column anymore
 
 #Take first 4 characters again to get IDsession
-datafiles$IDsession<- substr(datafiles$fname,1,4)
+datfiles$IDsession<- substr(datfiles$fname,1,4)
 
 #reorder columns for convenience of visual inspection
-datafiles<- datafiles %>% relocate(IDsession, .after=fname)
+datfiles<- datfiles %>% relocate(IDsession, .after=fname)
 
 #For those that have an underscore after the first 3 characters, delete the underscore
-underscoresInsteadOfSession <- datafiles %>% filter( str_ends(IDsession,"_") )
+underscoresInsteadOfSession <- datfiles %>% filter( str_ends(IDsession,"_") )
 #View(underscoresInsteadOfSession) #Visually inspect to make sure not too weird
 #All ok based on inspection 10 Jul, so delete the underscore to make them like the others
 #How to delete only the first underscore?
-datafiles<- datafiles %>% mutate(IDsession = 
+datfiles<- datfiles %>% mutate(IDsession = 
                        ifelse(str_ends(IDsession, "_"), #if ends with underscore
                               gsub("_", "", fname), #replace with filename with underscore deleted
                               IDsession) )
 #Because ones that had underscores will now have full filename, take first 4 characters again of all to get IDsession 
-datafiles$IDsession<- substr(datafiles$IDsession,1,4)
+datfiles$IDsession<- substr(datfiles$IDsession,1,4)
 
 #Parse out the ID, as opposed to the session number
-datafiles$ID <- substr(datafiles$IDsession,1,3)
-datafiles$IDnum <- substr(datafiles$ID,2,3)
+datfiles$ID <- substr(datfiles$IDsession,1,3)
+datfiles$IDnum <- substr(datfiles$ID,2,3)
 
 #Parse out the session number
-datafiles$session <- substr(datafiles$IDsession,4,4)
+datfiles$session <- substr(datfiles$IDsession,4,4)
 
 #The mouseClickArea problem was fixed on 10 May (SHA:802a331b80c544348da255ce61827583759bb879),
 #prior to that it would sometimes attribute a response to the wrong ring if participant didn't click in the best place
 #Affecting all participants <= 31, in other words: 22,23,24,26,27,28,29,30,31
-datafiles<- datafiles %>% filter(IDnum>31)
+datfiles<- datfiles %>% filter(IDnum>31)
 
 #To match to the EDF files, they will
 #The EDF files have names like M471.EDF, M472.EDF, M473.EDF, P23a.EDF, P23b.EDF
 #What I'll do is for each Psychopy datafile, I'll locate the corresponding EDF file and store its name,
 # or else note that one doesn't exist
 
-datafiles$IDvalid <- str_detect(datafiles$ID,grepForUppercaseLetterFollowedByTwoDigits)
+datfiles$IDvalid <- str_detect(datfiles$ID,grepForUppercaseLetterFollowedByTwoDigits)
 #j33_3 is a typo and should be uppercase J, as certified by Loretta.
 # Change it manually to valid
-datafiles<- datafiles %>% mutate(IDvalid = ifelse(IDsession == "j333", TRUE, IDvalid))
+datfiles<- datfiles %>% mutate(IDvalid = ifelse(IDsession == "j333", TRUE, IDvalid))
 
-if (any(datafiles$IDvalid==FALSE)) {
+if (any(datfiles$IDvalid==FALSE)) {
   cat("Problem! These files have the wrong format as the subject ID is not an upper-case letter followed by two digits:")
-  cat( datafiles %>% dplyr::filter(IDvalid==FALSE) )
+  cat( datfiles %>% dplyr::filter(IDvalid==FALSE) )
 }
 
 #Match EDF files to behavioral files
@@ -416,14 +420,14 @@ if ( length( unknownBadSessionNums  ) ) {
   cat(unknownBadSessionNums)
 }
 
-#Match eyetracking (EDF) files to psychopy datafiles
+#Match eyetracking (EDF) files to psychopy datfiles
 
 #Assign closest match to corresponding behavioral file
 #Visually inspect, and then deal case-by-case with anomalies
 EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
 EDFfiles <- EDFfiles %>% arrange(IDnum)
 
-#Join with datafiles dataframe by combination of ID and session columns
+#Join with datfiles dataframe by combination of ID and session columns
 #But first rename EDFfiles columns so clear it refers to the EDF files
 EDFfiles<- EDFfiles %>% rename(EDF_session = session, 
                                EDF_IDnum = IDnum, 
@@ -433,26 +437,26 @@ EDFfiles<- EDFfiles %>% rename(EDF_session = session,
 
 #there are two files for C53b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
 #Josh says the later one is the third session, so change its session to c
-datafiles<- datafiles %>% 
+datfiles<- datfiles %>% 
   mutate(session = ifelse(str_starts(fname,"C53_b_05Jun2024_14-35.tsv"),
                           "c", session) )
 
 #See how many behavioral files don't seem to have a match in the EDFfiles tibble
 #anti_join returns all rows from the first tibble where there are matching values in the second tibble
 noMatchingEDFfile<- 
-  anti_join(datafiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+  anti_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
 noMatchingEDFfile<- noMatchingEDFfile %>% arrange(IDnum)
 
-numSs<- length( unique(datafiles$IDnum) )
+numSs<- length( unique(datfiles$IDnum) )
 numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
 message( paste(numSs,"Ss total, of which",
                numSsWithoutMatchingEDFfile,"do not have a matching EDF file with a session number."))
 
-#Add a column to datafiles indicating whether there is a match
+#Add a column to datfiles indicating whether there is a match
 #Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
 noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session) %>% arrange(IDnum)
 noMatchingEDF$EDFmatchExists <- FALSE
-joined <- left_join(datafiles, noMatchingEDF, 
+joined <- left_join(datfiles, noMatchingEDF, 
                             by = c("IDnum", "session"))
 
 #Now match the matches (as opposed to the non-matches, added above), so that have record of the EDF filename
@@ -501,7 +505,7 @@ joined<- joined %>% rowwise() %>%
 #The preamble variable of the EDF file has exact date and time, so to anonymize should strip that out
 #Could read each EDF file with eyelinkReader and then save all the variables inside it into an R data file
 
-#In the meantime, could save the behavioral datafiles and then do the EDF file analyses in this private folder 
+#In the meantime, could save the behavioral datfiles and then do the EDF file analyses in this private folder 
 #For each row of joined, save that fname as IDnum_sessionNum.
 
 #Assuming this script is being run from "dataPreprocess" subdirectory, so need to go one level up,
@@ -511,7 +515,7 @@ if ( !file.exists(destinationDir) ) {
   message( paste(destinationDir," destination directory does not exist!") )
 }
 
-#Read in datafiles #########################################
+#Read in datfiles #########################################
 #In previous projects, I usually read all the data into tibbles and then copied it over.
 #This involves handling that later files have different numbers of columns because I added more timing variables
 
