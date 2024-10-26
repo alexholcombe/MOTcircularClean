@@ -113,23 +113,29 @@ myTryCatch <- function(expr) {
   list(value=value, warning=warn, error=err)
 }
 
+read_tsv_but_handle_erroneous_columns<- function(file_path) {
+  #Check whether this is one of the files with the missing column label
+  if (str_detect(file_path, "J55_b|J55_c|J56_|J57_")) { #One of the files with the missing column label
+    #So supply correct column labels when read the file
+    #message("special:",file_path)
+    dfWithWarnings<- myTryCatch( 
+      readr::read_tsv(file_path, show_col_types=FALSE, col_names=correctColumnNames, skip=1) #skip incorrect header
+    )
+  } else { #normal file
+    #message(file_path)
+    dfWithWarnings<- myTryCatch( 
+      readr::read_tsv(file_path, show_col_types=FALSE) 
+    )
+  }
+  return (dfWithWarnings)
+}
+  
 #Determine number of trials in each file, then can consider files that are very short
 # but need special handling of four participants with files with missing column name
 nRowsOfTsv <- function(fname) {
   file_path <- file.path(thisExpFolderPsychopy,fname)
-  #Check whether this is one of the files with the missing column label
-  if (str_detect(fname, "J55_b|J55_c|J56_|J57_")) { #One of the files with the missing column label
-    #So supply correct column labels when read the file
-    #message("special:",fname)
-    dfWithWarnings<- myTryCatch( 
-        readr::read_tsv(file_path, show_col_types=FALSE, col_names=correctColumnNames, skip=1) #skip incorrect header
-      )
-  } else { #normal file
-    #message(fname)
-    dfWithWarnings<- myTryCatch( 
-        readr::read_tsv(file_path, show_col_types=FALSE) 
-      )
-  }
+  
+  dfWithWarnings<- read_tsv_but_handle_erroneous_columns(file_path)
   
   if (!(is.null(dfWithWarnings$warning))) {
     message("Warning when tried to read ",fname)
@@ -170,11 +176,7 @@ datfiles<- rows_delete(datfiles, tibble(fname=c("S45_1_27May2024_11-45.tsv","S45
 datfiles<- rows_delete(datfiles, tibble(fname=c("N64_a_27Jun2024_10-21.tsv","N64_b_27Jun2024_10-59.tsv","N64_c_27Jun2024_11-38.tsv")), by="fname")
 
 #K341 has two files with 0 rows
-#datfiles %>% filter(str_starts(fname,"K34"))
-#Said her eyes felt dry towards the end of the trials, and that it was hard to focus.
-#"First session 60Hz, new monitor (second and third trials run at the correct Hz)
-#Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials"
-#Delete 0-row files of K347
+#Delete 0-row files of K34
 datfiles<- rows_delete( datfiles, tibble(fname=c("K341_1_15May2024_09-29.tsv","K341_1_15May2024_09-30.tsv")), by="fname") 
 
 #Delete 0-row file of M323 that was run again to replace it (false start)
@@ -219,9 +221,11 @@ datfiles<- rows_delete( datfiles, tibble(fname=c("S75_c_24Jul2024_13-25.tsv")), 
 datfiles<- rows_delete( datfiles, tibble(fname=c("lxx_a_27Jun2024_09-43.tsv")), by="fname")
 #Loretta says lor was just a test of the program, not a participant
 datfiles<- rows_delete( datfiles, tibble(fname=c("lor_a_12Jun2024_11-32.tsv")), by="fname")
-
-#there is a C55 with 3 sessions so let me know why you think there are two ID=55 participants
-#Josh: those are two separate participants
+#K341 has all timing blips; "First session 60Hz, new monitor (second and third trials run at the correct Hz)" "Both were the same monitor, but we had just changed it to the new one. The first session I realised the settings hadn’t saved because the middle dot flashed occasionally, I checked and it was only 60rps, I redid the settings for the next trials"
+#Because this sesssion was run at 60 Hz, should throw out.
+datfiles<- rows_delete( datfiles, tibble(fname=c("K341_1_15May2024_09-31.tsv")), by="fname")
+#there is both a C55 with 3 sessions and a J55 with 3 sessions, why are there two ID=55 participants?
+#It's OK because Josh: those are two separate participants
 
 #See if any remaining files have few rows
 almostNoTrials <- datfiles %>% filter( nrows < 10 )
@@ -238,8 +242,15 @@ if ( nrow(almostNoTrials) ) {
 
 # Define a custom function that returns a tibble of columns to be added onto my datafiles tibble
 calcTimingBlips <- function(fname) {
-  file_path <- file.path(thisExpFolderPsychopy,fname)  
-  mydf<- readr::read_tsv(file_path, show_col_types=FALSE)
+  file_path <- file.path(thisExpFolderPsychopy,fname)
+  
+  dfWithWarnings<- read_tsv_but_handle_erroneous_columns(file_path)
+  if (!(is.null(dfWithWarnings$warning))) {
+    message("Warning when tried to read ",fname)
+    print(dfWithWarnings$warning)
+  }
+  mydf <- dfWithWarnings$value
+  
   #Calculate proportion of trials with lots of timing blips
   if ( !("timingBlips" %in% names(mydf)) ) {
     message('Hey, was expecting a timingBlips column but it is not in :',file_path)
@@ -251,13 +262,16 @@ calcTimingBlips <- function(fname) {
   if ("numLongFramesAfterFixation" %in% names(mydf)) {
     pTrialsBlipsAfterFixatn <- sum(mydf$numLongFramesAfterFixation>0) / nrow(mydf)
   }
-  pTrialsLongFramesAfterCue <- NaN
+  pTrialsBlipsAfterCue <- NaN
+  pTrialsLotsAfterCue<- NaN
   if ("numLongFramesAfterCue" %in% names(mydf)) {
-    pTrialsLongFramesAfterCue <- sum( mydf$numLongFramesAfterCue>0 ) / nrow(mydf)
+    pTrialsBlipsAfterCue <- sum( mydf$numLongFramesAfterCue>0 ) / nrow(mydf)
+    pTrialsLotsAfterCue <- sum( mydf$numLongFramesAfterCue>3 ) / nrow(mydf)
   }
 
   #create columns in tibble form so can be added onto the df
-  timingStuff <- tibble( pTrialsLotsTimingBlips, pTrialsBlipsAfterFixatn, pTrialsLongFramesAfterCue )
+  timingStuff <- tibble( pTrialsLotsTimingBlips, pTrialsBlipsAfterFixatn, 
+                         pTrialsBlipsAfterCue, pTrialsLotsAfterCue )
   return(timingStuff)
 }
 
@@ -270,25 +284,29 @@ datfiles<- datfiles %>% rowwise() %>%
 #ggplot(datfiles,aes(x=pTrialsLotsTimingBlips)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
 #But most of them are at very beginning of trial so should have separate column to report only later timingBlips
 
-#Looking at this on 9 Jul, zero timingBlips after fixation! which suggests that's also true for
+#Looking at this on 25-10-24, no more than 2% of trials with timingBlips after fixation! which suggests that's also true for
 #earlier data runs before I programmed this facility.
-#ggplot(datfiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-#ggplot(datfiles,aes(x=pTrialsLongFramesAfterCue)) + geom_histogram(binwidth=.004) +xlim(-.1,1)
-#table(datfiles$pTrialsBlipsAfterFixatn)
+#ggplot(datfiles,aes(x=pTrialsBlipsAfterFixatn)) + geom_histogram(binwidth=.005)
+#similarly for after cue
+#ggplot(datfiles,aes(x=pTrialsBlipsAfterCue)) + geom_histogram(binwidth=.005)# +xlim(-.1,1)
 
-criterionProportnNumTimingBlipsForThrowingOutTrial = .02 
-
-if (any(datfiles$pTrialsLongFramesAfterCue > criterionProportnNumTimingBlipsForThrowingOutTrial, na.rm=T)) {
-  message('Some files actually had trials with more than ',criterionProportnNumTimingBlipsForThrowingOutTrial,
-          'timing blips after the cue! So you need to write code to delete those.')
+#While some files have up to 2% of trials with timingBlipsAfterCue, no files have more then 3 blips
+filesMoreThanThreeAfterCue<- datfiles %>% filter(pTrialsLotsAfterCue>0)
+#none with more than 3 long frames after cue, which suggests even files created before logged that
+#are fine.
+if (nrow(filesMoreThanThreeAfterCue)){
+  message("Unexpectedly there are files with trials with more than 3 timing blips after cue.")
+  message('So you need to write code to delete those.')
 }
+#ggplot(datfiles,aes(x=pTrialsLotsAfterCue)) + geom_histogram(binwidth=.005) + xlim(-.1,1)
 
-#There might be one participant without enough columns in the header, maybe the one Yuenchen ran that we can't find the data for
+#Consider files with very few rows. 
+#There are two G77_b's because "b crashed after 30 trials, so I redid it" so I can use both b's
+#Other than that, every remaining file has at least 90 trials, as of 25 Oct 2024
 
-#Consider removing files with very few rows.  All good as of 10 Jul 2024
-#datfiles<- datfiles %>% arrange(nrows)
-#head(datfiles)
 
+##############################################################################################
+##############################################
 #MATCHING UP PSYCHOPY DATAFILES WITH EDF FILES
 #Get ready to match up Psychopy datafiles with EDF files
 
@@ -317,7 +335,7 @@ datfiles<- datfiles %>% relocate(IDsession, .after=fname)
 #For those that have an underscore after the first 3 characters, delete the underscore
 underscoresInsteadOfSession <- datfiles %>% filter( str_ends(IDsession,"_") )
 #View(underscoresInsteadOfSession) #Visually inspect to make sure not too weird
-#All ok based on inspection 10 Jul, so delete the underscore to make them like the others
+#All ok based on inspection 26-10-24, so delete the underscore to make them like the others
 #How to delete only the first underscore?
 datfiles<- datfiles %>% mutate(IDsession = 
                        ifelse(str_ends(IDsession, "_"), #if ends with underscore
@@ -333,7 +351,7 @@ datfiles$IDnum <- substr(datfiles$ID,2,3)
 #Parse out the session number
 datfiles$session <- substr(datfiles$IDsession,4,4)
 
-#The mouseClickArea problem was fixed on 10 May (SHA:802a331b80c544348da255ce61827583759bb879),
+#Exclusion: the mouseClickArea problem was fixed on 10 May https://github.com/alexholcombe/MOTcircularClean/commit/802a331b80c544348da255ce61827583759bb879),
 #prior to that it would sometimes attribute a response to the wrong ring if participant didn't click in the best place
 #Affecting all participants <= 31, in other words: 22,23,24,26,27,28,29,30,31
 datfiles<- datfiles %>% filter(IDnum>31)
@@ -358,14 +376,12 @@ if (any(datfiles$IDvalid==FALSE)) {
 #Get a list of the EDF files
 thisExpFolderEDF = file.path(thisExpFolder,"EDF") #As opposed to Psychopy data folder
 EDFfiles <- dir(path=thisExpFolderEDF,pattern='.EDF')  #find all EDF files in this directory
-message("Found ",length(EDFfiles)," EDF files.")
+message("Found ",length(EDFfiles)," EDF files and there are ",length(datfiles$session)," behavioral sessions (after excluding some participants).")
 EDFfiles<- data.frame(fname=EDFfiles)
 
 #Do some validation of the EDF filenames
 #Filename should start with participant's first initial, two-digit subject number, and 
 #     session (4 characters in total), followed by ".EDF"
-
-#Ignore all those that have only 3 characters
 
 #Parse out the subject ID and session number
 #Validate that they all start with a letter followed by two numbers (the subject ID)
@@ -381,17 +397,16 @@ if ( length( notValidEDFfileNames) )  {
   notValidEDFfileNames
 }
 
+#Get IDnum
+EDFfiles$ID <- as.numeric( substr(EDFfiles$name,2,3) ) #returns warning because some are text because bad file name
+#Ignore EDF files prior to participant 31 before mouseClickArea was fixed
+EDFfiles<- EDFfiles %>% filter( ID > 31 ) #This also deletes some degenerate files with text
+
 EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix")) #based on "."
 
-#Check for files with no session letter/digit. This happened back when we didnt include a session
+#Check for files with no session letter/digit. This happened back when we didn't include a session
 # number, and the subsequent EDF files for a session would overwrite previous sessions if no one
 # got them off the computer first.
-grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
-noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
-if ( any(noSessionID) ) {
-  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
-  cat(EDFfiles$name[ noSessionID ]); cat("\n")
-}
 
 grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
 noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
@@ -403,6 +418,8 @@ if ( length( noSessionID_EDFfiles ) ) {
   message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
   cat(noSessionID_EDFfiles); cat("\n")
 }
+
+ALSO CHECK SAMPLE SIZE
 
 EDFfiles$session <- substr(EDFfiles$name,4,4)
 
@@ -529,9 +546,9 @@ columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisEx
 columns_spec_early_file_with_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
 columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
 
-#Debug why one with comment ends up with just 53 rows
+#why one with comment ends up with just 53 rows
 #thisRow<- joined %>% filter(fname=="M321_1_10May2024_13-43.tsv")
-#Problem seems to be that the comment has a newline in it, which of course screws things up.
+#Problem is that the comment has a newline in it, which of course screws things up.
 
 #Read all the behavioral files in and aggregate them into one massive tibble
 for (i in 1:nrow(joined)) {
@@ -667,7 +684,7 @@ message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
 #If staircases work, average correct should be 0.794 in each condition.
 avgCorrOverall<- rawData |> group_by(IDnum) |> summarise(correct=mean(orderCorrect==3),n=n())
 pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
-#Originally subjects 23 to 31 have below 70% accuracy indicating that staircases didn't work.
+#Subjects 23 to 31 have below 70% accuracy, which is a red flag, which can be explained by
 #due to the mouseClickArea problem making the program malfunction, data now thrown out above.
 
 #Saved anonymised data for loading by doAllAnalyses.R
