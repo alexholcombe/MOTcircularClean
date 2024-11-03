@@ -397,88 +397,135 @@ if ( length( notValidEDFfileNames) )  {
   notValidEDFfileNames
 }
 
+EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix")) #based on "."
+EDFfiles$EDF_firstLetter<- substr(EDFfiles$name,1,1)
+  
 #Get IDnum
 EDFfiles$ID <- as.numeric( substr(EDFfiles$name,2,3) ) #returns warning because some are text because bad file name
-#Ignore EDF files prior to participant 31 before mouseClickArea was fixed
+#Exclusion: Ignore EDF files, just like behavioral files, prior to participant 31 before mouseClickArea was fixed
 EDFfiles<- EDFfiles %>% filter( ID > 31 ) #This also deletes some degenerate files with text
 
-EDFfiles<- EDFfiles %>% separate(fname, c("name", "suffix")) #based on "."
-
-#Check for files with no session letter/digit. This happened back when we didn't include a session
-# number, and the subsequent EDF files for a session would overwrite previous sessions if no one
-# got them off the computer first.
-
-grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
-noSessionID <- str_detect(EDFfiles$name, grepForValidNameButNoSessionID)
-EDFfiles$noSessionID <- noSessionID
-knownEDFfilesWithoutSession<- c() #Fill this in once decide which ones not to care about
-noSessionID_EDFfiles<- EDFfiles$name[ noSessionID ]
-noSessionID_EDFfiles<- setdiff(noSessionID_EDFfiles, knownEDFfilesWithoutSession)
-if ( length( noSessionID_EDFfiles ) ) {
-  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
-  cat(noSessionID_EDFfiles); cat("\n")
-}
-
-ALSO CHECK SAMPLE SIZE
-
 EDFfiles$session <- substr(EDFfiles$name,4,4)
-
-#Validate that it is a session number/letter, e.g. "a" or "1", of those that have one
-knownBadSessionNums<- c("j5","tea")
-
-grepForDigitOrLowerCaseLetter <- "[0-9a-z]"
-validSession<- str_detect(EDFfiles$session, grepForDigitOrLowerCaseLetter)
-hasSessionIDbutInvalid <- which(!(noSessionID) & !validSession)
-badSessionNums<- EDFfiles$name[ hasSessionIDbutInvalid ]
-
-unknownBadSessionNums <- setdiff(badSessionNums,knownBadSessionNums)
-if ( length( unknownBadSessionNums  ) ) {
-  message("The following EDF filenames are not valid in that the session is not a letter or digit:")
-  cat(unknownBadSessionNums)
-}
-
-#Match eyetracking (EDF) files to psychopy datfiles
-
-#Assign closest match to corresponding behavioral file
-#Visually inspect, and then deal case-by-case with anomalies
 EDFfiles$IDnum <- substr(EDFfiles$name,2,3)
 EDFfiles <- EDFfiles %>% arrange(IDnum)
 
-#Join with datfiles dataframe by combination of ID and session columns
+#Will later join with datfiles dataframe by combination of ID and session columns
 #But first rename EDFfiles columns so clear it refers to the EDF files
 EDFfiles<- EDFfiles %>% rename(EDF_session = session, 
                                EDF_IDnum = IDnum, 
                                EDF_suffix = suffix,
                                EDF_name = name)
 
+#Check for files with no session letter/digit. This happened back when we didn't include a session
+# number, and the subsequent EDF files for a session would overwrite previous sessions if no one
+# got them off the computer first.
+grepForValidNameButNoSessionID <- "[A-Za-z][0-9][0-9]$"
+noSessionID <- str_detect(EDFfiles$EDF_name, grepForValidNameButNoSessionID)
+EDFfiles$noSessionID <- noSessionID
+knownEDFfilesWithoutSession<- c("J33","J56","J57") #These are handled further down
+noSessionID_EDFfiles<- EDFfiles$EDF_name[ noSessionID ]
+noSessionID_EDFfiles<- setdiff(noSessionID_EDFfiles, knownEDFfilesWithoutSession)
+if ( length( noSessionID_EDFfiles ) ) {
+  message("The following EDF filenames are not valid in that there is no session letter or digit (4th character is not a session letter/digit), which often happened back when we didnt include a session number, and the subsequent EDF files for a session would overwrite previous sessions if no one got them off the computer first.:")
+  cat(noSessionID_EDFfiles); cat("\n")
+}
 
-#there are two files for C53b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
+#For special cases, maybe I can just set the session manually and below code will then match it with corresponding
+#Psychopy file
+#Figure out which session J33.EDF applies to by checking date inside EDF file
+#EDFfileWithPath<-file.path("..","dataRaw","youngOld","EDF")
+#J33stuff <- eyelinkReader::read_edf( file.path(thisExpFolderEDF,"J33.EDF") )
+#According to the EDF file preamble, J33.EDF was run at Mon May 13 14:47:36 , 
+#and there is a J33_2_13May2024_12-46.tsv so I’m thinking the eyetracker computer is 2 hours off, 
+#so I think this J33.EDF corresponds to the second session.
+EDFfiles<- EDFfiles %>% 
+  mutate(EDF_session = ifelse(str_starts(EDF_name,"J33"),
+                              "2", EDF_session) )
+
+#J56.EDF, is this the third session - because J56a.EDF and J56b.EDF also exist
+#J56stuff <- eyelinkReader::read_edf( file.path(thisExpFolderEDF,"J56.EDF") )
+#preamble says Jun 17 21:23:00, closest behavioural file is J56PRACTICE_18Jun2024_11-23.tsv
+#which is weird because that's 10 hours off but it has 9 trials like the practice file
+#So should just exclude J56.EDF
+EDFfiles<- rows_delete(EDFfiles, tibble(EDF_name="J56"), by="EDF_name")
+#J57preamble <- ( eyelinkReader::read_edf( file.path(thisExpFolderEDF,"J57.EDF") ) )$preamble
+#Has only 10 trials, datetime 17 Jun 23:54, no behavioral file, must be abortive so delete              
+EDFfiles<- rows_delete(EDFfiles, tibble(EDF_name="J57"), by="EDF_name")
+
+#Why does C53b not match. Because the third session was also mistaknely labeled b.
+#So I need to work out whether C53b.EDF is the second session or third session
+#C53b_stuff <- eyelinkReader::read_edf( file.path(thisExpFolderEDF,"C53b.EDF") ) 
+#preamble says 5 June 16:37, corresponding to Psychopy 3rd session file
+EDFfiles<- EDFfiles %>% 
+  mutate(EDF_session = ifelse(str_starts(EDF_name,"C53b"),
+                              "c", EDF_session) )
+
+##################################################################################
+#Match eyetracking (EDF) files to psychopy datfiles
+#Assign closest match to corresponding behavioral file
+#Inspect and deal with anomalies
+
+#Validate that it is a session number/letter, e.g. "a" or "1", of those that have one
+knownBadSessionNums<- c()
+grepForDigitOrLowerCaseLetter <- "[0-9a-z]"
+validSession<- str_detect(EDFfiles$EDF_session, grepForDigitOrLowerCaseLetter)
+if (any(!validSession)) {
+  hasSessionIDbutInvalid <- which(!(noSessionID) & !validSession)
+  badSessionNums<- EDFfiles$EDF_name[ hasSessionIDbutInvalid ]
+  
+  unknownBadSessionNums <- setdiff(badSessionNums,knownBadSessionNums)
+  if ( length( unknownBadSessionNums  ) ) {
+    message("The following EDF filenames are not valid in that the session is not a letter or digit:")
+    cat(unknownBadSessionNums)
+  }
+}
+#there are two psychopy files for C53b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
 #Josh says the later one is the third session, so change its session to c
 datfiles<- datfiles %>% 
   mutate(session = ifelse(str_starts(fname,"C53_b_05Jun2024_14-35.tsv"),
                           "c", session) )
+#There are two participants numbered 55, C55 and J55, so I need to match by first letter to disambiguate
+datfiles$firstLetter<- substr(datfiles$IDsession,1,1)
 
 #See how many behavioral files don't seem to have a match in the EDFfiles tibble
 #anti_join returns all rows from the first tibble where there are matching values in the second tibble
 noMatchingEDFfile<- 
-  anti_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+  anti_join(datfiles, EDFfiles, 
+            by = c("IDnum"="EDF_IDnum", "firstLetter"="EDF_firstLetter", "session"="EDF_session"))
 noMatchingEDFfile<- noMatchingEDFfile %>% arrange(IDnum)
+
+knownToNotHaveMatch<- c("J331","j333",
+                        "T52a","T52b","T52c",#Eyetracker wouldn't calibrate with glasses
+                        "C53b") #One EDF file overwritten
+#there are no EDF files on Sharepoint for the three sessions of Y71 (participant run by Josh), M74 (run by Josh), S75 (run by Loretta), R76 (run by Loretta), G77, W78, N79, and, A90, R91 (all run by Loretta),  And there’s no note in the Sharepoint file about any of this. 
+
+#datfiles %>% filter(IDnum==53) %>% select(fname,IDnum,firstLetter,session)
+
+temp<-left_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session","firstLetter"="EDF_firstLetter"))
+
+#Why did J33 session 2 not match
+temp<-left_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+temp<-left_join(datfiles[16,], EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
 
 numSs<- length( unique(datfiles$IDnum) )
 numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
 message( paste(numSs,"Ss total, of which",
-               numSsWithoutMatchingEDFfile,"do not have a matching EDF file with a session number."))
+               numSsWithoutMatchingEDFfile,"do not have even one matching EDF file with a session number."))
+#For the EDF files that don't have a session number, could try to figure out which session they
+#correspond to by looking at their date/time
+#J33 I know about
+
 
 #Add a column to datfiles indicating whether there is a match
 #Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
 noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session) %>% arrange(IDnum)
 noMatchingEDF$EDFmatchExists <- FALSE
 joined <- left_join(datfiles, noMatchingEDF, 
-                            by = c("IDnum", "session"))
+                            by = c("IDnum", "session","firstLetter"))
 
 #Now match the matches (as opposed to the non-matches, added above), so that have record of the EDF filename
 joinedWithEDF<- left_join(joined, EDFfiles, 
-                          by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+                          by = c("IDnum"="EDF_IDnum", "session"="EDF_session","firstLetter"="EDF_firstLetter"))
 
 #A weird consequence of how I did this is that all the rows that *do* have a match are NA for EDFmatchExists,
 # need to change that to TRUE
@@ -491,8 +538,6 @@ message( paste( length( unique(joined$IDnum) ),"Ss total, of which",
 message( paste(nrow(joined),"files total, of which",
                summarize(joined, trues=sum(EDFmatchExists))$trues,
                "have a matching EDF file with a session number."))
-#For the EDF files that don't have a session number, could try to figure out which session they
-#correspond to by looking at their date/time
 
 #Do I need to do any matching with sessions? 
 #Maybe the only thing to do is create a sessionNum column that assigns 1,2,3 to the a,b,cs
@@ -510,9 +555,6 @@ joined<- joined %>% rowwise() %>%
     TRUE ~ -999  
   ))
 
-#there are two files for C53_b, “C53_b_05Jun2024_14-05.tsv” and “C53_b_05Jun2024_14-35.tsv”, 
-#Josh says the later one is the third session
-#I guess I need to take care of that below when I create the anonymized files
 
 #Next, save data to anonymised data folder and only then do eyetracking filtering?
 #Ideally would strip all date and time info from the anonymised data
