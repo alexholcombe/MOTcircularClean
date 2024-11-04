@@ -88,10 +88,10 @@ datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 #I can see someone must have accidentally deleted that part of the code after running
 #first session of J55a, because it's there for J55a but not b
 #The column names should be:
-#"trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
+#"trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixatnPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
 #For all files with J55_b, J55_c, or J56_ in their name with suffix .tsv,
 #need special handling, like this:
-new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
+new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixatnPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
 # Split the string based on the \t delimiter and unlist to get a character vector
 correctColumnNames <- str_split(new_header, "\t") %>% unlist()
 #missingColumnName_datafiles <- datafiles %>% filter(str_detect(fname, "J55_b|J55_c|J56_"))
@@ -598,15 +598,13 @@ earlyFileWithSessionNum<- "J51_a_03Jun2024_13-17.tsv"
 lateFile<- "D61_a_25Jun2024_11-12.tsv"
 
 columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithoutSessionColumn)     )
-columns_spec_early_file_with_sessionNum <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
 columns_spec_early_file_with_sessionLetter <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionNum)     )
 columns_spec_early_file_with_sessionNum <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionLetter)     )
 columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
 
-
-#why one with comment ends up with just 53 rows
+#Why one with comment ends up with just 53 rows
 #thisRow<- joined %>% filter(fname=="M321_1_10May2024_13-43.tsv")
-#Problem is that the comment has a newline in it, which of course screws things up.
+#Problem is that the comment has a newline in it, which of course screws things up. Changed by hand in partiicpant notes
 
 #Read all the behavioral files in and aggregate them into one massive tibble
 #J55_b_18Jun2024_12-20.tsv
@@ -747,11 +745,11 @@ for (i in 1:nrow(joined)) {
               } 
     )
   }
-}
+} #Finished reading each behavioral file and aggregating into one huge tibble
 
+#Summarise number of files
 numSs<- length( unique(rawData$IDnum) )
-numSessions <- n_groups(  rawData %>% group_by(IDnum,session)  
-                         )
+numSessions <- n_groups(  rawData %>% group_by(IDnum,session)                          )
 perSubjSession<- rawData %>%
   group_by(IDnum,session) %>%
   filter(row_number()==1) %>%
@@ -764,8 +762,17 @@ message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
 #If staircases work, average correct should be 0.794 in each condition.
 avgCorrOverall<- rawData |> group_by(IDnum) |> summarise(correct=mean(orderCorrect==3),n=n())
 pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
-#Subjects 23 to 31 have below 70% accuracy, which is a red flag, which can be explained by
+#Subjects 23 to 31 have below 70% accuracy, which is a red flag, which was explained by
 #due to the mouseClickArea problem making the program malfunction, data now thrown out above.
+
+#Check for participants with less than 71% overall correct.
+terriblePerformers<- avgCorrOverall %>% filter(correct<0.71)
+if (nrow(terriblePerformers)) {
+  message("The following participants had less than 71% overall correct:")
+  print(terriblePerformers)
+}
+#Participant 69 has about 67% accuracy. No immediate explanation from notes.
+#Participant 73 has 70% accuracy. No immediate explanation from notes.
 
 #Saved anonymised data for loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationStudyFolderName)
@@ -773,7 +780,7 @@ destination_fname<- file.path(destinationDir,destinationStudyFolderName)
 readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
-#Also save all the information about the files in joined,
+#Also save all the information about the files in joined including EDF file match ,
 # save everything except the filename, because it has the date/time
 anonymisedMatchingOfDataAndEDF<- joined
 anonymisedMatchingOfDataAndEDF$fname <- NULL
@@ -785,7 +792,8 @@ write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 #Copy all the EDF files over?
 
 #To get rid of first initial from EDF files, would have to save them with a new name
-#, simply with the first initial stripped
+#, simply with the first initial stripped. But then would have to specially handle 55 and any other 
+#participant number that was used twice.
 
 
 
