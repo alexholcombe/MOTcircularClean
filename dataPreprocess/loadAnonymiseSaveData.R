@@ -50,7 +50,7 @@ pInfo_reducedForPrivacy$gender<- tolower(pInfo_reducedForPrivacy$gender)
 
 destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,destinationName="youngOld")
 readr::write_tsv(pInfo_reducedForPrivacy, file = paste0(destination_fname,".tsv"))
-message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
+message( paste("Anonymised (first initial, date and time removed, agePerturbed) data aggregated into single file and saved to",destination_fname) )
 
 #Match up Psychopy datafiles and EDF files
 #There will always be a Psychopy datafile, but not always an EDF file, so start with Psychopy files
@@ -88,7 +88,7 @@ datafiles <- datafiles %>% filter( !str_detect(fname,"PRAC") )
 #I can see someone must have accidentally deleted that part of the code after running
 #first session of J55a, because it's there for J55a but not b
 #The column names should be:
-"trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
+#"trialnum	subject	session	basicShape	numObjects	speed	initialDirRing0 fixationPeriodFrames  orderCorrect	trialDurTotal	numTargets	whichIsTargetEachRing0	whichIsTargetEachRing1	whichIsTargetEachRing2	ringToQuery	direction0	direction1	direction2	respAdj0	respAdj1	respAdj2	rev0_0	rev0_1	rev0_2	rev0_3	rev0_4	rev0_5	rev0_6	rev0_7	rev0_8	rev1_0	rev1_1	rev1_2	rev1_3	rev1_4	rev1_5	rev1_6	rev1_7	rev1_8	rev2_0	rev2_1	rev2_2	rev2_3	rev2_4	rev2_5	rev2_6	rev2_7	rev2_8	timingBlips"
 #For all files with J55_b, J55_c, or J56_ in their name with suffix .tsv,
 #need special handling, like this:
 new_header <- "trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0\tfixationPeriodFrames\torderCorrect\ttrialDurTotal\tnumTargets\twhichIsTargetEachRing0\twhichIsTargetEachRing1\twhichIsTargetEachRing2\tringToQuery\tdirection0\tdirection1\tdirection2\trespAdj0\trespAdj1\trespAdj2\trev0_0\trev0_1\trev0_2\trev0_3\trev0_4\trev0_5\trev0_6\trev0_7\trev0_8\trev1_0\trev1_1\trev1_2\trev1_3\trev1_4\trev1_5\trev1_6\trev1_7\trev1_8\trev2_0\trev2_1\trev2_2\trev2_3\trev2_4\trev2_5\trev2_6\trev2_7\trev2_8\ttimingBlips"
@@ -117,7 +117,6 @@ read_tsv_but_handle_erroneous_columns<- function(file_path) {
   #Check whether this is one of the files with the missing column label
   if (str_detect(file_path, "J55_b|J55_c|J56_|J57_")) { #One of the files with the missing column label
     #So supply correct column labels when read the file
-    #message("special:",file_path)
     dfWithWarnings<- myTryCatch( 
       readr::read_tsv(file_path, show_col_types=FALSE, col_names=correctColumnNames, skip=1) #skip incorrect header
     )
@@ -159,6 +158,15 @@ nRowsOfTsv <- function(fname) {
 datfiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
 #REMOVE/HANDLE DYSFUNCTIONAL RUNS
+#There are two C55a, one being an identical copy -  has the exact same time/datestamp and contents as the other and is called C55_a_12Jun2024_13-02 - Copy.tsv?
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
+#Similarly for C55b and C55c
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
+datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
+
 #S26 has two files with zero rows, Loretta confirmed they should be thrown out rather than being lost data. 
 datfiles<- rows_delete(datfiles, tibble(fname=c("S26_1_01May2024_11-17.tsv","S26_1_01May2024_11-19.tsv")), by="fname")
 #Also for S26 more trials based on the first session were done at the end because only 1 trialsPerCondition were mistakenly run
@@ -201,12 +209,6 @@ datfiles <- datfiles %>% filter(!str_starts(fname, "te_a")) #Delete files that s
 datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-12 - Copy.tsv")), by="fname")
 datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-12.tsv")), by="fname")
 datfiles<- rows_delete( datfiles, tibble(fname=c("D69_b_03Jul2024_12-36.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02 - Copy.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_a_12Jun2024_13-02trialHandler - Copy.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39 - Copy.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_b_12Jun2024_13-39trialHandler - Copy.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14 - Copy.tsv")), by="fname")
-datfiles<- rows_delete( datfiles, tibble(fname=c("C55_c_12Jun2024_14-14trialHandler - Copy.tsv")), by="fname")
 
 datfiles<- rows_delete( datfiles, tibble(fname=c("J51a_a_03Jun2024_13-14.tsv")), by="fname")
 datfiles<- rows_delete( datfiles, tibble(fname=c("J51a_a_03Jun2024_13-16.tsv")), by="fname")
@@ -225,7 +227,11 @@ datfiles<- rows_delete( datfiles, tibble(fname=c("lor_a_12Jun2024_11-32.tsv")), 
 #Because this sesssion was run at 60 Hz, should throw out.
 datfiles<- rows_delete( datfiles, tibble(fname=c("K341_1_15May2024_09-31.tsv")), by="fname")
 #there is both a C55 with 3 sessions and a J55 with 3 sessions, why are there two ID=55 participants?
-#It's OK because Josh: those are two separate participants
+#It's OK because Josh says: those are two separate participants
+
+#There are two G77_b's because "b crashed after 30 trials, so I redid it" so I can use both b's
+#But it's not worth writing code to merge these as it's the only such case, so delete the shorter G77b
+datfiles<- rows_delete( datfiles, tibble(fname=c("G77_b_31Jul2024_11-38.tsv")), by="fname") #false start
 
 #See if any remaining files have few rows
 almostNoTrials <- datfiles %>% filter( nrows < 10 )
@@ -301,7 +307,8 @@ if (nrow(filesMoreThanThreeAfterCue)){
 #ggplot(datfiles,aes(x=pTrialsLotsAfterCue)) + geom_histogram(binwidth=.005) + xlim(-.1,1)
 
 #Consider files with very few rows. 
-#There are two G77_b's because "b crashed after 30 trials, so I redid it" so I can use both b's
+
+
 #Other than that, every remaining file has at least 90 trials, as of 25 Oct 2024
 
 
@@ -494,31 +501,35 @@ noMatchingEDFfile<-
             by = c("IDnum"="EDF_IDnum", "firstLetter"="EDF_firstLetter", "session"="EDF_session"))
 noMatchingEDFfile<- noMatchingEDFfile %>% arrange(IDnum)
 
-knownToNotHaveMatch<- c("J331","j333",
+knownToNotHaveMatch<- c("J331","j333", #only one EDF file, for session 2, which was disambiguated above
                         "T52a","T52b","T52c",#Eyetracker wouldn't calibrate with glasses
                         "C53b") #One EDF file overwritten
-#there are no EDF files on Sharepoint for the three sessions of Y71 (participant run by Josh), M74 (run by Josh), S75 (run by Loretta), R76 (run by Loretta), G77, W78, N79, and, A90, R91 (all run by Loretta),  And there’s no note in the Sharepoint file about any of this. 
-
 #datfiles %>% filter(IDnum==53) %>% select(fname,IDnum,firstLetter,session)
 
+#Have to include first letter because of the participant number (55, I think) that was used twice accidentally
 temp<-left_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session","firstLetter"="EDF_firstLetter"))
 
-#Why did J33 session 2 not match
-temp<-left_join(datfiles, EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
-temp<-left_join(datfiles[16,], EDFfiles, by = c("IDnum" = "EDF_IDnum", "session" = "EDF_session"))
+# Identify and display the rows in EDFfiles that match multiple rows in datfiles
+matches <- temp %>%
+  group_by(IDnum, session, firstLetter) %>%
+  filter(n() > 1) %>%
+  ungroup()
+if (nrow(matches)) {
+  message('One or more multiple matches happened, you better look into that.')
+  print(matches)
+}
 
-numSs<- length( unique(datfiles$IDnum) )
-numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
-message( paste(numSs,"Ss total, of which",
-               numSsWithoutMatchingEDFfile,"do not have even one matching EDF file with a session number."))
 #For the EDF files that don't have a session number, could try to figure out which session they
 #correspond to by looking at their date/time
-#J33 I know about
-
+#J33 I know about (Josh said it disappeared),
+unexplained<-  noMatchingEDFfile$IDsession[ !(noMatchingEDFfile$IDsession %in% knownToNotHaveMatch) ]
+message("Unaccounted-for absences of EDF files:")
+print(unexplained)
+#L72, K73 Loretta going looking for 4 November
 
 #Add a column to datfiles indicating whether there is a match
 #Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
-noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session) %>% arrange(IDnum)
+noMatchingEDF <- noMatchingEDFfile %>% select(IDnum,session,firstLetter) %>% arrange(IDnum)
 noMatchingEDF$EDFmatchExists <- FALSE
 joined <- left_join(datfiles, noMatchingEDF, 
                             by = c("IDnum", "session","firstLetter"))
@@ -527,20 +538,22 @@ joined <- left_join(datfiles, noMatchingEDF,
 joinedWithEDF<- left_join(joined, EDFfiles, 
                           by = c("IDnum"="EDF_IDnum", "session"="EDF_session","firstLetter"="EDF_firstLetter"))
 
+numSs<- length( unique(datfiles$IDnum) )
+numSsWithoutMatchingEDFfile<- length( unique(noMatchingEDFfile$IDnum) )
+message( paste(numSs,"Ss total, of which",
+               numSsWithoutMatchingEDFfile,"have at least one EDF file missing."))
+
 #A weird consequence of how I did this is that all the rows that *do* have a match are NA for EDFmatchExists,
 # need to change that to TRUE
 joined <- joinedWithEDF %>% mutate(EDFmatchExists = replace_na(EDFmatchExists,TRUE))
 #double-check the result is consistent with the count I did above
 numSsNoMatchingEDFfile<- nrow( unique( filter(joined,EDFmatchExists==FALSE) %>% select(IDnum) ) )
 message( paste( length( unique(joined$IDnum) ),"Ss total, of which",
-                numSsNoMatchingEDFfile,"do not have a matching EDF file with a session number."))
+                numSsNoMatchingEDFfile,"have at least one EDF file missing."))
 
 message( paste(nrow(joined),"files total, of which",
                summarize(joined, trues=sum(EDFmatchExists))$trues,
                "have a matching EDF file with a session number."))
-
-#Do I need to do any matching with sessions? 
-#Maybe the only thing to do is create a sessionNum column that assigns 1,2,3 to the a,b,cs
 
 #Create a sessionNum column that assigns 1,2,3 to the a,b,cs
 #https://stackoverflow.com/questions/78802310/why-does-this-create-an-nas-introduced-by-coercion-warning?noredirect=1#comment138937096_78802310
@@ -555,8 +568,7 @@ joined<- joined %>% rowwise() %>%
     TRUE ~ -999  
   ))
 
-
-#Next, save data to anonymised data folder and only then do eyetracking filtering?
+#Next, save data to anonymised data folder and only then do eyetracking filtering.
 #Ideally would strip all date and time info from the anonymised data
 #That would mean re-saving each individual datafile as  IDnum + sessionNum.tsv and the EDF file
 
@@ -575,46 +587,71 @@ if ( !file.exists(destinationDir) ) {
 }
 
 #Read in datfiles #########################################
-#In previous projects, I usually read all the data into tibbles and then copied it over.
+#Read all the data into tibbles and then copied it over.
 #This involves handling that later files have different numbers of columns because I added more timing variables
 
 #Get the two kinds of column specification,for the early files with only timingBlips and the later with more columns
 # to check against each file as it comes in
 earlyFileWithoutSessionColumn<- "M22a_05Apr2024_11-02.tsv"
-earlyFileWithSessionColumn<- "S381_1_17May2024_09-08.tsv"
+earlyFileWithSessionLetter<- "S381_1_17May2024_09-08.tsv"
+earlyFileWithSessionNum<- "J51_a_03Jun2024_13-17.tsv"
 lateFile<- "D61_a_25Jun2024_11-12.tsv"
 
 columns_spec_early_file_without_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithoutSessionColumn)     )
-columns_spec_early_file_with_session <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
+columns_spec_early_file_with_sessionNum <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionColumn)     )
+columns_spec_early_file_with_sessionLetter <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionNum)     )
+columns_spec_early_file_with_sessionNum <- readr::spec_table(   file.path(thisExpFolderPsychopy,earlyFileWithSessionLetter)     )
 columns_spec_late_file <- readr::spec_table(   file.path(thisExpFolderPsychopy,lateFile)     )
+
 
 #why one with comment ends up with just 53 rows
 #thisRow<- joined %>% filter(fname=="M321_1_10May2024_13-43.tsv")
 #Problem is that the comment has a newline in it, which of course screws things up.
 
 #Read all the behavioral files in and aggregate them into one massive tibble
+#J55_b_18Jun2024_12-20.tsv
 for (i in 1:nrow(joined)) {
+#for (i in 1:59) {
   thisRow <- joined[i,]
   thisFile<- file.path(thisExpFolderPsychopy,thisRow$fname)
   
   rawDataLoad=tryCatch( 
-    readr::read_tsv(thisFile, show_col_types = FALSE),  #suppress the column specification output printout
-      error=function(e) { 
+    read_tsv_but_handle_erroneous_columns(thisFile),  
+    error=function(e) { 
         stop( paste0("ERROR reading the file ",fname," :",e) )
-      } 
+    } 
   )
-  rawDataThis <- rawDataLoad
+  if (!(is.null(rawDataLoad$warning))) {
+    message("Warning when tried to read ",thisFile)
+    print(dfWithWarnings$warning)
+  }
+  rawDataThis <- rawDataLoad$value
   
   #Validate columns in the file, that they're as expected
   #Should be one of 2 possible column specs
   cols_spec<- readr::spec_table( thisFile  )
   
   isEarlyFileWithoutSession<- identical(cols_spec, columns_spec_early_file_without_session)
-  isEarlyFile<- identical(cols_spec, columns_spec_early_file_with_session)
+  isEarlyFileWithSessionNum<- identical(cols_spec, columns_spec_early_file_with_sessionNum)
+  isEarlyFileWithSessionLetter<- identical(cols_spec, columns_spec_early_file_with_sessionLetter)
   isLaterFile<- identical(cols_spec, columns_spec_late_file)
   
-  if (!isEarlyFileWithoutSession && !isEarlyFile && !isLaterFile) {
-    stop( paste0("File,",thisFile," is not in any of the three formats that I know about") )
+  if (!isEarlyFileWithoutSession && !isEarlyFileWithSessionNum && !isEarlyFileWithSessionLetter && !isLaterFile) {
+    #See what columns are different
+    # Extract column names
+    cols_spec_names <- names(cols_spec$cols)
+    cols_laterFile <- names(columns_spec_late_file$cols)
+    # Find columns in cols_spec that are not in columns_spec_late_file
+    colsNotInLaterFile <- setdiff(cols_spec_names, cols_laterFile)
+    laterFileColsNotInCurrent <- setdiff(cols_laterFile, cols_spec_names)
+    
+    #Or compare to columns_spec_early_file_with_sessionNum
+    cols_early<- names(columns_spec_early_file_with_sessionNum$cols)
+    colsNotInEarlyFile <- setdiff(cols_spec_names, cols_early)
+    earlyFileColsNotInCurrent<- setdiff(cols_early,cols_spec_names)
+    
+    message( paste0("File,",thisFile," is not in any of the three formats that I know about") )   
+    stop('Its unique columns are:',colsNotInLaterFile,laterFileColsNotInCurrent)
   }
 
   if (!("session" %in% colnames(rawDataThis))) {
@@ -638,7 +675,8 @@ for (i in 1:nrow(joined)) {
   rawDataThis$comment <- thisRow$comment
   rawDataThis$pTrialsLotsTimingBlips <- thisRow$pTrialsLotsTimingBlips
   rawDataThis$pTrialsBlipsAfterFixatn <- thisRow$pTrialsBlipsAfterFixatn
-  rawDataThis$pTrialsLongFramesAfterCue <- thisRow$pTrialsLongFramesAfterCue
+  rawDataThis$pTrialsLotsAfterCue <- thisRow$pTrialsLotsAfterCue
+  #rawDataThis$pTrialsLongFramesAfterCue <- thisRow$pTrialsLongFramesAfterCue
   rawDataThis$EDFmatchExists <- thisRow$EDFmatchExists
   
   #Delete subject because it contains their first initial
@@ -662,7 +700,7 @@ for (i in 1:nrow(joined)) {
     #There should be no newCols thanks to my checking the format above
     oldColsNotInNew <- setdiff( prevColNames,colnames(rawDataThis) )
     if (length(newCols) >0) {
-      message( paste("newCols in",thisRow$fname,"and they are:") )
+      message( paste("newCols in",thisRow$fname,"will now add to old dataframe, and those new cols are:") )
       print( paste(newCols,collapse=','))
       for (n in 1:length(newCols)) {#add newCol to old data.frame with dummy value
         newCol = newCols[n]
@@ -708,7 +746,7 @@ for (i in 1:nrow(joined)) {
                 stop(paste0("ERROR merging, error reported as ",e))
               } 
     )
-} 
+  }
 }
 
 numSs<- length( unique(rawData$IDnum) )
