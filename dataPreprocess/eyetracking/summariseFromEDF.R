@@ -1,8 +1,6 @@
-
 #Check whether all the fixations for each trial is within the desired fixation zone.
 #It also outputs whether the subject blinked on each trial.
 
-#library(stringr)
 #library(plyr); library(dplyr) #must be done in this order
 library(tidyverse)
 library(eyelinkReader)
@@ -426,7 +424,7 @@ EDFsummarise<- function(EDF_name,widthPix,heightPix,centralZoneWidthPix,centralZ
   return( results )
 }
 
-TESTME = TRUE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
+TESTME = FALSE #Unfortunately no equivalent in R of python __main__. Would have to use testhat I guess
 if (TESTME) {
 
   EDF_name<- file.path("dataForTestingOfCode", "C55b.EDF") #C55b.EDF A421.EDF A20b.EDF Y481.EDF 

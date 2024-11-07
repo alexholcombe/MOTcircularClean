@@ -152,8 +152,6 @@ nRowsOfTsv <- function(fname) {
   #message("ans=",ans)
   return (ans)
 }
-#fname<-"J55_b_18Jun2024_12-20.tsv"
-#nRowsOfTsv(fname)
 
 datfiles <- datafiles %>% rowwise() %>% mutate( nrows = nRowsOfTsv(fname) )
 
@@ -523,9 +521,10 @@ if (nrow(matches)) {
 #correspond to by looking at their date/time
 #J33 I know about (Josh said it disappeared),
 unexplained<-  noMatchingEDFfile$IDsession[ !(noMatchingEDFfile$IDsession %in% knownToNotHaveMatch) ]
-message("Unaccounted-for absences of EDF files:")
-print(unexplained)
-#L72, K73 Loretta going looking for 4 November
+if (length(unexplained)) {
+  message("Unaccounted-for absences of EDF files:")
+  print(unexplained)
+}
 
 #Add a column to datfiles indicating whether there is a match
 #Can do that with the noMatchingEDFfile by reducing it to the ID and session column and then joining
@@ -762,7 +761,7 @@ message( paste(numSs,"Ss total, and",numSessions,"sessions total, of which",
 #If staircases work, average correct should be 0.794 in each condition.
 avgCorrOverall<- rawData |> group_by(IDnum) |> summarise(correct=mean(orderCorrect==3),n=n())
 pCorrPlot<- ggplot(avgCorrOverall,aes(x=IDnum,y=correct)) + geom_point()
-#Subjects 23 to 31 have below 70% accuracy, which is a red flag, which was explained by
+#Subjects 23 to 31 had below 70% accuracy, which is a red flag, which was explained 
 #due to the mouseClickArea problem making the program malfunction, data now thrown out above.
 
 #Check for participants with less than 71% overall correct.
@@ -774,7 +773,7 @@ if (nrow(terriblePerformers)) {
 #Participant 69 has about 67% accuracy. No immediate explanation from notes.
 #Participant 73 has 70% accuracy. No immediate explanation from notes.
 
-#Saved anonymised data for loading by doAllAnalyses.R
+#Save anonymised data for loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationStudyFolderName)
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
@@ -789,11 +788,15 @@ anonymisedMatchingOfDataAndEDF$ID <- NULL
 destination_fname = paste0(destination_fname,"_files_guide.tsv")
 write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
-#Copy all the EDF files over?
-
+#Copy the matching (don't include the degenerate ones or those of the excluded particiants) EDF files over 
 #To get rid of first initial from EDF files, would have to save them with a new name
 #, simply with the first initial stripped. But then would have to specially handle 55 and any other 
 #participant number that was used twice.
-
+#Prevent public date/time info by saving entire thing as an R object, but without
+#the preamble that contains the date/time information
+EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
+EDFfname<- paste0(EDF1,".EDF")
+library(eyelinkReader)
+eyelinkReader::read_edf('eyelink-recording.edf')
 
 
