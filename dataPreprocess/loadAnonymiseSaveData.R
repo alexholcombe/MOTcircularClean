@@ -789,14 +789,38 @@ destination_fname = paste0(destination_fname,"_files_guide.tsv")
 write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
 #Copy the matching (don't include the degenerate ones or those of the excluded particiants) EDF files over 
-#To get rid of first initial from EDF files, would have to save them with a new name
-#, simply with the first initial stripped. But then would have to specially handle 55 and any other 
+#To get rid of first letter from EDF files, would have to save them with a new name
+#, simply with the first letter stripped. But then would have to specially handle 55 and any other 
 #participant number that was used twice.
+
+library(eyelinkReader)
+#Create function that saves EDF file contents without date/time part of preface,
+#saving entire thing as an R object, but without
+#the preamble that contains the date/time information to prevent public knowledge
+save_EDF_without_datetime <- function(EDFpathAndFname,destinationPathAndFname) {
+  EDFstuff<- eyelinkReader::read_edf(EDFpathAndFname)
+  #The absolute date/time is specified only in EDFstuff$preamble[1], so delete that
+  EDFstuff$preamble[1] <- "Date/time redacted for privacy, to reduce chance of re-identification of participant identities"
+  saveRDS(EDFstuff,file=destinationPathAndFname,compress=T)
+}
+
+setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
+  EDFfname<- paste0(EDFname,".EDF")
+  message("About to read",EDFfname)
+  EDFfnameWithPath<- file.path(thisExpFolderEDF,EDFfname)
+  destination_fname<- paste0(EDFfname,".RDS")
+  destination<- file.path(destinationDir,"EDFs",destination_fname)
+  save_EDF_without_datetime(EDFfnameWithPath,destination)
+}
+
 #Prevent public date/time info by saving entire thing as an R object, but without
 #the preamble that contains the date/time information
-EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
-EDFfname<- paste0(EDF1,".EDF")
-library(eyelinkReader)
-eyelinkReader::read_edf('eyelink-recording.edf')
+#EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
+#setupFilenamesAndResaveEDFcontentsWithoutDateTime(EDF1)
 
+message("Now will read in all EDF files and save their contents without datetime. This will cause a lot of annoying messages because SRresearch currently won't let you mute them.")
+EDF_names <- anonymisedMatchingOfDataAndEDF %>% 
+                filter(EDFmatchExists==T) %>% select(EDF_name)
+# Apply the function to each row of anonymisedMatchingOfDataAndEDF$EDF_name
+purrr::walk(EDF_names, setupFilenamesAndResaveEDFcontentsWithoutDateTime)
 
