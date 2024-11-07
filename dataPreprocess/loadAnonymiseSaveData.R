@@ -806,7 +806,7 @@ save_EDF_without_datetime <- function(EDFpathAndFname,destinationPathAndFname) {
 
 setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
   EDFfname<- paste0(EDFname,".EDF")
-  message("About to read",EDFfname)
+  message("About to read ",EDFfname)
   EDFfnameWithPath<- file.path(thisExpFolderEDF,EDFfname)
   destination_fname<- paste0(EDFfname,".RDS")
   destination<- file.path(destinationDir,"EDFs",destination_fname)
@@ -818,9 +818,20 @@ setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
 #EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
 #setupFilenamesAndResaveEDFcontentsWithoutDateTime(EDF1)
 
+#E463 has read error
+E463path<- file.path(thisExpFolderEDF,"E463.EDF" )
+EDFstuff<- eyelinkReader::read_edf(E463path)
+
+resultWithWarnings<- myTryCatch( 
+  EDFstuff<- eyelinkReader::read_edf(E463path)
+)
+
+dfWithWarnings<- myTryCatch( 
+
 message("Now will read in all EDF files and save their contents without datetime. This will cause a lot of annoying messages because SRresearch currently won't let you mute them.")
 EDF_names <- anonymisedMatchingOfDataAndEDF %>% 
                 filter(EDFmatchExists==T) %>% select(EDF_name)
 # Apply the function to each row of anonymisedMatchingOfDataAndEDF$EDF_name
-purrr::walk(EDF_names, setupFilenamesAndResaveEDFcontentsWithoutDateTime)
+purrr::walk(EDF_names$EDF_name, setupFilenamesAndResaveEDFcontentsWithoutDateTime)
+
 
