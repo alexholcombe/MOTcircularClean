@@ -383,6 +383,15 @@ thisExpFolderEDF = file.path(thisExpFolder,"EDF") #As opposed to Psychopy data f
 EDFfiles <- dir(path=thisExpFolderEDF,pattern='.EDF')  #find all EDF files in this directory
 message("Found ",length(EDFfiles)," EDF files and there are ",length(datfiles$session)," behavioral sessions (after excluding some participants).")
 EDFfiles<- data.frame(fname=EDFfiles)
+#Add the file size
+# Get the full file paths
+EDFfiles <- EDFfiles %>%
+  mutate(file_path = file.path(thisExpFolderEDF, fname))
+# Get the file size and add it as a new column
+EDFfiles <- EDFfiles %>%
+  mutate(file_size =  purrr::map_dbl(file_path, ~ file.info(.x)$size))
+#Delete the full file path
+EDFfiles$file_path <-NULL
 
 #Do some validation of the EDF filenames
 #Filename should start with participant's first initial, two-digit subject number, and 
@@ -773,20 +782,12 @@ if (nrow(terriblePerformers)) {
 #Participant 69 has about 67% accuracy. No immediate explanation from notes.
 #Participant 73 has 70% accuracy. No immediate explanation from notes.
 
-#Save anonymised data for loading by doAllAnalyses.R
+#Save anonymised Psychopy data, for later loading by doAllAnalyses.R
 destination_fname<- file.path(destinationDir,destinationStudyFolderName)
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
-#Also save all the information about the files in joined including EDF file match ,
-# save everything except the filename, because it has the date/time
-anonymisedMatchingOfDataAndEDF<- joined
-anonymisedMatchingOfDataAndEDF$fname <- NULL
-anonymisedMatchingOfDataAndEDF$IDsession <- NULL
-anonymisedMatchingOfDataAndEDF$ID <- NULL
-destination_fname = paste0(destination_fname,"_files_guide.tsv")
-write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
 #Copy the matching (don't include the degenerate ones or those of the excluded particiants) EDF files over 
 #To get rid of first letter from EDF files, would have to save them with a new name
@@ -797,11 +798,23 @@ library(eyelinkReader)
 #Create function that saves EDF file contents without date/time part of preface,
 #saving entire thing as an R object, but without
 #the preamble that contains the date/time information to prevent public knowledge
-save_EDF_without_datetime <- function(EDFpathAndFname,destinationPathAndFname) {
-  EDFstuff<- eyelinkReader::read_edf(EDFpathAndFname)
-  #The absolute date/time is specified only in EDFstuff$preamble[1], so delete that
-  EDFstuff$preamble[1] <- "Date/time redacted for privacy, to reduce chance of re-identification of participant identities"
-  saveRDS(EDFstuff,file=destinationPathAndFname,compress=T)
+save_EDF_without_datetime <- function(thisExpFolderEDF,EDFpathAndFname,destinationPathAndFname) {
+  
+  #In case error reading EDF file, need to catch errors
+  resultWithWarnings<- myTryCatch( 
+    EDFstuff<- eyelinkReader::read_edf(EDFpathAndFname)
+  )
+  if (!is.null(resultWithWarnings$error)) {
+    message("When trying to read ",EDFpathAndFname," got this error:",resultWithWarnings$error)
+    #Make copy to send them all to SR research
+    
+    file.copy(from = EDFpathAndFname, to = file.path(thisExpFolderEDF, "unreadableButGoodSubjectCopy"))
+    #NEED TO CHANGE FILE GUIDE TO say EDF file not available
+  } else {
+    #The absolute date/time is specified only in EDFstuff$preamble[1], so delete that
+    EDFstuff$preamble[1] <- "Date/time redacted for privacy, to reduce chance of re-identification of participant identities"
+    saveRDS(EDFstuff,file=destinationPathAndFname,compress=T)
+  }
 }
 
 setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
@@ -810,7 +823,7 @@ setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
   EDFfnameWithPath<- file.path(thisExpFolderEDF,EDFfname)
   destination_fname<- paste0(EDFfname,".RDS")
   destination<- file.path(destinationDir,"EDFs",destination_fname)
-  save_EDF_without_datetime(EDFfnameWithPath,destination)
+  save_EDF_without_datetime(thisExpFolderEDF,EDFfnameWithPath,destination)
 }
 
 #Prevent public date/time info by saving entire thing as an R object, but without
@@ -818,20 +831,37 @@ setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
 #EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
 #setupFilenamesAndResaveEDFcontentsWithoutDateTime(EDF1)
 
-#E463 has read error
-E463path<- file.path(thisExpFolderEDF,"E463.EDF" )
-EDFstuff<- eyelinkReader::read_edf(E463path)
+EDFreadErrors<- c('E463','W87c', 'W78c', 'S88c', 'S75c', 'S393', 'R91c', 'M74c', 'M323', 'L84c', 'L81c', 'L72c', 'K86c', 'J57c', 'J51c', 'H83c', 'G58c')
+#Add readError column and sort by that so can see sizes
+EDFfiles <- EDFfiles %>%
+  mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
+EDFfiles <- EDFfiles %>% arrange(EDFreadError)
+#Plot shows nothing strange about file sizes of those with EDF read error
+#ggplot(EDFfiles, aes(x = file_size, fill = EDFreadError)) +
+#  geom_histogram( position = "stack") + theme_minimal()
 
-resultWithWarnings<- myTryCatch( 
-  EDFstuff<- eyelinkReader::read_edf(E463path)
-)
+#E463 has read error, so does W87c, W78c, S88c, S75c, S393, R91c, M74c, M323, L84c, L81c, L72c,
+# K86c, J57c, J51c, H83c, G58c 
+#E463path<- file.path(thisExpFolderEDF,"E463.EDF" ) 
+#EDFstuff<- eyelinkReader::read_edf(E463path)
 
-dfWithWarnings<- myTryCatch( 
+#Also save all the information about the files in joined including EDF file match ,
+# save everything except the filename, because it has the date/time
+anonymisedMatchingOfDataAndEDF<- joined
+anonymisedMatchingOfDataAndEDF$fname <- NULL
+anonymisedMatchingOfDataAndEDF$IDsession <- NULL
+anonymisedMatchingOfDataAndEDF$ID <- NULL
+#add column for whether the EDF file can't be read
+anonymisedMatchingOfDataAndEDF <- anonymisedMatchingOfDataAndEDF %>%
+  mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
+destination_fname = paste0(destination_fname,"_files_guide.tsv")
+write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
 message("Now will read in all EDF files and save their contents without datetime. This will cause a lot of annoying messages because SRresearch currently won't let you mute them.")
-EDF_names <- anonymisedMatchingOfDataAndEDF %>% 
+EDF_names <- anonymisedMatchingOfDataAndEDF %>% #filter(EDF_name<"E463") %>%
                 filter(EDFmatchExists==T) %>% select(EDF_name)
 # Apply the function to each row of anonymisedMatchingOfDataAndEDF$EDF_name
 purrr::walk(EDF_names$EDF_name, setupFilenamesAndResaveEDFcontentsWithoutDateTime)
+
 
 
