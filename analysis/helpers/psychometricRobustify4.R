@@ -29,7 +29,6 @@ threshold_slope <- function( pfit, xfit, criterion) {
 		# if there are many point for the same threshold value, then function is flat
 		# in this point and slope=0
 		diffs = diff(pfit)
-	    #print(c("diffs are",diffs))
 		#find middle one of 0-slope flat area
 		idxsFlat= which(diffs==0)
 		err=FALSE

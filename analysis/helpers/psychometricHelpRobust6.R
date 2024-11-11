@@ -43,7 +43,7 @@ fitBrglmKludge<- function( df, lapseMinMax, returnAsDataframe, initialMethod, ve
 #Boot can't deal with a dataframe or list, so boot-related functions will call with returnAsDataframe=FALSE.
   if (!is.null(df$chance))
   	chance<- df$chance[1] #assume it's same for all these trials
-  else stop("df dataframe passed in must have chance")
+  else stop("df dataframe provided must specify chance")
   #round min up to the nearest .01
   min01 = ceiling(lapseMinMax[1]*100) /100
   #round max down to the nearest .01
@@ -146,8 +146,9 @@ fitBrglmKludge<- function( df, lapseMinMax, returnAsDataframe, initialMethod, ve
   else  #boot wants only a vector back. Can't handle a dataframe. So, cant pass text warning message back because all vec vals
   	dg<- cbind(mean,slope,chance,lapseRate,sigma,nWarns,nErrs) #have to be same type
   
-  if (verbosity>1)
+  if (verbosity>1) {
   	cat('exiting fitBrglmKludge with:\n'); print(dg)
+  }
   return( dg )  	#before I had the following which eventually crapped out inside boot return( list(dg,bestPredictor) )  
 }
 

@@ -38,8 +38,10 @@ fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity
   #data comes in one row per trial, but binomFit wants total correct, numTrials
   #so now I have to count number of correct, incorrect trials for each speed
   #assuming there's no other factors to worry about
-  cat("Finding best fit (calling fitParms) for")
-  print(groupvars)
+  if (verbosity > -1) {
+    cat("Finding best fit (calling fitParms) for")
+    print(groupvars)
+  }
   
   if (iv=="speed")
     sumry = plyr::ddply(df,plyr::.(speed),summarizNumTrials) #also calculates chance
@@ -54,10 +56,10 @@ fitData <- function(df,groupvars,         iv,lapseMinMax,initialMethod,verbosity
 
 datAnalyze$subject <- factor(datAnalyze$subject)
 
-fitParms<- datAnalyze |>
+fitParms<- datAnalyze |> #filter(subject==32) |>
     group_by(  !!! syms(factorsPlusSubject)  ) |> #Send each subset of the data to curvefit
     #Take each group's condition variables as a tibble and add the results of the curve fit
-    group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=0)  
+    group_modify( fitData, iv,lapseMinMax,initialMethod,verbosity=-1)  
 
 #Does this well now, using penalized.deviance to compare across lapse rates
 #tempDat<- subset(dat,numObjects==2 & numTargets==1 & subject=="AH" ) 
