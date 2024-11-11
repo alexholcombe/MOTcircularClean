@@ -15,8 +15,10 @@ if (!file.exists(anonDataFileWithPath)) {
 rawData<- readr::read_tsv(anonDataFileWithPath,  show_col_types=FALSE)
 
 numSs<- length(unique(rawData$IDnum))
-message("Have read in the data for",numSs," anonymized participants.")
-#Also need to get age and sex from somewhere.. a manual copy of the Sharepoint participant sheet with only those columns?
+message("Have read in the data for ",numSs," anonymized participants.")
+
+#Get age and sex info sheet - an anonymised copy of the Sharepoint participant sheet with many columns 
+#  redacted that was created by loadAnonymiseSaveData.R
 
 ###################################################
 #Exclusion criteria

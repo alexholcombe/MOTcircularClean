@@ -34,8 +34,12 @@ participantInfo <- participantInfo |> rename_with(tolower)
 pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,"edf transfered":"crowding exp notes")
 
 #Create new ID column that doesn't include first letter
-pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( ID = substr(`participant id`,2,3) )
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( IDnum = substr(`participant id`,2,3) )
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( ID = substr(`participant id`,1,3) )
 pInfo_reducedForPrivacy$`participant id` <- NULL   #Delete ID column that included letter
+
+#Reorder columns to put ID first
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy %>% select(IDnum,ID,everything())
 
 #Add random number to age to protect privacy
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> 
@@ -48,7 +52,7 @@ pInfo_reducedForPrivacy$gender<- tolower(pInfo_reducedForPrivacy$gender)
 #Now that the file has been anonymized, can save in the anonymized folder
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 
-destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,destinationName="youngOld")
+destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,"participantInfo")
 readr::write_tsv(pInfo_reducedForPrivacy, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed, agePerturbed) data aggregated into single file and saved to",destination_fname) )
 
