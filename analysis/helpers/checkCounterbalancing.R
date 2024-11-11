@@ -1,4 +1,4 @@
-checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
+checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE,verbose=T) {
 	#in data.frame df, check whether the factors in the list colNames reflect full factorial design (all combinations of levels occur equally often)
 	#
 	#dropZeros is useful if one of the factors nested in the others. E.g. testing different speeds for each level of    
@@ -19,13 +19,17 @@ checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
 	#if fully crossed, all entries in table should be identical (all combinations occur equally often)
 	frequenciesOfCombos <- unique(t)
 	
-	if ( length(frequenciesOfCombos) == 1 ) { 
-	  print(paste(colNamesStr,"fully crossed- each combination occurred",unique(t)[1],'times'))
+	if ( length(frequenciesOfCombos) == 1  ) { 
+	  if (verbose) {
+	    print(paste(colNamesStr,"fully crossed- each combination occurred",unique(t)[1],'times'))
+	  }
 	  ans <- TRUE
 	} else {
-	  print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),
+	  if (verbose) {
+	    print(paste(colNamesStr,"NOT fully crossed,",length(unique(t)),
 	              'distinct repetition numbers:'  ))
-	  print(frequenciesOfCombos)
+	    print(frequenciesOfCombos)
+	  }
 	  ans <- FALSE
 	}	
 	
@@ -34,11 +38,13 @@ checkCombosOccurEqually<- function(df,colNames,tolerance=0,dropZeros=FALSE) {
 	  percentDifferentFromMean <- freq / mean(frequenciesOfCombos)
 	  untolerable <- sum(which(percentDifferentFromMean > tolerance))
 	  if (untolerable) {
-	    print( paste0("And these differences exceed the tolerance of",tolerance) )
+	    print( paste0("The differences exceed the tolerance of",tolerance) )
 	    ans <- FALSE
 	  } else {
-	    print( paste("Differences do not exceed the tolerance of",tolerance) )
-	    ans <- TRUE
+	    if (verbose) {
+	      print( paste("Differences do not exceed the tolerance of",tolerance) )
+	      ans <- TRUE
+	    }
 	  }
 	}
 	
