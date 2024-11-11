@@ -52,7 +52,8 @@ pInfo_reducedForPrivacy$gender<- tolower(pInfo_reducedForPrivacy$gender)
 #Now that the file has been anonymized, can save in the anonymized folder
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
 
-destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,"participantInfo")
+destination_fname<- file.path("..",anonymizedDir,destinationStudyFolderName,
+                              "participantInfo_reducedForPrivacy")
 readr::write_tsv(pInfo_reducedForPrivacy, file = paste0(destination_fname,".tsv"))
 message( paste("Anonymised (first initial, date and time removed, agePerturbed) data aggregated into single file and saved to",destination_fname) )
 
@@ -547,6 +548,7 @@ joined <- left_join(datfiles, noMatchingEDF,
                             by = c("IDnum", "session","firstLetter"))
 
 #Now match the matches (as opposed to the non-matches, added above), so that have record of the EDF filename
+EDFfiles$ID<-NULL #Delete this because redundant with joined and causes two columns
 joinedWithEDF<- left_join(joined, EDFfiles, 
                           by = c("IDnum"="EDF_IDnum", "session"="EDF_session","firstLetter"="EDF_firstLetter"))
 
@@ -599,7 +601,7 @@ if ( !file.exists(destinationDir) ) {
 }
 
 #Read in datfiles #########################################
-#Read all the data into tibbles and then copied it over.
+#Read all the data into tibbles and then save it in the destination.
 #This involves handling that later files have different numbers of columns because I added more timing variables
 
 #Get the two kinds of column specification,for the early files with only timingBlips and the later with more columns
@@ -787,10 +789,11 @@ if (nrow(terriblePerformers)) {
 #Participant 73 has 70% accuracy. No immediate explanation from notes.
 
 #Save anonymised Psychopy data, for later loading by doAllAnalyses.R
-destination_fname<- file.path(destinationDir,destinationStudyFolderName)
+destination_fname<- file.path(destinationDir,
+                              paste0(destinationStudyFolderName,"_psychopy_data.tsv"))
 #save in tsv format. Only thing that's sometimes screwed this up is if comment has a newline in it
-readr::write_tsv(rawData, file = paste0(destination_fname,".tsv"))
-message( paste("Anonymised (first initial, date and time removed) data aggregated into single file and saved to",destination_fname) )
+readr::write_tsv(rawData, file = destination_fname)
+message( paste("Anonymised (first letter, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
 
 #Copy the matching (don't include the degenerate ones or those of the excluded particiants) EDF files over 
@@ -858,7 +861,8 @@ anonymisedMatchingOfDataAndEDF$ID <- NULL
 #add column for whether the EDF file can't be read
 anonymisedMatchingOfDataAndEDF <- anonymisedMatchingOfDataAndEDF %>%
   mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
-destination_fname = paste0(destination_fname,"_files_guide.tsv")
+destination_fname<- file.path(destinationDir,
+                              paste0(destinationStudyFolderName,"_files_guide.tsv"))
 write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
 message("Now will read in all EDF files and save their contents without datetime. This will cause a lot of annoying messages because SRresearch currently won't let you mute them.")
