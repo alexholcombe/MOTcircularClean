@@ -231,20 +231,18 @@ iv<-"speed"
 for (iv in c("speed","tf")) { #"logTf","logSpd"
   cat('Fitting data, extracting threshes, plotting with iv=',iv)
   
-  #The following file returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
+  #The following returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
   source('analyzeMakeReadyForPlot.R') 
   fitParms$iv<- iv
-  #Get the plotIndividDataAndCurves function from another file
+  
+  #Plot some psychometric functions, and look out for data that doesn't go low or high enough to 
+  # get the threshold.
+  #Get the plotIndividDataAndCurves function
   source('individDataWithPsychometricCurves.R') 
   factorsForPlot <- tibble( colorF = "targets", colF = "objects", rowF = "subject" )
   
-  #Problem curvefitting subject= 64  objects= 8  targets= 3. Indeed with targets =2 and objects =8, slope is positive!
-  #if length(unique())
-  
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) >= 27 ) |>
-        filter(  as.numeric(as.character(subject)) <= 999 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) >=27  ) |>
-    filter(  as.numeric(as.character(subject)) <= 999 )
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= 37 )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=37  )
   
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) 
@@ -252,16 +250,23 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   show(plt)
   ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
   
-  #Psychometric doesn't go high enough with subject= 69  objects= 8  targets= 2, which
-  #from the below individual graph looks appropriate - the persom was getting 25% wrong even at low speeds
+  #Even at slowest speeds, subject= 69  objects= 8  targets= 2 barely gets up to 75% correct.
+  #See below individual graph looks appropriate
   sub69<- datAnalyze |> filter( subject==69)
   s69<- plotIndividDataAndCurves("subject69",sub69,
-                           psychometricsForThisPlot |> filter(subject==69),
+                           psychometrics |> filter(subject==69),
                            tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
                            wrapOrGrid=T,xmin=0,xmax=1.5)
   
   show(s69)
-
+  #Plot another special subject individually
+  specialSubject<-54 #54 Doesn't go up to three-quarters thresh for 8 objects (78%)
+  specialSubjectData<- datAnalyze |> filter( subject==specialSubject)
+  specialSubjectPlot<- plotIndividDataAndCurves(as.character(specialSubject),specialSubjectData,
+                                 psychometrics |> filter(subject==specialSubject),
+                                 tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
+                                 wrapOrGrid=T,xmin=0,xmax=1.5)
+  show(specialSubjectPlot)  
   
   thrAll<-tibble()
   source("extractThreshesAndPlot.R") #provides threshes

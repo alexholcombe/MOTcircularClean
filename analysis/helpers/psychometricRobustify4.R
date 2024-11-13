@@ -294,9 +294,6 @@ binomfit_limsAlex <- function(r,m,x,p=1, link="logit", guessing=0, lapsing=0, K=
 		#cat("fit="); print(fit)
 	}
 	if (method=="glmCustomlink") {
-	  #clear warnings buffer. Doesn't work in modern versions of R. Change to https://stackoverflow.com/a/66497026/302378
-   	#assign("last.warning", NULL, envir = baseenv())  
-	  
    	#linkfun<<-linkfun; guessing<<-guessing; lapsing<<-lapsing; ctrl<<-ctrl; glmformula<<-glmformula; glmdata<<-glmdata;
 	  
   	fit<- glm( glmformula, data = glmdata, weights = m, 

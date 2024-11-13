@@ -302,9 +302,9 @@ extractThreshFromCurveNumerically<- function(df,groupvars, iv,threshCriterion) {
     return( data.frame(thresh=threshSlop$x_th, slopeThisCrit=threshSlop$slope, error=FALSE) )
   }, 
   error = function(e) {
-    cat("\nERROR occurred with ")  
     print(groupvars)
     print(e)
+    message("Not catastrophic, will continue extracting others. ")  
     return( data.frame(thresh=NA, slopeThisCrit=NA, error=TRUE) )
   }#,
   #       finally = function(e) { #just return the normal answer
