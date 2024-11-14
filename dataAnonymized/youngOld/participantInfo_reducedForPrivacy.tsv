@@ -1,82 +1,82 @@
 IDnum	gender	edf transfered	snellen-upper	snellen-lower	separation-upper in degree	separation-lower in degree	uppervf-acuity test  threshold estimate in minutes of arc  mean and sd	sd_uvf_acuity	lowervf-acuity test  threshold estimate in minutes of arc  mean and sd	sd_lvf_acuity	uppervf crowding threshold estimate in minutes of arc  mean and sd	sd_uvf_crowding	lowervf crowding threshold estimate in minutes of arc  mean and sd	sd_lvf_crowding	crowding exp notes	agePerturbed
-12	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-13	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-14	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-16	female	Only 2? a and b no c	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	66
-15	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	70
-17	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-18	female	Only 1?	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-19	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-20	female	no files?	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
-21	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	25
-22	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	81
-23	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	76
-24	female	only 1	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	25
-25	female	onl1	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-26	female	only 1, 226	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	23
-27	female	Only 1, K27	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	24
-28	female	Only 1, H28	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-29	female	Only 1, P29	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	23
-30	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-31	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-32	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-33	female	ONLY 2, j33 and J33	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-34	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-35	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-36	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-37	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	23
-38	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-39	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-40	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-41	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	28
-42	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-43	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-44	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	24
-45	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-46	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	24
-47	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-48	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	26
-49	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
-51	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	68
-52	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	71
-53	female	a.b	6 / 51	6 / 29	33.6	3.76	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   have to move eyes away to press the button	79
-54	male	yes	6 / 8	6 / 32	0.54	1.13	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   start to orally report the orientation but they peek the target a lot	80
-55	female	NA	6 / 48	6 / 31	6.07	4.83	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   start to orally report the orientation but they peek the target a lot	79
-55	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	75
-56	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	70
-57	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	68
-58	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	67
-59	female	NA	6 / 25	6 / 20	14.22	4.03	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 200ms in the acuity test, but for 300ms in crowding test, because could see nothing in crowding when 'C' present for 200ms	78
-60	male	NA	6 / 28	6 / 27	3.27	3	4.74	0.4	4.52	0.4	35.65	0.49	32.59	0.49	From this participant 'C' present for 300ms in both experiment	69
-61	female	NA	6 / 33	6 / 25	6.22	3.95	5.48	0.41	4.14	0.42	67.56	0.97	42.96	0.49	NA	71
-62	female	NA	6 / 29	6 / 39	2.22	3.95	4.82	0.41	6.5	0.42	24.43	0.5	42.73	0.5	NA	74
-64	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	80
-65	female	NA	6 / 14	6 / 24	3.56	4.13	2.34	0.44	4.01	0.4	38.42	0.48	44.95	0.54	NA	75
-66	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	79
-67	male	NA	6 / 57	6 / 32	4.62	3.28	9.54	0.41	5.41	0.41	50.05	0.58	35.46	0.48	peek a lot in both experiment	92
-68	female	NA	6 / 23	6 / 11	0.45	0.33	3.88	0.4	1.91	0.4	5.02	0.49	3.55	0.54	NA	70
-69	female	NA	6 / 33	6 / 33	57.3364	56.0413	5.5	0.41	5.54	0.41	681.17	1.66	663.42	1.68	Eye tracking plot shows, almost peek at each trial	78
-70	female	NA	6 / 29	6 / 33	2.12	0.67	4.91	0.4	5.53	0.4	23.25	0.5	7.14	0.51	Peeking in the beginning of each experiment but better at the end	71
-71	female	NA	6/27	6/26	3.56	2.95	4.47	0.4	4.28	0.41	38.34	0.49	32.01	0.48	Not peek too much in acuity test, but a few peek in crowding test	67
-72	female	NA	6/28	6/27	10.07	9.73	4.66	0.41	4.49	0.42	110.31	1.56	106.33	1.53	Eye gaze super well, seldom gaze on the target	71
-73	female	NA	6/13	6/15	2.61	0.73	2.14	0.44	2.57	0.43	28.64	0.5	7.71	0.51	First P without mask(noise) after the target(300ms)      unconciously gaze on the target  quite frequently	66
-74	male	NA	6/29	6/23	56.56	1.4	4.85	0.49	3.78	0.4	670.54	1.9	15.32	0.49	Fixation quite well in seperation test, and peek a little in crowding task	67
-75	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	73
-76	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	75
-77	female	NA	6/163	6/20	3.89	0.88	27.15	0.4	3.26	0.41	42.26	0.49	9.65	0.5	peek quite a few in both experiment	80
-78	female	NA	6/24	6/14	1.61	2.95	4.07	0.41	2.29	0.42	17.18	0.49	32.43	0.48	Fixation quite well in both task	66
-79	female	NA	6/13	6/19	58.87	44.05	2.12	0.41	3.21	0.4	702.73	1.85	504.85	2.06	Young participant  fixation well	21
-80	male	NA	6/29	6/27	2.88	2.55	4.89	0.41	4.48	0.41	31.4	0.49	27.38	0.48	Perfect fixation	22
-81	male	NA	6/83	6/64	14.7	3	13.91	0.41	10.6	0.43	161.61	1.96	33.11	0.48	Perfect fixation   seldom blink longest 45 sec	24
-82	female	NA	6/29	6/31	1.67	1.79	4.81	0.4	5.24	0.4	17.93	0.49	19.34	0.5	No peek	21
-83	male	NA	6/26	6/23	1.12	2.4	4.25	0.4	3.83	0.42	12.23	0.49	26.25	0.49	No peek	23
-84	female	NA	6/21	6/16	1.21	0.6	3.49	0.41	2.63	0.45	13.14	0.49	6.77	0.51	Peek and blink, when the stimulus is extremely  small the aged participant could also guess it correctly.	74
-85	female	NA	6/15	6/10	0.45	0.45	2.48	0.41	1.59	0.4	4.76	0.52	5.38	0.52	Peek after the 10 test trial when task getting diffcult	71
-86	female	NA	6/50	6/47	2.8	2.28	8.41	0.40	7.86	0.4	30.32	0.48	25.13	0.49	wonderful fixation	20
-87	male	NA	6/31	6/30	3.22	3.01	5.17	0.4	4.99	0.41	35.34	0.49	32.67	0.48	The only perfect fixation for aged participants	77
-88	male	NA	6/34	6/33	4.74	3.07	5.6	0.4	5.49	0.4	51.82	0.71	33.28	0.48	No peek	23
-89	female	NA	6/22	6/24	2.95	2.28	3.7	0.41	3.95	0.41	32.39	0.48	25.13	0.49	No peek	21
-90	female	NA	6/27	6/25	2.88	1.94	4.51	0.4	4.22	0.4	31.26	0.48	21.46	0.48	No peek	22
-91	female	NA	6/29	6/24	4.89	2.88	4.89	0.4	3.98	0.4	53.29	0.75	31.52	0.48	No peek	23
-92	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
-93	male	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
+12	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+13	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+14	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+15	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	68
+16	female	Only 2? a and b no c	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	64
+17	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+18	female	Only 1?	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+19	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+20	female	no files?	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	18
+21	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	23
+22	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	79
+23	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	74
+24	female	only 1	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	23
+25	female	onl1	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+26	female	only 1, 226	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
+27	female	Only 1, K27	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
+28	female	Only 1, H28	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+29	female	Only 1, P29	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
+30	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+31	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+32	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+33	female	ONLY 2, j33 and J33	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+34	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+35	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+36	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+37	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	21
+38	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+39	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+40	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+41	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	26
+42	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+43	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+44	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
+45	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+46	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	22
+47	male	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+48	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	24
+49	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	20
+51	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	66
+52	female	yes	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	69
+53	female	a.b	6 / 51	6 / 29	33.6	3.76	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   have to move eyes away to press the button	77
+54	male	yes	6 / 8	6 / 32	0.54	1.13	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   start to orally report the orientation but they peek the target a lot	78
+55	female	NA	6 / 48	6 / 31	6.07	4.83	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 500 ms   start to orally report the orientation but they peek the target a lot	77
+56	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	68
+57	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	66
+58	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	65
+59	female	NA	6 / 25	6 / 20	14.22	4.03	NA	NA	NA	NA	NA	NA	NA	NA	C' present for 200ms in the acuity test, but for 300ms in crowding test, because could see nothing in crowding when 'C' present for 200ms	76
+60	male	NA	6 / 28	6 / 27	3.27	3	4.74	0.4	4.52	0.4	35.65	0.49	32.59	0.49	From this participant 'C' present for 300ms in both experiment	67
+61	female	NA	6 / 33	6 / 25	6.22	3.95	5.48	0.41	4.14	0.42	67.56	0.97	42.96	0.49	NA	69
+62	female	NA	6 / 29	6 / 39	2.22	3.95	4.82	0.41	6.5	0.42	24.43	0.5	42.73	0.5	NA	72
+64	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	78
+65	female	NA	6 / 14	6 / 24	3.56	4.13	2.34	0.44	4.01	0.4	38.42	0.48	44.95	0.54	NA	73
+66	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	77
+67	male	NA	6 / 57	6 / 32	4.62	3.28	9.54	0.41	5.41	0.41	50.05	0.58	35.46	0.48	peek a lot in both experiment	90
+68	female	NA	6 / 23	6 / 11	0.45	0.33	3.88	0.4	1.91	0.4	5.02	0.49	3.55	0.54	NA	68
+69	female	NA	6 / 33	6 / 33	57.3364	56.0413	5.5	0.41	5.54	0.41	681.17	1.66	663.42	1.68	Eye tracking plot shows, almost peek at each trial	76
+70	female	NA	6 / 29	6 / 33	2.12	0.67	4.91	0.4	5.53	0.4	23.25	0.5	7.14	0.51	Peeking in the beginning of each experiment but better at the end	69
+71	female	NA	6/27	6/26	3.56	2.95	4.47	0.4	4.28	0.41	38.34	0.49	32.01	0.48	Not peek too much in acuity test, but a few peek in crowding test	65
+72	female	NA	6/28	6/27	10.07	9.73	4.66	0.41	4.49	0.42	110.31	1.56	106.33	1.53	Eye gaze super well, seldom gaze on the target	69
+73	female	NA	6/13	6/15	2.61	0.73	2.14	0.44	2.57	0.43	28.64	0.5	7.71	0.51	First P without mask(noise) after the target(300ms)      unconciously gaze on the target  quite frequently	64
+74	male	NA	6/29	6/23	56.56	1.4	4.85	0.49	3.78	0.4	670.54	1.9	15.32	0.49	Fixation quite well in seperation test, and peek a little in crowding task	65
+75	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	71
+76	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	73
+77	female	NA	6/163	6/20	3.89	0.88	27.15	0.4	3.26	0.41	42.26	0.49	9.65	0.5	peek quite a few in both experiment	78
+78	female	NA	6/24	6/14	1.61	2.95	4.07	0.41	2.29	0.42	17.18	0.49	32.43	0.48	Fixation quite well in both task	64
+79	female	NA	6/13	6/19	58.87	44.05	2.12	0.41	3.21	0.4	702.73	1.85	504.85	2.06	Young participant  fixation well	19
+80	male	NA	6/29	6/27	2.88	2.55	4.89	0.41	4.48	0.41	31.4	0.49	27.38	0.48	Perfect fixation	20
+81	male	NA	6/83	6/64	14.7	3	13.91	0.41	10.6	0.43	161.61	1.96	33.11	0.48	Perfect fixation   seldom blink longest 45 sec	22
+82	female	NA	6/29	6/31	1.67	1.79	4.81	0.4	5.24	0.4	17.93	0.49	19.34	0.5	No peek	19
+83	male	NA	6/26	6/23	1.12	2.4	4.25	0.4	3.83	0.42	12.23	0.49	26.25	0.49	No peek	21
+84	female	NA	6/21	6/16	1.21	0.6	3.49	0.41	2.63	0.45	13.14	0.49	6.77	0.51	Peek and blink, when the stimulus is extremely  small the aged participant could also guess it correctly.	72
+85	female	NA	6/15	6/10	0.45	0.45	2.48	0.41	1.59	0.4	4.76	0.52	5.38	0.52	Peek after the 10 test trial when task getting diffcult	69
+86	female	NA	6/50	6/47	2.8	2.28	8.41	0.40	7.86	0.4	30.32	0.48	25.13	0.49	wonderful fixation	18
+87	male	NA	6/31	6/30	3.22	3.01	5.17	0.4	4.99	0.41	35.34	0.49	32.67	0.48	The only perfect fixation for aged participants	75
+88	male	NA	6/34	6/33	4.74	3.07	5.6	0.4	5.49	0.4	51.82	0.71	33.28	0.48	No peek	21
+89	female	NA	6/22	6/24	2.95	2.28	3.7	0.41	3.95	0.41	32.39	0.48	25.13	0.49	No peek	19
+90	female	NA	6/27	6/25	2.88	1.94	4.51	0.4	4.22	0.4	31.26	0.48	21.46	0.48	No peek	20
+91	female	NA	6/29	6/24	4.89	2.88	4.89	0.4	3.98	0.4	53.29	0.75	31.52	0.48	No peek	21
+92	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+93	male	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	19
+98	female	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	73

@@ -1,5 +1,5 @@
 #expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
-#Gets behavioral data and combines with eyetracking result and anonymises 
+#Gets behavioral xdata and combines with eyetracking result and anonymises 
 rm(list = ls()) #Clear workspace so that any code executed before won't contaminate this run
 library(dplyr)
 library(stringr)
@@ -34,7 +34,7 @@ participantInfo <- participantInfo |> rename_with(tolower)
 pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,"edf transfered":"crowding exp notes")
 
 #There are two participants numbered 55, J55 and C55. Make their numbers different by changing J55 to J98
-participantInfo<- participantInfo |> mutate(`participant id` = recode(`participant id`, "J55" = "J98"))
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate(`participant id` = recode(`participant id`, "J55" = "J98"))
 
 #Create new ID column that doesn't include first letter
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( IDnum = substr(`participant id`,2,3) )

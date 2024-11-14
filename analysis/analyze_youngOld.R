@@ -36,9 +36,9 @@ pInfoReducedForPrivacy<- pInfoReducedForPrivacy |>
             mutate(age = if_else(agePerturbed>60, "Old", "Young"))
 
 ###Join age and sex to behavioural data
-ageSex<- pInfoReducedForPrivacy |> select(IDnum,gender,age,agePerturbed)
+ageGender<- pInfoReducedForPrivacy |> select(IDnum,gender,age,agePerturbed)
 #ALSO ADD ACUITY AND CROWDING for exploratory analyses
-rawData<- rawData |> left_join(ageSex, by = IDnum)
+rawData<- rawData |> left_join(ageGender, by = join_by(IDnum))
 
 ###################################################
 ############Exclusion criteria########################
