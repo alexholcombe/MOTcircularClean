@@ -33,13 +33,15 @@ participantInfo <- participantInfo |> rename_with(tolower)
 
 pInfo_reducedForPrivacy<- participantInfo |> select("participant id",age,gender,"edf transfered":"crowding exp notes")
 
+#There are two participants numbered 55, J55 and C55. Make their numbers different by changing J55 to J98
+participantInfo<- participantInfo |> mutate(`participant id` = recode(`participant id`, "J55" = "J98"))
+
 #Create new ID column that doesn't include first letter
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( IDnum = substr(`participant id`,2,3) )
-pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( ID = substr(`participant id`,1,3) )
 pInfo_reducedForPrivacy$`participant id` <- NULL   #Delete ID column that included letter
 
 #Reorder columns to put ID first
-pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy %>% select(IDnum,ID,everything())
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy %>% select(IDnum,everything())
 
 #Add random number to age to protect privacy
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> 
@@ -309,11 +311,7 @@ if (nrow(filesMoreThanThreeAfterCue)){
 }
 #ggplot(datfiles,aes(x=pTrialsLotsAfterCue)) + geom_histogram(binwidth=.005) + xlim(-.1,1)
 
-#Consider files with very few rows. 
-
-
 #Other than that, every remaining file has at least 90 trials, as of 25 Oct 2024
-
 
 ##############################################################################################
 ##############################################
@@ -582,6 +580,20 @@ joined<- joined %>% rowwise() %>%
     TRUE ~ -999  
   ))
 
+EDFreadErrors<- c('E463','W87c', 'W78c', 'S88c', 'S75c', 'S393', 'R91c', 'M74c', 'M323', 'L84c', 'L81c', 'L72c', 'K86c', 'J57c', 'J51c', 'H83c', 'G58c')
+#Add readError column and sort by that so can see sizes
+EDFfiles <- EDFfiles %>%
+  mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
+EDFfiles <- EDFfiles %>% arrange(EDFreadError)
+#Plot shows nothing strange about file sizes of those with EDF read error
+#ggplot(EDFfiles, aes(x = file_size, fill = EDFreadError)) +
+#  geom_histogram( position = "stack") + theme_minimal()
+
+#E463 has read error, so does W87c, W78c, S88c, S75c, S393, R91c, M74c, M323, L84c, L81c, L72c,
+# K86c, J57c, J51c, H83c, G58c 
+#E463path<- file.path(thisExpFolderEDF,"E463.EDF" ) 
+#EDFstuff<- eyelinkReader::read_edf(E463path)
+
 #Next, save data to anonymised data folder and only then do eyetracking filtering.
 #Ideally would strip all date and time info from the anonymised data
 #That would mean re-saving each individual datafile as  IDnum + sessionNum.tsv and the EDF file
@@ -691,9 +703,6 @@ for (i in 1:nrow(joined)) {
   #rawDataThis$pTrialsLongFramesAfterCue <- thisRow$pTrialsLongFramesAfterCue
   rawDataThis$EDFmatchExists <- thisRow$EDFmatchExists
   
-  #Delete subject because it contains their first initial
-  rawDataThis$subject <- NULL
-
   removeFirstTrialIfOdd = FALSE #This was added because in previous programs, somehow there was an odd trial some of the time
   if (nrow(rawDataThis) %% 2 ==1) {
     msg=paste0(" Odd number of trials (",nrow(rawDataThis),"); was session incomplete, or extra trial at end?")  
@@ -761,7 +770,18 @@ for (i in 1:nrow(joined)) {
   }
 } #Finished reading each behavioral file and aggregating into one huge tibble
 
-#Summarise number of files
+#re-order columns
+rawData<- rawData %>% select(subject, IDnum, sessionNum, EDFmatchExists, everything())
+
+#There are two participants numbered 55, J55 and C55. Make their numbers different by changing J55 to J98
+rawData<- rawData %>% mutate(IDnum = ifelse(subject == "J55", 98, IDnum))
+rawData<- rawData %>% mutate(subject = ifelse(subject == "J55", "J98", subject))
+#rawData |> filter(IDnum==98)
+
+#Delete subject because it contains their first initial
+rawData$subject <- NULL
+
+#Summarise number of Psychopy files
 numSs<- length( unique(rawData$IDnum) )
 numSessions <- n_groups(  rawData %>% group_by(IDnum,session)                          )
 perSubjSession<- rawData %>%
@@ -795,7 +815,6 @@ destination_fname<- file.path(destinationDir,
 readr::write_tsv(rawData, file = destination_fname)
 message( paste("Anonymised (first letter, date and time removed) data aggregated into single file and saved to",destination_fname) )
 
-
 #Copy the matching (don't include the degenerate ones or those of the excluded particiants) EDF files over 
 #To get rid of first letter from EDF files, would have to save them with a new name
 #, simply with the first letter stripped. But then would have to specially handle 55 and any other 
@@ -808,50 +827,52 @@ library(eyelinkReader)
 save_EDF_without_datetime <- function(thisExpFolderEDF,EDFpathAndFname,destinationPathAndFname) {
   
   #In case error reading EDF file, need to catch errors
+  errorReading<-FALSE
   resultWithWarnings<- myTryCatch( 
     EDFstuff<- eyelinkReader::read_edf(EDFpathAndFname)
   )
   if (!is.null(resultWithWarnings$error)) {
     message("When trying to read ",EDFpathAndFname," got this error:",resultWithWarnings$error)
-    #Make copy to send them all to SR research
-    
-    file.copy(from = EDFpathAndFname, to = file.path(thisExpFolderEDF, "unreadableButGoodSubjectCopy"))
+    pathToSaveUnreadables<- file.path(thisExpFolderEDF, "unreadableButGoodSubjectCopy")
+    if (!dir.exists(pathToSaveUnreadables)) {
+      stop("Was looking for this directory but doesn't exist:",pathToSaveUnreadables)
+    }
+    file.copy(from = EDFpathAndFname, to = pathToSaveUnreadables)
+    errorReading<-TRUE
     #NEED TO CHANGE FILE GUIDE TO say EDF file not available
   } else {
     #The absolute date/time is specified only in EDFstuff$preamble[1], so delete that
     EDFstuff$preamble[1] <- "Date/time redacted for privacy, to reduce chance of re-identification of participant identities"
     saveRDS(EDFstuff,file=destinationPathAndFname,compress=T)
   }
+  return (errorReading)
 }
 
-setupFilenamesAndResaveEDFcontentsWithoutDateTime<- function(EDFname) {
+setupFilenamesAndResaveEDFcontentsWithoutLetterDateTime<- function(EDFname) {
   EDFfname<- paste0(EDFname,".EDF")
+  #For destination, remove first letter (initial) from filename
+  destinationEDFname<-substr(EDFfname,2,99)
   message("About to read ",EDFfname)
+  #Handle duplicate participant number
+  if (substr(EDFname,1,3) == "J55") { #duplicate participant number
+    session<-substr(EDFname,4,4)
+    destinationEDFname<- paste0("98",session,".EDF")
+  }
   EDFfnameWithPath<- file.path(thisExpFolderEDF,EDFfname)
-  destination_fname<- paste0(EDFfname,".RDS")
+  
+  destination_fname<- paste0(destinationEDFname,".RDS")
   destination<- file.path(destinationDir,"EDFs",destination_fname)
-  save_EDF_without_datetime(thisExpFolderEDF,EDFfnameWithPath,destination)
+  message("Will save to",destination)
+  #Dont have a way to do anything with errorReading flag because I use purrr_walk to call this function
+  errorReading<- save_EDF_without_datetime(thisExpFolderEDF,EDFfnameWithPath,destination)
 }
 
 #Prevent public date/time info by saving entire thing as an R object, but without
 #the preamble that contains the date/time information
-#EDF1<- anonymisedMatchingOfDataAndEDF$EDF_name[1]
-#setupFilenamesAndResaveEDFcontentsWithoutDateTime(EDF1)
 
-EDFreadErrors<- c('E463','W87c', 'W78c', 'S88c', 'S75c', 'S393', 'R91c', 'M74c', 'M323', 'L84c', 'L81c', 'L72c', 'K86c', 'J57c', 'J51c', 'H83c', 'G58c')
-#Add readError column and sort by that so can see sizes
-EDFfiles <- EDFfiles %>%
-  mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
-EDFfiles <- EDFfiles %>% arrange(EDFreadError)
-#Plot shows nothing strange about file sizes of those with EDF read error
-#ggplot(EDFfiles, aes(x = file_size, fill = EDFreadError)) +
-#  geom_histogram( position = "stack") + theme_minimal()
 
-#E463 has read error, so does W87c, W78c, S88c, S75c, S393, R91c, M74c, M323, L84c, L81c, L72c,
-# K86c, J57c, J51c, H83c, G58c 
-#E463path<- file.path(thisExpFolderEDF,"E463.EDF" ) 
-#EDFstuff<- eyelinkReader::read_edf(E463path)
-
+###################################################################
+#Create files_guide
 #Also save all the information about the files in joined including EDF file match ,
 # save everything except the filename, because it has the date/time
 anonymisedMatchingOfDataAndEDF<- joined
@@ -861,15 +882,27 @@ anonymisedMatchingOfDataAndEDF$ID <- NULL
 #add column for whether the EDF file can't be read
 anonymisedMatchingOfDataAndEDF <- anonymisedMatchingOfDataAndEDF %>%
   mutate(EDFreadError = if_else(EDF_name %in% EDFreadErrors, TRUE, FALSE))
-destination_fname<- file.path(destinationDir,
-                              paste0(destinationStudyFolderName,"_files_guide.tsv"))
-write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
+#There are two participants numbered 55, J55 and C55. Make their numbers different by changing J55 to 98
+anonymisedMatchingOfDataAndEDF<- anonymisedMatchingOfDataAndEDF %>% 
+  mutate(IDnum = ifelse(firstLetter == "J" && IDnum=="55", "98", IDnum))
+
+#Order by most important columns
+anonymisedMatchingOfDataAndEDF<- anonymisedMatchingOfDataAndEDF %>% select(IDnum, session, EDFmatchExists, everything())
+anonymisedMatchingOfDataAndEDF <- anonymisedMatchingOfDataAndEDF |> arrange(IDnum,session)
+
+##########################
+# Anonymize EDF files by saving an RDS without preamble and first letter date time
 message("Now will read in all EDF files and save their contents without datetime. This will cause a lot of annoying messages because SRresearch currently won't let you mute them.")
 EDF_names <- anonymisedMatchingOfDataAndEDF %>% #filter(EDF_name<"E463") %>%
                 filter(EDFmatchExists==T) %>% select(EDF_name)
 # Apply the function to each row of anonymisedMatchingOfDataAndEDF$EDF_name
-purrr::walk(EDF_names$EDF_name, setupFilenamesAndResaveEDFcontentsWithoutDateTime)
+purrr::walk(EDF_names$EDF_name, setupFilenamesAndResaveEDFcontentsWithoutLetterDateTime)
 
-
+#Now that have gotten the EDF files and re-saved them, can delete first letter containing fields
+anonymisedMatchingOfDataAndEDF$firstLetter <- NULL
+anonymisedMatchingOfDataAndEDF$EDF_name<- NULL
+destination_fname<- file.path(destinationDir,
+                              paste0(destinationStudyFolderName,"_files_guide.tsv"))
+write_tsv(anonymisedMatchingOfDataAndEDF, file = destination_fname)
 
