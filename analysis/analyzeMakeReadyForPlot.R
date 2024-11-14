@@ -126,3 +126,4 @@ stopifnot(exists("fitParms"))
 stopifnot(exists("psychometrics"))
 stopifnot(exists("datMeans"))
 stopifnot(exists("calcPctCorrThisIvVal"))
+

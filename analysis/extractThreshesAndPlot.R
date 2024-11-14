@@ -1,5 +1,5 @@
-#Intended to be called by doAllAnalyses.R, which 
-#variables expected:
+#Intended to be called by analyze_youngOld.R, with 
+#variables expected to have already been created:
 #factorsPlusSubject
 #fitParms
 #psychometrics
@@ -146,11 +146,47 @@ show(h)
 ggsave( paste0('figs/',tit,'.png') )
 
 message('I give you threshes')
+####################
+####### AGE ####################################################################
+#################Plot mean speed threshes against distractors
+######Plot mean speed threshes against numTargets
+tit<-paste0("SpeedMeanThreshAgainstTargets_age",infoMsg,"_threeQuarterThresh")
+quartz(title=tit,width=4,height=3) 
+threeQuartersThreshes<- subset(threshes,criterionNote=="threeQuarters")
+couldNotBeEstimated<- threeQuartersThreshes %>% filter(is.na(thresh))
+threeQuartersThreshes<- threeQuartersThreshes %>% filter(!is.na(thresh))
+h<-ggplot(data=threeQuartersThreshes,   
+          aes(x=targets,y=thresh,color=age,
+              shape=factor(objects)))
+#h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
+#ylim(1.4,2.5) DO NOT use this command, it will drop some data
+#h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
+#h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
+h<-h+ stat_summary(fun=mean,geom="point")
+#h<-h+ stat_summary(fun=mean,geom="line")
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+                  fun.args=list(conf.int=.95))
+#Represent degenerate subjects with grey question marks low on axis
+if (nrow(couldNotBeEstimated)) {
+  minYaxis<- layer_scales(h)$y$get_limits()[1]
+  couldNotBeEstimated$thresh <- runif(nrow(couldNotBeEstimated), 
+                                      min = minYaxis, max = minYaxis + 0.01)
+  h<-h+ geom_point(data=couldNotBeEstimated, position=position_dodge(width=dodgeWidth),
+                   size=3,alpha=0.5,shape = "\u003F") #, color="grey")
+  
+}
+h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
+if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
+} else h<-h+ggtitle('4,8 validate tf limit.')
+#h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
+h<-h+ggtitle(paste("4,8 difft validates t.f. limit. Speed limits vary widely",lapseMsg))
+show(h)
+ggsave( paste0('figs/',tit,'.png') )
 
-#######Age plots####################################################################
-###########Plot mean speed threshes against distractors
-
-
+TRY FITTING TEMPORALFREQ
+  
+)
   # ##########################################################################################
 # ##########Plot mean speed threshes against distractors
 # tit<-paste0('SpeedMeanThreshAgainstDistractors ',infoMsg,' threeQuarterThresh') 

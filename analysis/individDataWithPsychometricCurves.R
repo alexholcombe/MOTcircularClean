@@ -4,7 +4,8 @@
 #iv - "tf" or "speed"
 if (!("speed" %in% colnames(psychometrics))) { #psychometrics must have been fit to tf
   stopifnot("tf" %in% colnames(psychometrics)) #confirm my interpretation that tf was fit
-  psychometrics$speed = psychometrics$tf / psychometrics$numObjects #because always plot them in terms of speed
+  psychometrics$speed = psychometrics$tf / 
+              as.numeric(as.character(psychometrics$objects)) #need because plot in terms of speed
 }
 
 #(expName,datForThisPlot,psychometricsForThisPlot,factorsForPlot)
@@ -64,8 +65,6 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapO
   # g<-g+ geom_line(data=threshLines,lty=3,size=0.9)  #,color="black") #emphasize lines so can see what's going on
   return(g)
 }
-
-#condition: centered, slightly off-center, or fully off-center
 
 # for ( expThis in sort(unique(dat$exp)) ) {  #draw individual Ss' data, for each experiment
 #   title<-paste('E',expThis,' individual Ss data',sep='')

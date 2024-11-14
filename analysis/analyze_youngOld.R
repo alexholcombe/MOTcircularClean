@@ -90,6 +90,7 @@ datAnalyze<- datAnalyze %>% dplyr::rename(objects = numObjects) %>% mutate(objec
 datAnalyze<- datAnalyze %>% dplyr::rename(targets = numTargets) %>% mutate(targets = as.factor(targets))
 
 datAnalyze$subject<- datAnalyze$IDnum
+datAnalyze$tf <- datAnalyze$speed * as.numeric( as.character(datAnalyze$objects) )
 factorsForBreakdownForAnalysis <- c('objects','targets') #young
 
 #If staircases work, average correct should be 0.794 in each condition
@@ -238,12 +239,15 @@ if (excludeFixationViolations) {
 ############################################################################################################
 #### Fit data and extract thresholds ###############################################################
 #########################################
-iv<-"speed"
+iv<-"speed" #tf
 for (iv in c("speed","tf")) { #"logTf","logSpd"
   cat('Fitting data, extracting threshes, plotting with iv=',iv)
   
   #The following returns fitParms for each subject, psychometrics, and function calcPctCorrThisSpeed
-  source('analyzeMakeReadyForPlot.R') 
+  source('analyzeMakeReadyForPlot.R')
+  #Join with age gender info
+  fitParms$subject<- as.numeric( as.character(fitParms$subject) )
+  fitParms<-fitParms |> left_join(ageGender, by = join_by(subject==IDnum))
   fitParms$iv<- iv
   
   #Plot some psychometric functions; look out for data that doesn't go low or high enough to 
@@ -253,8 +257,9 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   factorsForPlot <- tibble( colorF = "targets", colF = "objects", rowF = "subject" )
   
   #Make a few plots of psychometric functions
-  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= 37 )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=37  )
+  maxSubjForPlot<-37
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= maxSubjForPlot )
+  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=maxSubjForPlot  )
   
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) 
