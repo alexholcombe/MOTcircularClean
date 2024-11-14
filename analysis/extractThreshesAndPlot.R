@@ -82,7 +82,6 @@ themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, s
         panel.background = element_rect(fill = "transparent",colour = NA),
         plot.background = element_rect(fill = "transparent",colour = NA)   )
 ##########Plot midpoint threshes, age*subject*numTargets*numObjects ################
-##Setup age plot here later
 tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
 dv="speed"
 quartz(title=tit,width=6,height=3) #create graph of thresholds
@@ -127,7 +126,8 @@ h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
 #h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
 h<-h+ stat_summary(fun=mean,geom="point")
 #h<-h+ stat_summary(fun=mean,geom="line")
-h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,conf.int=.95) #error bar
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+                  fun.args=list(conf.int=.95))
 #Represent degenerate subjects with grey question marks low on axis
 if (nrow(couldNotBeEstimated)) {
   minYaxis<- layer_scales(h)$y$get_limits()[1]
@@ -147,7 +147,11 @@ ggsave( paste0('figs/',tit,'.png') )
 
 message('I give you threshes')
 
-# ##########################################################################################
+#######Age plots####################################################################
+###########Plot mean speed threshes against distractors
+
+
+  # ##########################################################################################
 # ##########Plot mean speed threshes against distractors
 # tit<-paste0('SpeedMeanThreshAgainstDistractors ',infoMsg,' threeQuarterThresh') 
 # quartz(title=tit,width=4,height=3) #create graph of threshes
