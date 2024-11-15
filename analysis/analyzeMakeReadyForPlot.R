@@ -11,7 +11,7 @@ if (varyLapseRate) { lapseMinMax= c(0,0.05) }  else  #range of lapseRates to try
 	{ lapseMinMax = c(0.01,0.01) }
 chanceRate=.5
 
-xLims=c(.04,1.5);  if (iv=="tf") {xLims=c(.5,7)}
+xLims=c(.04,1.5);  if (iv=="tf") {xLims=c(.001,7)}
 yLims=c(.3,1.05)
 numPointsForPsychometricCurve=150 #250
 #end global variables expected

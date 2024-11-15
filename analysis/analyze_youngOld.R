@@ -259,10 +259,12 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #Make a few plots of psychometric functions
   maxSubjForPlot<-37
   datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) <= maxSubjForPlot )
-  psychometricsForThisPlot <- psychometrics |> filter( as.numeric(as.character(subject)) <=maxSubjForPlot  )
-  
+  psychometricsForThisPlot <- psychometrics |> 
+                                  filter( as.numeric(as.character(subject)) <=maxSubjForPlot  )
+  xmax=1.5
+  if (iv=="tf") { xmax=6 }
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
-                           factorsForPlot,wrapOrGrid=T,xmin=0,xmax=1.5) 
+                           iv,factorsForPlot,wrapOrGrid=T,xmin=0,xmax=xmax) 
   plt<-plt+facet_wrap(vars(subject))
   show(plt)
   ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
@@ -271,7 +273,7 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #See below individual graph looks appropriate
   sub69<- datAnalyze |> filter( subject==69)
   s69<- plotIndividDataAndCurves("subject69",sub69,
-                           psychometrics |> filter(subject==69),
+                           psychometrics |> filter(subject==69), iv,
                            tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
                            wrapOrGrid=T,xmin=0,xmax=1.5)
   
@@ -280,15 +282,16 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   specialSubject<-54 #54 Doesn't go up to three-quarters thresh for 8 objects (78%)
   specialSubjectData<- datAnalyze |> filter( subject==specialSubject)
   specialSubjectPlot<- plotIndividDataAndCurves(as.character(specialSubject),specialSubjectData,
-                                 psychometrics |> filter(subject==specialSubject),
+                                 psychometrics |> filter(subject==specialSubject), iv,
                                  tibble( colorF = "targets", colF = "targets", rowF = "objects" ),
                                  wrapOrGrid=T,xmin=0,xmax=1.5)
   show(specialSubjectPlot)  
   
   thrAll<-tibble()
   source("extractThreshesAndPlot.R") #provides threshes
-  #Add threshes to the plots so that can see where threshold extraction failed
   
+  #Psychometric functions, create publishable plots
+  #Add threshes to the plots so that can see where threshold extraction failed
   thrAll<-rbind(thrAll,threshes)
   #below is old way, saving separate threshes
   #   varName=paste("threshes_",iv,"_",expName,sep='') #combine threshes

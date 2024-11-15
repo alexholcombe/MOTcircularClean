@@ -72,6 +72,12 @@ for (numObjectsThis in unique(numObjects)) {
 #slow speeds with objects = 8
 #errorConditions<- threshes %>% filter(is.na(thresh))
 #print(errorConditions)
+threshes$age<- as.factor(threshes$age)
+#ends up with Old before Young which is non-intuitive in the plot legends, so reverse
+threshes$age <- factor(threshes$age, levels = levels(threshes$age)[c(2,1)])
+#Similarly reverse male and female
+threshes$gender<- as.factor(threshes$gender)
+threshes$gender <- factor(threshes$gender, levels = levels(threshes$gender)[c(2,1)])
 
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
   theme(axis.line = element_line(linewidth=.3, color = "grey"), 
@@ -83,13 +89,12 @@ themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, s
         plot.background = element_rect(fill = "transparent",colour = NA)   )
 ##########Plot midpoint threshes, age*subject*numTargets*numObjects ################
 tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
-dv="speed"
 quartz(title=tit,width=6,height=3) #create graph of thresholds
 dodgeWidth<-.4
 midpointThreshes<- subset(threshes,criterionNote=="midpoint")
 h<-ggplot(data=midpointThreshes,
-          aes(x=targets,y=thresh,color=factor(objects), 
-              group=interaction(subject,objects))) #this is critical for points and lines to dodge in same way
+          aes(x=targets,y=thresh,color=factor(objects)), 
+              group=interaction(subject,objects)) #this is critical for points and lines to dodge in same way
 #h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
@@ -104,31 +109,37 @@ if (nrow(couldNotBeEstimated)) {
   
 }
 
-h<-h+ylab(  paste('threshold ',iv,' (',ifelse(dv=="speed","rps","Hz"),')',sep='') )  
+h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='') )  
 if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge when plot tf") 
-} else h<-h+ggtitle('4,8 validate tf limit.')
+} else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################################
-#############three-quarters threshes
-######Plot mean speed threshes against numTargets
-tit<-paste0("SpeedMeanThreshAgainstTargets)",infoMsg,"_threeQuarterThresh")
+#############
+######Plot mean threshes against numTargets
+thisCriterion<-"midpoint"
+tit<-paste0("MeanThreshAgainstTargets)",infoMsg,"_",thisCriterion)
 quartz(title=tit,width=4,height=3) 
-threeQuartersThreshes<- subset(threshes,criterionNote=="threeQuarters")
-couldNotBeEstimated<- threeQuartersThreshes %>% filter(is.na(thresh))
-threeQuartersThreshes<- threeQuartersThreshes %>% filter(!is.na(thresh))
-h<-ggplot(data=threeQuartersThreshes,   
+threshesThis<- subset(threshes,criterionNote==thisCriterion)
+couldNotBeEstimated<- threshesThis %>% filter(is.na(thresh))
+threshesThisGood<- threshesThis %>% filter(!is.na(thresh))
+h<-ggplot(data=threshesThisGood,   
           aes(x=targets,y=thresh,color=factor(objects)))
-#h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
+h<-h+ labs(color = "objects") # Change legend title from factor(objects) to objects
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
 #h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
-h<-h+ stat_summary(fun=mean,geom="point")
+pd=position_dodge(width=dodgeWidth) 
+h<-h+ stat_summary(fun=mean,geom="point",position=pd)
 #h<-h+ stat_summary(fun=mean,geom="line")
-h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
                   fun.args=list(conf.int=.95))
-#Represent degenerate subjects with grey question marks low on axis
+#Show individual points, for non-degenerate data
+h<-h+ geom_point(data=threshesThisGood, 
+                 position=position_jitterdodge(jitter.width = 0.1, dodge.width = 0.5),
+                 alpha=.7, size= 0.1)
+#Represent degenerate subjects with faded question marks low on axis
 if (nrow(couldNotBeEstimated)) {
   minYaxis<- layer_scales(h)$y$get_limits()[1]
   couldNotBeEstimated$thresh <- runif(nrow(couldNotBeEstimated), 
@@ -148,25 +159,32 @@ ggsave( paste0('figs/',tit,'.png') )
 message('I give you threshes')
 ####################
 ####### AGE ####################################################################
-#################Plot mean speed threshes against distractors
-######Plot mean speed threshes against numTargets
-tit<-paste0("SpeedMeanThreshAgainstTargets_age",infoMsg,"_threeQuarterThresh")
-quartz(title=tit,width=4,height=3) 
-threeQuartersThreshes<- subset(threshes,criterionNote=="threeQuarters")
-couldNotBeEstimated<- threeQuartersThreshes %>% filter(is.na(thresh))
-threeQuartersThreshes<- threeQuartersThreshes %>% filter(!is.na(thresh))
-h<-ggplot(data=threeQuartersThreshes,   
+#################Plot threshes against distractors
+######Plot threshes against numTargets
+quartz(title=tit,width=4,height=6) 
+thisCriterion<-"midpoint"
+tit<-paste0("meanThreshAgainstTargets_age_",infoMsg,"_",thisCriterion)
+threshesThis<- subset(threshes,criterionNote==thisCriterion)
+couldNotBeEstimated<- threshesThis %>% filter(is.na(thresh))
+threshesThisGood<- threshesThis %>% filter(!is.na(thresh))
+h<-ggplot(data=threshesThisGood,   
           aes(x=targets,y=thresh,color=age,
               shape=factor(objects)))
+h<-h+ labs(shape = "objects") # Change legend title from factor(objects) to objects
 #h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
 #h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
-h<-h+ stat_summary(fun=mean,geom="point")
+pd=position_dodge(width=dodgeWidth) 
+h<-h+ stat_summary(fun=mean,geom="point", size=3, position=pd)
 #h<-h+ stat_summary(fun=mean,geom="line")
-h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
                   fun.args=list(conf.int=.95))
+#Show individual points, for non-degenerate data
+h<-h+ geom_point(data=threshesThisGood, 
+                 position=position_jitterdodge(jitter.width = 0.1, dodge.width = 0.5),
+                 alpha=.7, size=0.6)
 #Represent degenerate subjects with grey question marks low on axis
 if (nrow(couldNotBeEstimated)) {
   minYaxis<- layer_scales(h)$y$get_limits()[1]
@@ -178,16 +196,56 @@ if (nrow(couldNotBeEstimated)) {
 }
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
 if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
-} else h<-h+ggtitle('4,8 validate tf limit.')
+} else h<-h+ggtitle('4,8 replicate partial tf limit for young, but worse with 8 objects for old.')
 #h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
-h<-h+ggtitle(paste("4,8 difft validates t.f. limit. Speed limits vary widely",lapseMsg))
+show(h)
+ggsave( paste0('figs/',tit,'.png') )
+###################################
+# ######GENDER###################################################################
+# ##########
+quartz(title=tit,width=5,height=7) 
+thisCriterion<-"midpoint" #threeQuarters
+tit<-paste0("meanThreshAgainstTargets_gender_",infoMsg,"_",thisCriterion)
+threshesThis<- subset(threshes,criterionNote==thisCriterion)
+couldNotBeEstimated<- threshesThis %>% filter(is.na(thresh))
+threshesThisGood<- threshesThis %>% filter(!is.na(thresh))
+couldNotBeEstimated<- threeQuartersThreshes %>% filter(is.na(thresh))
+h<-ggplot(data=threshesThisGood,   
+          aes(x=targets,y=thresh,color=age,
+              shape=gender))
+h<-h+scale_shape_manual(values = c("male" = "\u2642", "female" = "\u2640"))
+#h<-h+ labs(color = "gender") # Change legend title from factor(objects) to objects
+#h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
+#ylim(1.4,2.5) DO NOT use this command, it will drop some data
+#h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
+#h<-h+ geom_point() + geom_line(aes(group=interaction(subject,numObjects))) #plot individual lines for each subject
+pd=position_dodge(width=dodgeWidth) 
+h<-h+ stat_summary(fun=mean,geom="point", size=6, position=pd)
+#h<-h+ stat_summary(fun=mean,geom="line")
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
+                  fun.args=list(conf.int=.95))
+#Show individual points, for non-degenerate data
+h<-h+ geom_point(data=threshesThisGood, #non-degenerate data
+                 position=position_jitterdodge(jitter.width = 0.1, dodge.width = 0.5),
+                 alpha=.7, size= 2)
+#Represent degenerate subjects with grey question marks low on axis
+if (nrow(couldNotBeEstimated)) {
+  minYaxis<- layer_scales(h)$y$get_limits()[1]
+  couldNotBeEstimated$thresh <- runif(nrow(couldNotBeEstimated), 
+                                      min = minYaxis, max = minYaxis + 0.01)
+  h<-h+ geom_point(data=couldNotBeEstimated, position=position_dodge(width=dodgeWidth),
+                   size=3,alpha=0.5,shape = "\u003F") #, color="grey")
+  
+}
+h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
+if (iv=="speed") {  h<-h+ggtitle("Gender pattern inconsistent")
+} else h<-h+ggtitle('Gender pattern inconsistent')
+#h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
 show(h)
 ggsave( paste0('figs/',tit,'.png') )
 
-TRY FITTING TEMPORALFREQ
-  
-)
-  # ##########################################################################################
+# ##########################################################################################
 # ##########Plot mean speed threshes against distractors
 # tit<-paste0('SpeedMeanThreshAgainstDistractors ',infoMsg,' threeQuarterThresh') 
 # quartz(title=tit,width=4,height=3) #create graph of threshes

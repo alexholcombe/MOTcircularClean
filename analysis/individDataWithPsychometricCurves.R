@@ -10,7 +10,8 @@ if (!("speed" %in% colnames(psychometrics))) { #psychometrics must have been fit
 
 #(expName,datForThisPlot,psychometricsForThisPlot,factorsForPlot)
 #function that plots the psychometric functions for a dataset / experiment /criterion,
-plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapOrGrid=TRUE,xmin=NULL,xmax=NULL) {
+plotIndividDataAndCurves <- function(expName,df,psychometricCurves,iv,factors,
+                                     wrapOrGrid=TRUE,xmin=NULL,xmax=NULL) {
   #wrapOrGrid means facet_grid. facet_wrap is better if have lots of participants
   #draw individual psychometric functions for individual experiment
   #the F's, like colorF are factors to break down data by (expects psychometric functions to have these factors)
@@ -20,9 +21,8 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapO
   rowF<-factors$rowF
   title<-paste0(expName,' individual Ss data')
   quartz(title,width=6,height=7)
-  #print( table(df[colorF],df[colF],df[rowF) ) #debug
-  g=ggplot(df, aes(x=speed,y=correct,color=.data[[colorF]],shape=.data[[colF]]) )
-  #g=ggplot(df,aes_string(x='speed',y='correct',color=colorF,shape=colF)) )
+  g=ggplot(df, aes(x=!!sym(iv),y=correct,
+                   color=.data[[colorF]],shape=.data[[colF]]) )
   g=g+stat_summary(fun=mean,geom="point", position=position_jitter(w=0.01,h=0.01),alpha=.95)
   if (colF != "" | rowF != "") {
     if (colF=="") { colF='.' }
@@ -30,19 +30,19 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,factors,wrapO
     facetString = paste(rowF,"~",colF)
     g=g+facet_grid(facetString)
   }
-  g=g+ theme_bw()
+  g=g+theme_bw()
   
   #draw individual psychometric functions, for only one experiment  
   g=g+geom_line(data=psychometricCurves)
   g=g+geom_hline(mapping=aes(yintercept=chance),lty=2)  #draw horizontal line for chance performance
-  g=g+xlab('Speed (rps)')+ylab('Proportion Correct')
+  g=g+xlab(iv) #xlab('Speed (rps)')
+  g<-g+ylab('Proportion Correct')
   xlims= ggplot_build(g)$panel$ranges[[1]]$x.range #http://stackoverflow.com/questions/7705345/how-can-i-extract-plot-axes-ranges-for-a-ggplot2-object
   if (!is.null(xmin))
     xlims[1]<-xmin
   if (!is.null(xmax))
     xlims[2]<-xmax
   g<-g+ coord_cartesian( xlim=xlims )#have to use coord_cartesian here instead of naked ylim()  
-  
   showNumPts=TRUE
   if (showNumPts) {#add count of data points per graph. http://stackoverflow.com/questions/13239843/annotate-ggplot2-facets-with-number-of-observations-per-facet?rq=1
     breakDownBy<- c(colF,rowF)
