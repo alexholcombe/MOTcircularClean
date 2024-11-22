@@ -249,7 +249,7 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   fitParms$subject<- as.numeric( as.character(fitParms$subject) )
   fitParms<-fitParms |> left_join(ageGender, by = join_by(subject==IDnum))
   fitParms$iv<- iv
-  
+  #####################
   #Plot some psychometric functions; look out for data that doesn't go low or high enough to 
   # get the threshold.
   #Get the plotIndividDataAndCurves function
@@ -263,11 +263,39 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
                                   filter( as.numeric(as.character(subject)) <=maxSubjForPlot  )
   xmax=1.5
   if (iv=="tf") { xmax=6 }
+  quartz(title = paste0(expName,' individual Ss data'), width=6,height=7)
   plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
                            iv,factorsForPlot,wrapOrGrid=T,xmin=0,xmax=xmax) 
   plt<-plt+facet_wrap(vars(subject))
   show(plt)
   ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )
+  
+  #Plot worst performers (which were discovered to all be old in extractThreshesAndPlot)
+  worstPerformers<- c(51,   60,  72,   85, 69, 73, 54, 58,  63, 53) #all old
+  #Create a label indicating whether they clearly got well above 75%
+  annotatn<-c("good when v. slow","good when v. slow","good when v. slow","good when v. slow", 
+              "", "", "", "", "", "") #to label the subjects
+  #51, #60, #85, #72 appear to be totally fine! Others it’s less clear whether they get above 75% correct in all conditions.
+  subjectWithAnnotatn<- paste(worstPerformers,annotatn)
+  subjWithAnnotatn<- tibble(subject=worstPerformers, withAnnotation=subjectWithAnnotatn)
+  
+  datForThisPlot <- datAnalyze |> filter(  as.numeric(as.character(subject)) %in% worstPerformers )
+  psychometricsForThisPlot <- psychometrics |> filter(as.numeric(as.character(subject)) %in% worstPerformers)
+  #add the annotated subject name 
+  datForThisPlot$subject<- as.numeric(as.character( datForThisPlot$subject ))
+  datForThisPlot<-datForThisPlot |> left_join(subjWithAnnotatn, by=join_by(subject))
+  psychometricsForThisPlot$subject<- as.numeric(as.character( psychometricsForThisPlot$subject ))  
+  psychometricsForThisPlot<-psychometricsForThisPlot |> left_join(subjWithAnnotatn, by=join_by(subject))
+  
+  tit=paste("worst-performingSs_allOld",iv,sep='_')
+  quartz(title=tit,width=9,height=6) #create graph of thresholds
+  xmax=1.5
+  if (iv=="tf") { xmax=6 }
+  plt<- plotIndividDataAndCurves(expName,datForThisPlot,psychometricsForThisPlot,
+                                 iv,factorsForPlot,wrapOrGrid=T,xmin=0,xmax=xmax) 
+  plt<-plt + facet_wrap(vars(withAnnotation)) + ggtitle(tit)
+  show(plt)
+  ggsave( file.path('figs', paste0('individPlotsE',expName,'.png'))  )  
   
   #Even at slowest speeds, subject= 69  objects= 8  targets= 2 barely gets up to 75% correct.
   #See below individual graph looks appropriate

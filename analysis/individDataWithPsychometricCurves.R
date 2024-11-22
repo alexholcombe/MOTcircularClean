@@ -20,7 +20,6 @@ plotIndividDataAndCurves <- function(expName,df,psychometricCurves,iv,factors,
   colF<-factors$colF
   rowF<-factors$rowF
   title<-paste0(expName,' individual Ss data')
-  quartz(title,width=6,height=7)
   g=ggplot(df, aes(x=!!sym(iv),y=correct,
                    color=.data[[colorF]],shape=.data[[colF]]) )
   g=g+stat_summary(fun=mean,geom="point", position=position_jitter(w=0.01,h=0.01),alpha=.95)

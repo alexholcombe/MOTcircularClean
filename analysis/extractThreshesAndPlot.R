@@ -79,6 +79,12 @@ threshes$age <- factor(threshes$age, levels = levels(threshes$age)[c(2,1)])
 threshes$gender<- as.factor(threshes$gender)
 threshes$gender <- factor(threshes$gender, levels = levels(threshes$gender)[c(2,1)])
 
+midpointThreshes<- subset(threshes,criterionNote=="midpoint")
+##########worst performers ######################################
+##Looks like the seven lowest-threshold participants in the 3 targets condition are all old
+midpointThreshes<- midpointThreshes |> arrange(thresh)
+worstPerformers<- c(69, 73, 54, 58, 85, 51, 60, 63, 53, 72, 85)
+
 themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, show only axes, not plot enclosing lines
   theme(axis.line = element_line(linewidth=.3, color = "grey"), 
         axis.title.y=element_text(vjust=0.24), #Move y axis label slightly away from axis
@@ -87,22 +93,24 @@ themeAxisTitleSpaceNoGridLinesLegendBox = theme_classic() + #Remove gridlines, s
         legend.background= element_rect(color="grey90"), #put big light grey box around entire legend
         panel.background = element_rect(fill = "transparent",colour = NA),
         plot.background = element_rect(fill = "transparent",colour = NA)   )
-##########Plot midpoint threshes, age*subject*numTargets*numObjects ################
+#############################################################
+############# Individual subjects effect of num targets
+##########Plot midpoint threshes, subject*numTargets*numObjects ################
 tit=paste("individual_Ss_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
 quartz(title=tit,width=6,height=3) #create graph of thresholds
 dodgeWidth<-.4
-midpointThreshes<- subset(threshes,criterionNote=="midpoint")
 h<-ggplot(data=midpointThreshes,
-          aes(x=targets,y=thresh,color=factor(objects)), 
-              group=interaction(subject,objects)) #this is critical for points and lines to dodge in same way
+          aes(x=targets,y=thresh,color=objects,shape=age, 
+              group=interaction(subject,objects))) #this is critical for points and lines to dodge in same way
 #h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 #ylim(1.4,2.5) DO NOT use this command, it will drop some data
 #h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
-h<-h+ geom_point(position=position_dodge(width=dodgeWidth),size=1,alpha=0.5)
-h<-h+ geom_line(position=position_dodge(width=dodgeWidth),alpha=0.5) #plot individual lines for each subject
+pd<- position_dodge(width=dodgeWidth)
+h<-h+ geom_point(position=pd,size=1,alpha=0.5)
+h<-h+ geom_line(position=pd,alpha=0.5) #plot individual lines for each subject
 h<-h+ stat_summary(fun=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
-                   aes(x=targets,y=thresh,color=factor(objects),group=factor(objects)))
+                   aes(x=targets,y=thresh,color=objects,group=objects))
 #If there any subjects whose threshold could not be estimated, add them at bottom of plot
 couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
 if (nrow(couldNotBeEstimated)) {
@@ -114,6 +122,31 @@ if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge whe
 } else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
+################################################################################
+############# Individual subjects effect of num target. Showcase Age with color
+##########Plot midpoint threshes, subject*numTargets*numObjects ################
+tit=paste("individual_Ss_Age_threshesSpeed_",infoMsg,"_midpointThresh",sep='')
+quartz(title=tit,width=6,height=6) #create graph of thresholds
+h<-ggplot(data=midpointThreshes,
+          aes(x=targets,y=thresh,color=age,shape=objects, 
+              group=interaction(subject,objects))) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+pd<- position_dodge(width=dodgeWidth)
+h<-h+ geom_point(position=pd,size=1,alpha=0.5)
+h<-h+ geom_line(position=pd,alpha=0.5) #plot individual lines for each subject
+#h<-h+ stat_summary(fun=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
+#                   aes(x=targets,y=thresh,color=age,group=objects))
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
+h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='') )  
+if (iv=="speed") { h<-h+ggtitle("4,8 will converge when plot tf") 
+} else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
+show(h)
+ggsave( paste('figs/',tit,'.png',sep='') )
+#############################################################
 #############################################################
 #############
 ######Plot mean threshes against numTargets
@@ -169,7 +202,7 @@ couldNotBeEstimated<- threshesThis %>% filter(is.na(thresh))
 threshesThisGood<- threshesThis %>% filter(!is.na(thresh))
 h<-ggplot(data=threshesThisGood,   
           aes(x=targets,y=thresh,color=age,
-              shape=factor(objects)))
+              shape=factor(objects))) #group=interaction(subject,objects)))
 h<-h+ labs(shape = "objects") # Change legend title from factor(objects) to objects
 #h<-h+facet_grid(. ~ criterion)  #facet_grid(criterion ~ exp)
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
@@ -194,6 +227,8 @@ if (nrow(couldNotBeEstimated)) {
                    size=3,alpha=0.5,shape = "\u003F") #, color="grey")
   
 }
+#h<-h+ geom_line(position=pd,alpha=0.5) #plot individual lines for each subject
+
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
 if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
 } else h<-h+ggtitle('4,8 replicate partial tf limit for young, but worse with 8 objects for old.')
