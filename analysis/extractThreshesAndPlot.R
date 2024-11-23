@@ -122,6 +122,26 @@ if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge whe
 } else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
+#############################################################
+############# TEMP
+##########TEMP ################
+quartz(title=tit,width=6,height=3) #create graph of thresholds
+dodgeWidth<-.4
+h<-ggplot(data=midpointThreshes,
+          aes(x=objects,y=thresh,color=age, 
+              group=interaction(subject,age))) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+pd<- position_dodge(width=dodgeWidth)
+h<-h+ geom_point(position=pd,size=1,alpha=0.5)
+h+ geom_line(position=pd,alpha=0.5) 
+
+h<-h+ stat_summary(fun=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
+                   aes(x=targets,y=thresh,color=objects,group=objects))
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
 ################################################################################
 ############# Individual subjects effect of num target. Showcase Age with color
 ##########Plot midpoint threshes, subject*numTargets*numObjects ################
@@ -230,6 +250,55 @@ if (nrow(couldNotBeEstimated)) {
 #h<-h+ geom_line(position=pd,alpha=0.5) #plot individual lines for each subject
 
 h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='')  ) 
+if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
+} else h<-h+ggtitle('4,8 replicate partial tf limit for young, but worse with 8 objects for old.')
+#h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
+show(h)
+ggsave( paste0('figs/',tit,'.png') )
+####################
+####### AGE ####################################################################
+#################simplified plot for grant, collapse numTargets to showcase different effect of objects
+######
+quartz(title=tit,width=4,height=6) 
+thisCriterion<-"midpoint"
+tit<-paste0("meanThreshAgainstTargets_age_",infoMsg,"_",thisCriterion)
+threshesThis<- subset(threshes,criterionNote==thisCriterion)
+if (iv=="speed") { #convert to t.f.
+  threshesThis$thresh<- threshesThis$thresh * as.numeric(as.character(threshesThis$objects))
+}
+couldNotBeEstimated<- threshesThis %>% filter(is.na(thresh))
+threshesThisGood<- threshesThis %>% filter(!is.na(thresh))
+h<-ggplot(data=threshesThisGood,   
+          aes(x=objects,y=thresh,color=age,group=interaction(subject,objects)) )
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox
+#ylim(1.4,2.5) DO NOT use this command, it will drop some data
+#h<-h+ coord_cartesian( xlim=c(xLims[1],xLims[2]), ylim=yLims ) #have to use coord_cartesian here instead of naked ylim()
+pd=position_dodge(width=dodgeWidth) 
+h<-h+ stat_summary(fun=mean,geom="point", size=3, position=pd)
+h+geom_line()
+h<-h+ stat_summary(fun=mean,geom="line", size=3, position=pd) #geom_line() 
+
+#h<-h+ stat_summary(aes(group=interaction(age,numObjects)),fun=mean,geom="line", size=3, position=pd)
+#h<-h+ geom_line(aes(group=interaction(age,numObjects)))
+
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
+                  fun.args=list(conf.int=.95))
+#Show individual points, for non-degenerate data
+h<-h+ geom_point(data=threshesThisGood, 
+                 position=position_jitterdodge(jitter.width = 0.1, dodge.width = 0.5),
+                 alpha=.7, size=0.6)
+#Represent degenerate subjects with grey question marks low on axis
+if (nrow(couldNotBeEstimated)) {
+  minYaxis<- layer_scales(h)$y$get_limits()[1]
+  couldNotBeEstimated$thresh <- runif(nrow(couldNotBeEstimated), 
+                                      min = minYaxis, max = minYaxis + 0.01)
+  h<-h+ geom_point(data=couldNotBeEstimated, position=position_dodge(width=dodgeWidth),
+                   size=3,alpha=0.5,shape = "\u003F") #, color="grey")
+  
+}
+#h<-h+ geom_line(position=pd,alpha=0.5) #plot individual lines for each subject
+
+h<-h+ylab( 'temporal frequency threshold (Hz)' ) 
 if (iv=="speed") {  h<-h+ggtitle("4,8 difft validates t.f. limit. Speed limits vary widely")
 } else h<-h+ggtitle('4,8 replicate partial tf limit for young, but worse with 8 objects for old.')
 #h<-h+coord_cartesian(ylim=c(1.5,2.5)) #have to use coord_cartesian here instead of naked ylim() to don't lose part of threshline
