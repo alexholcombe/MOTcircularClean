@@ -123,20 +123,55 @@ if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge whe
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################################
-############# TEMP
+############# t.f. x=age collapse targets
 ##########TEMP ################
 quartz(title=tit,width=6,height=3) #create graph of thresholds
+threshTargetsCollapse<- midpointThreshes |> group_by(subject,age,objects) |>
+  summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
+if (iv=="speed") { #convert to t.f.
+  threshesTargetsCollapseTF<- threshTargetsCollapse |> 
+                  mutate(thresh = thresh*as.numeric(as.character(objects)))
+}
 dodgeWidth<-.4
-h<-ggplot(data=midpointThreshes,
+h<-ggplot(data=threshesTargetsCollapseTF,
+          aes(x=age,y=thresh,color=objects,
+              group=interaction(subject,age))) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+pd<- position_dodge(width=dodgeWidth)
+h<-h+ geom_point(position=pd,size=1,alpha=0.5)
+#h + stat_summary(fun=mean,geom="line",position=pd,alpha=0.6)
+h<-h+ stat_summary(fun=mean,geom="point",
+                   aes(group=interaction(objects,age)),#override the subject-age grouping
+                   size=3,position=pd)
+h<-h+stat_summary(aes(group=interaction(objects,age)),#override the subject-age grouping
+                  fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
+                  fun.args=list(conf.int=.95))
+#h<-h+ geom_line(position=pd,alpha=0.5) 
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
+h<-h+ylab('threshold (Hz)')  
+show(h)
+#############################################################
+############# TEMP x=objects
+##########TEMP ################
+quartz(title=tit,width=6,height=3) #create graph of thresholds
+threshTargetsCollapse<- midpointThreshes |> group_by(subject,age,objects) |>
+                      summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
+dodgeWidth<-.4
+h<-ggplot(data=threshTargetsCollapse,
           aes(x=objects,y=thresh,color=age, 
               group=interaction(subject,age))) #this is critical for points and lines to dodge in same way
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 pd<- position_dodge(width=dodgeWidth)
 h<-h+ geom_point(position=pd,size=1,alpha=0.5)
-h+ geom_line(position=pd,alpha=0.5) 
-
-h<-h+ stat_summary(fun=mean,geom="point",size=5,fill=NA,shape=22,stroke=3,
-                   aes(x=targets,y=thresh,color=objects,group=objects))
+#h + stat_summary(fun=mean,geom="line",position=pd,alpha=0.6)
+h<-h+ stat_summary(fun=mean,geom="point",
+                   aes(group=interaction(objects,age)),#override the subject-age grouping
+                   size=5,position=pd)
+h<-h+ geom_line(position=pd,alpha=0.5) 
 #If there any subjects whose threshold could not be estimated, add them at bottom of plot
 couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
 if (nrow(couldNotBeEstimated)) {
