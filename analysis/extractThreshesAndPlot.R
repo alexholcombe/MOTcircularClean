@@ -122,10 +122,48 @@ if (iv=="speed") { h<-h+ggtitle("Speed limits vary widely. 4,8 will converge whe
 } else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
+##################################################################
+##### Look at worst performers - all old
+View(midpointThreshes |> select(objects,targets,subject,thresh,gender,age,agePerturbed))
+
+#############################################################
+############# x=age collapse targets
+########## ################
+tit=paste("CollapseTargets",infoMsg,"_midpointThresh",sep='')
+quartz(title=tit,width=2.8,height=3) #create graph of thresholds
+threshTargetsCollapse<- midpointThreshes |> group_by(subject,age,objects) |>
+  summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
+dodgeWidth<-.4
+h<-ggplot(data=threshTargetsCollapse,
+          aes(x=age,y=thresh,color=objects,
+              group=interaction(subject,age))) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+pd<- position_dodge(width=dodgeWidth)
+h<-h+ geom_point(position=pd,size=0.3,alpha=0.5)
+#h + stat_summary(fun=mean,geom="line",position=pd,alpha=0.6)
+h<-h+ stat_summary(fun=mean,geom="point",
+                   aes(group=interaction(objects,age)),#override the subject-age grouping
+                   size=3,position=pd)
+h<-h+stat_summary(aes(group=interaction(objects,age)),#override the subject-age grouping
+                  fun.data="mean_cl_boot",geom="errorbar",width=.2, position=pd,
+                  fun.args=list(conf.int=.95))
+#h<-h+ geom_line(position=pd,alpha=0.5) 
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
+h<-h+ylab(  paste('threshold ',iv,' (',ifelse(iv=="speed","rps","Hz"),')',sep='') )  
+if (iv=="speed") { h<-h+ggtitle("4,8 will converge when plot tf") 
+} else h<-h+ggtitle('4,8 objects overlap validate tf limit.')
+show(h)
+ggsave( paste('figs/',tit,'.png',sep='') )
+#############################################################
 #############################################################
 ############# t.f. x=age collapse targets
-##########TEMP ################
-quartz(title=tit,width=6,height=3) #create graph of thresholds
+########## ################
+tit=paste("tfCollapseTargets",infoMsg,"_midpointThresh",sep='')
+quartz(title=tit,width=2.8,height=3) #create graph of thresholds
 threshTargetsCollapse<- midpointThreshes |> group_by(subject,age,objects) |>
   summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
 if (iv=="speed") { #convert to t.f.
@@ -138,7 +176,7 @@ h<-ggplot(data=threshesTargetsCollapseTF,
               group=interaction(subject,age))) #this is critical for points and lines to dodge in same way
 h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
 pd<- position_dodge(width=dodgeWidth)
-h<-h+ geom_point(position=pd,size=1,alpha=0.5)
+h<-h+ geom_point(position=pd,size=0.3,alpha=0.5)
 #h + stat_summary(fun=mean,geom="line",position=pd,alpha=0.6)
 h<-h+ stat_summary(fun=mean,geom="point",
                    aes(group=interaction(objects,age)),#override the subject-age grouping
@@ -154,6 +192,71 @@ if (nrow(couldNotBeEstimated)) {
 }
 h<-h+ylab('threshold (Hz)')  
 show(h)
+ggsave( paste('figs/',tit,'.png',sep='') )
+#############################################################
+############# x=age collapse all. Not appropriate for speed here because 
+########## ################ 4 and 8 objects so different
+tit=paste("collapseExceptAgeTF_",infoMsg,"_midpointThresh",sep='')
+quartz(title=tit,width=1.8,height=3) #create graph of thresholds
+midpointThreshes<- subset(threshes,criterionNote=="midpoint")
+threshCollapseTFageOnly<- midpointThreshes
+if (iv=="speed") { #convert to t.f.
+  threshCollapseTFageOnly<- threshCollapseTFageOnly |> 
+    mutate(thresh = thresh*as.numeric(as.character(objects)))
+}
+threshCollapseTFageOnly<- midpointThreshes |> group_by(subject,age) |>
+  summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
+
+dodgeWidth<-.2
+pd<- position_jitter(width=dodgeWidth)
+h<-ggplot(data=threshCollapseTFageOnly,
+          aes(x=age,y=thresh)) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+h<-h+ geom_point(position=pd,size=0.5,alpha=0.5)
+h<-h+ stat_summary(fun=mean,geom="point", size=3)
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+                  fun.args=list(conf.int=.95))
+#h<-h+ geom_line(position=pd,alpha=0.5) 
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
+h<-h+ylab('threshold temporal frequency (Hz)')  
+show(h)
+ggsave( paste('figs/',tit,'.png',sep='') )
+#############################################################
+#############################################################
+############# t.f. x=age collapse all
+########## ################
+tit=paste("tfCollapseExceptAge",infoMsg,"_midpointThresh",sep='')
+quartz(title=tit,width=1.8,height=3) #create graph of thresholds
+threshCollapseTFageOnly<- midpointThreshes
+if (iv=="speed") { #convert to t.f.
+  threshCollapseTFageOnly<- threshCollapseTFageOnly |> 
+    mutate(thresh = thresh * as.numeric(as.character(objects)))
+}
+threshCollapseTFageOnly<- midpointThreshes |> group_by(subject,age) |>
+  summarize(thresh = mean(thresh, na.rm = TRUE)) |> ungroup()
+
+dodgeWidth<-.2
+pd<- position_jitter(width=dodgeWidth)
+h<-ggplot(data=threshCollapseTFageOnly,
+          aes(x=age,y=thresh)) #this is critical for points and lines to dodge in same way
+h<-h+themeAxisTitleSpaceNoGridLinesLegendBox #theme_bw() 
+h<-h+ geom_point(position=pd,size=0.5,alpha=0.5)
+h<-h+ stat_summary(fun=mean,geom="point", size=3)
+h<-h+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.2,
+                  fun.args=list(conf.int=.95))
+#h<-h+ geom_line(position=pd,alpha=0.5) 
+#If there any subjects whose threshold could not be estimated, add them at bottom of plot
+couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
+if (nrow(couldNotBeEstimated)) {
+  
+}
+h<-h+ylab('threshold (Hz)')  
+show(h)
+ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################################
 ############# TEMP x=objects
 ##########TEMP ################

@@ -272,6 +272,10 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   
   #Plot worst performers (which were discovered to all be old in extractThreshesAndPlot)
   worstPerformers<- c(51,   60,  72,   85, 69, 73, 54, 58,  63, 53) #all old
+  agesWorstPerformers<- unique(threshes |> filter(subject %in% worstPerformers) |> 
+                                 select(agePerturbed))
+  unique(threshes |> filter(!subject %in% worstPerformers) |> filter(age=="Old") |>
+                                 select(agePerturbed))  
   #Create a label indicating whether they clearly got well above 75%
   annotatn<-c("good when v. slow","good when v. slow","good when v. slow","good when v. slow", 
               "", "", "", "", "", "") #to label the subjects
@@ -327,3 +331,20 @@ for (iv in c("speed","tf")) { #"logTf","logSpd"
   #   save(list=varName,file=paste(dataDir,varName,".Rdata",sep='')) #e.g. threshes_tf_123targets269objects.Rdata
   #   cat("Saved",varName)
 }
+
+#############################################################
+############# Inferential stats
+######
+anova_all_factors <- aov(thresh ~ objects * age * targets, data = threshes)
+
+# Print the summary of the ANOVA result
+summary(anova_all_factors) #age - p < 10^-16, objects < 10^-16, objects*age p=0.07, targets =.009
+
+#threshesTargetsCollapseTF from extractThreshesAndPlot.R
+# Perform ANOVA including interactions between objects and age
+anova_result <- aov(thresh ~ objects * age, data = threshesTargetsCollapseTF)
+
+# Print the summary of the ANOVA result
+summary(anova_result) #age - p < .000001
+#objects:age p = 0.284
+
