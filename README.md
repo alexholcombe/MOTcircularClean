@@ -4,6 +4,13 @@ This program is super-complicated, legacy of many different papers using trackin
 
 In the long term, want to set up exchange of objects among rings. Necessary to conduct an identity-tracking experiment. Can also push harder on speed limit that way.
 
+## Analysis of this data outside of this repo
+
+When I did it with Bayesian I switched to [this repo](https://github.com/alexholcombe/brms_psychometric_variableGuessRate_lapseRate), but didn’t get farther than model recovery, and then I made this [repo](https://github.com/alexholcombe/analyseRoudaiaHolcombeMOT) I think when I was trying to transition to real data, including joint analysis the Roudaia lab data.
+When I did it with Bayesian I switched to [this repo], but didn’t get farther than model recovery
+
+
+
 ## Analysis workflow
 
 *	In the [dataPreprocess](dataPreprocess) folder, its Rproj loadAnonymiseSaveData.R is used to match up Psychopy datafiles with EDF files, and possibly combine multiple sessions together.
