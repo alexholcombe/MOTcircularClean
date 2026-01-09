@@ -7,7 +7,6 @@ In the long term, want to set up exchange of objects among rings. Necessary to c
 ## Analysis of this data outside of this repo
 
 When I did it with Bayesian I switched to [this repo](https://github.com/alexholcombe/brms_psychometric_variableGuessRate_lapseRate), but didn’t get farther than model recovery, and then I made this [repo](https://github.com/alexholcombe/analyseRoudaiaHolcombeMOT) I think when I was trying to transition to real data, including joint analysis the Roudaia lab data.
-When I did it with Bayesian I switched to [this repo], but didn’t get farther than model recovery
 
 
 
