@@ -11,7 +11,7 @@ When I did it with Bayesian I switched to [this repo], but didn’t get farther 
 
 
 
-## Analysis workflow
+## Analysis workflow inside this repo
 
 *	In the [dataPreprocess](dataPreprocess) folder, its Rproj loadAnonymiseSaveData.R is used to match up Psychopy datafiles with EDF files, and possibly combine multiple sessions together.
 *	the [analysis](analysis) directory with its Rproj is used to analyze the data.
