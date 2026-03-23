@@ -348,3 +348,27 @@ anova_result <- aov(thresh ~ objects * age, data = threshesTargetsCollapseTF)
 summary(anova_result) #age - p < .000001
 #objects:age p = 0.284
 
+#Calculate cohen's d for age
+means <- aggregate(thresh ~ age, data = threshesTargetsCollapseTF, mean)
+sds <- aggregate(thresh ~ age, data = threshesTargetsCollapseTF, sd)
+
+mean_young <- means$thresh[means$age == "Young"]
+mean_old <- means$thresh[means$age == "Old"]
+sd_young <- sds$thresh[sds$age == "Young"]
+sd_old <- sds$thresh[sds$age == "Old"]
+
+# Calculate pooled standard deviation
+n_young <- sum(threshesTargetsCollapseTF$age == "Young")
+n_old <- sum(threshesTargetsCollapseTF$age == "Old")
+pooled_sd <- sqrt(((n_young - 1) * sd_young^2 + (n_old - 1) * sd_old^2) / (n_young + n_old - 2))
+
+# Calculate Cohen's d
+cohen_d <- (mean_young - mean_old) / pooled_sd
+
+# Print Cohen's d
+print(cohen_d)
+
+#install.packages("effsize")
+library("effsize")
+# Calculate Cohen's d for the difference between young and old
+cohen_d_result <- effsize::cohen.d(thresh ~ age, data = threshesTargetsCollapseTF)

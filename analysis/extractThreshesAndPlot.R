@@ -222,7 +222,7 @@ couldNotBeEstimated<- midpointThreshes %>% filter(is.na(thresh))
 if (nrow(couldNotBeEstimated)) {
   
 }
-h<-h+ylab('threshold temporal frequency (Hz)')  
+h<-h+ylab('temporal frequency threshold (Hz)')  
 show(h)
 ggsave( paste('figs/',tit,'.png',sep='') )
 #############################################################

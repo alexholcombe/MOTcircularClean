@@ -1,4 +1,4 @@
-#expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
+#Expecting current working directory to be top level of this git-indexed project, and this file to be in top level - dataPreprocess/
 #Gets behavioral xdata and combines with eyetracking result and anonymises 
 rm(list = ls()) #Clear workspace so that any code executed before won't contaminate this run
 library(dplyr)
@@ -41,7 +41,7 @@ pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> mutate( IDnum = substr(`par
 pInfo_reducedForPrivacy$`participant id` <- NULL   #Delete ID column that included letter
 
 #Reorder columns to put ID first
-pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy %>% select(IDnum,everything())
+pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> select(IDnum,everything()) |> arrange(IDnum)
 
 #Add random number to age to protect privacy
 pInfo_reducedForPrivacy<- pInfo_reducedForPrivacy |> 
