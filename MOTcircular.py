@@ -10,6 +10,8 @@ from psychopy import sound, monitors, logging, visual, data, core
 import psychopy.gui, psychopy.event, psychopy.info
 import numpy as np, pandas as pd 
 import itertools #to calculate all subsets
+from psychopy import plugins
+plugins.activatePlugins()
 from copy import deepcopy
 from math import atan, atan2, pi, cos, sin, sqrt, ceil, floor
 import time, random, sys, platform, os, gc, io, warnings
@@ -68,9 +70,9 @@ trackAllIdenticalColors = True#with tracking, can either use same colors as othe
 timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
 respTypes=['order']; respType=respTypes[0]
 rng_seed = int(time.time())
-np.random.seed(seed=rng_seed); random.seed(rng_seed)
+rng = np.random.default_rng(rng_seed); random.seed(rng_seed)
 
-drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
+drawingAsGrating = False;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
@@ -277,7 +279,7 @@ myWin.setRecordFrameIntervals(False)
 if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
     msgWrongResolutionFinal = ('Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested) 
         +' pixels, screen is apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1]) + ' will base calculations off that.')
-    logging.warn(msgWrongResolutionFinal)
+    logging.warning(msgWrongResolutionFinal)
 widthPix = myWin.size[0]
 heightPix = myWin.size[1]
 logging.info( 'Screen resolution, which is also being used for calculations, is ' + str(widthPix) + ' by ' + str(heightPix) )
@@ -297,7 +299,7 @@ logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
 
 #Create Gaussian blob
-blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+blob = visual.GratingStim(myWin, tex='none',mask='gauss',colorSpace='rgb', sf=0,size=ballStdDev,autoLog=autoLogging)
 
 labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
@@ -320,20 +322,20 @@ referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rg
 
 blindspotFill = 0 #a way for people to know if they move their eyes
 if blindspotFill:
-    blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
+    blindspotStim = visual.GratingStim(myWin, tex='none',mask='circle',sf=0,size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 fixatnNoise = True
 fixSizePix = 6 #20 make fixation big so flicker more conspicuous
 if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
-    fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
-    fixation= visual.PatchStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+    fixatnNoiseTexture = np.round( rng.random((nearestPowerOfTwo,nearestPowerOfTwo)) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
+    fixation= visual.GratingStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
 else:
-    fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
-fixationPoint = visual.PatchStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
+    fixation = visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+fixationPoint = visual.GratingStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
 
 #respText = visual.TextStim(myWin,pos=(0, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
@@ -470,7 +472,7 @@ for numObjs in numObjsInRing: #set up experiment design
               for s in subsetsThis: #to equate ring usage, balance by going through all subsets. E.g. 3 rings with 2 targets is 1,2; 1,3; 2,3
                   whichIsTargetEachRing = np.ones(numRings)*-999 #initialize to -999, meaning not a target in that ring.
                   for ring in s:
-                      whichIsTargetEachRing[ring] = np.random.randint(0,numObjs-1,size=1)
+                      whichIsTargetEachRing[ring] = rng.integers(0,numObjs-1,size=1)
                   print('numTargets=',nt,' whichIsTargetEachRing=',whichIsTargetEachRing,' and that is one of ',numSubsetsThis,' possibilities and we are doing ',repsNeeded,'repetitions')
                   for whichToQuery in range( leastCommonMultipleTargetNums ):  #for each subset, have to query one. This is dealed out to  the current subset by using modulus. It's assumed that this will result in equal total number of queried rings
                       whichSubsetEntry = whichToQuery % nt  #e.g. if nt=2 and whichToQuery can be 0,1,or2 then modulus result is 0,1,0. This implies that whichToQuery won't be totally counterbalanced with which subset, which is bad because
@@ -520,7 +522,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     angleSegment = 360./(numObjects*2)
     if gratingTexPix % (numObjects*2) >0: #gratingTexPix contains 2 patches, one for object and one for space between.
         #numCycles will control how many total objects there are around circle
-        logging.warn('Culd not exactly render a numObjects*2='+str(numObjects*2)+'-segment pattern radially, will be off by '+str( (gratingTexPix%(numObjects*2))*1.0 /gratingTexPix ) )
+        logging.warning('Culd not exactly render a numObjects*2='+str(numObjects*2)+'-segment pattern radially, will be off by '+str( (gratingTexPix%(numObjects*2))*1.0 /gratingTexPix ) )
     if patchAngle > angleSegment:
         msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible (' + str(angleSegment) 
         print(msg); logging.error(msg)
@@ -543,7 +545,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     patchAngleActual = patchPixTexture / gratingTexPix * (360./numObjects)
     if abs(patchAngleActual - patchAngle) > .04:
         msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
-        logging.warn(msg)
+        logging.warning(msg)
     #print('halfCyclePixTexture=',halfCyclePixTexture,' patchPixTexture=',patchPixTexture, ' patchFlankPix=',patchFlankPix)
     #patchFlankPix at 199 is way too big, because patchPixTexture = 114
 
@@ -719,7 +721,7 @@ def diamondShape(constSpeedOrConstRps,angle):
         return x,y
 
 ampTemporalRadiusModulation = 0.0 # 1.0/3.0
-ampModulatnEachRingTemporalPhase = np.random.rand(numRings) * 2*np.pi
+ampModulatnEachRingTemporalPhase = rng.random(numRings) * 2*np.pi
 def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN, speed):
     #period of oscillation should be in sec
     r = radiiThisTrial[numRing]
@@ -734,7 +736,7 @@ def xyThisFrameThisAngle(basicShape, radiiThisTrial, numRing, angle, thisFrameN,
                 return sin(modulatnPhaseRadians)
             elif type == 'sqrWave':
                 ans = np.sign( sin(modulatnPhaseRadians) ) #-1 or 1. That's great because that's also sin min and max
-                if ans==0: ans = -1+ 2*round( np.random.rand(1)[0] ) #exception case is when 0, gives 0, so randomly change that to -1 or 1
+                if ans==0: ans = -1+ 2*round( rng.random()[0] ) #exception case is when 0, gives 0, so randomly change that to -1 or 1
                 return ans
             else: print('Error! unexpected type in radiusThisFrameThisAngle')
         
@@ -1109,7 +1111,7 @@ while trialNum < trials.nTotal and expStop==False:
         #print("should be -999 at this point: thisTrial['whichIsTargetEachRing'] = ", thisTrial['whichIsTargetEachRing'])
         #Randomly assign a target object for each ring that is meant to have a target
         for r in whichRingsHaveTargets:
-            thisTrial['whichIsTargetEachRing'][r] = np.random.randint(0,thisTrial['numObjectsInRing'])
+            thisTrial['whichIsTargetEachRing'][r] = rng.integers(0,thisTrial['numObjectsInRing'])
         #Randomly pick ring to query. 
         random.shuffle(whichRingsHaveTargets) 
         thisTrial['ringToQuery'] = whichRingsHaveTargets[0]
@@ -1124,7 +1126,7 @@ while trialNum < trials.nTotal and expStop==False:
         angleIniEachRing = [0]*numRings
     currAngle = list([0]) * numRings
     if randomInitialDirExceptRing0:
-        initialDirectionEachRing = list( np.random.randint(0,1,size=[numRings]) *2 -1 ) #randomise initial direction of each ring
+        initialDirectionEachRing = list( rng.integers(0,1,size=[numRings]) *2 -1 ) #randomise initial direction of each ring
         initialDirectionEachRing[0] = thisTrial['initialDirRing0']
         if oppositeInitialDirFirstTwoRings and numRings>1:
             initialDirectionEachRing[1] = -1*initialDirectionEachRing[0]
@@ -1153,7 +1155,7 @@ while trialNum < trials.nTotal and expStop==False:
         my_tracker.sendMessage('trialDurTotal='+str(trialDurTotal))
     fixatnMinDur = 0.8
     fixatnVariableDur = 0.5
-    fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval between 800 and 1300ms
+    fixatnPeriodFrames = int(   (fixatnMinDur + rng.random()*fixatnVariableDur)   *refreshRate)  #random interval between 800 and 1300ms
     for i in range(fixatnPeriodFrames):
         if i%2:
             fixation.draw()
@@ -1262,10 +1264,10 @@ while trialNum < trials.nTotal and expStop==False:
                     flankingAlso=list()
                     for idx in idxsInterframeLong: #also print timing of one before and one after long frame
                         if idx-1>=0:  flankingAlso.append(idx-1)
-                        else: flankingAlso.append(np.NaN)
+                        else: flankingAlso.append(np.nan)
                         flankingAlso.append(idx)
                         if idx+1<len(interframeIntervs):  flankingAlso.append(idx+1)
-                        else: flankingAlso.append(np.NaN)
+                        else: flankingAlso.append(np.nan)
                     #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) ) 
     #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
     #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
