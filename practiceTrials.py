@@ -8,6 +8,8 @@
 ##############
 from psychopy import sound, monitors, logging, visual, data, core
 import psychopy.gui, psychopy.event, psychopy.info
+from psychopy import plugins
+plugins.activatePlugins()
 import numpy as np, pandas as pd 
 import itertools #to calculate all subsets
 from copy import deepcopy
@@ -276,7 +278,7 @@ myWin.setRecordFrameIntervals(False)
 if (not demo) and (myWinRes != [widthPixRequested,heightPixRequested]).any():
     msgWrongResolutionFinal = ('Instead of desired resolution of '+ str(widthPixRequested)+'x'+str(heightPixRequested) 
         +' pixels, screen is apparently '+ str(myWinRes[0])+ 'x'+ str(myWinRes[1]) + ' will base calculations off that.')
-    logging.warn(msgWrongResolutionFinal)
+    logging.warning(msgWrongResolutionFinal)
 widthPix = myWin.size[0]
 heightPix = myWin.size[1]
 logging.info( 'Screen resolution, which is also being used for calculations, is ' + str(widthPix) + ' by ' + str(heightPix) )
@@ -296,7 +298,7 @@ logging.info('gammaGrid='+str(mon.getGammaGrid()))
 logging.info('linearizeMethod='+str(mon.getLinearizeMethod()))
 
 #Create Gaussian blob
-blob = visual.PatchStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
+blob = visual.GratingStim(myWin, tex='none',mask='gauss',colorSpace='rgb',size=ballStdDev,autoLog=autoLogging)
 
 labelBlobs = False #Draw the number of each Gaussian blob over it, to visualize the drawing algorithm better
 if labelBlobs:
@@ -319,7 +321,7 @@ referenceCircle = visual.Circle(myWin, radius=radii[0], edges=32, colorSpace='rg
 
 blindspotFill = 0 #a way for people to know if they move their eyes
 if blindspotFill:
-    blindspotStim = visual.PatchStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
+    blindspotStim = visual.GratingStim(myWin, tex='none',mask='circle',size=4.8,colorSpace='rgb',color = (-1,1,-1),autoLog=autoLogging) #to outline chosen options
     blindspotStim.setPos([13.1,-2.7]) #AOH, size=4.8; pos=[13.1,-2.7] #DL: [13.3,-0.8]
 fixatnNoise = True
 fixSizePix = 6 #20 make fixation big so flicker more conspicuous
@@ -327,12 +329,12 @@ if fixatnNoise:
     checkSizeOfFixatnTexture = fixSizePix/4
     nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
     fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
-    fixation= visual.PatchStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+    fixation= visual.GratingStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
 else:
-    fixation = visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
-    fixationBlank= visual.PatchStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
-fixationPoint = visual.PatchStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
+    fixation = visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+fixationPoint = visual.GratingStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
 
 #respText = visual.TextStim(myWin,pos=(0, -.5),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
 NextText = visual.TextStim(myWin,pos=(0, 0),colorSpace='rgb',color = (1,1,1),anchorHoriz='center', anchorVert='center', units='norm',autoLog=autoLogging)
@@ -423,7 +425,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     angleSegment = 360./(numObjects*2)
     if gratingTexPix % (numObjects*2) >0: #gratingTexPix contains 2 patches, one for object and one for space between.
         #numCycles will control how many total objects there are around circle
-        logging.warn('Culd not exactly render a numObjects*2='+str(numObjects*2)+'-segment pattern radially, will be off by '+str( (gratingTexPix%(numObjects*2))*1.0 /gratingTexPix ) )
+        logging.warning('Culd not exactly render a numObjects*2='+str(numObjects*2)+'-segment pattern radially, will be off by '+str( (gratingTexPix%(numObjects*2))*1.0 /gratingTexPix ) )
     if patchAngle > angleSegment:
         msg='Error: patchAngle (angle of circle spanned by object) requested ('+str(patchAngle)+') bigger than maximum possible (' + str(angleSegment) 
         print(msg); logging.error(msg)
@@ -446,7 +448,7 @@ def constructRingAsGratingSimplified(radii,numObjects,patchAngle,colors,stimColo
     patchAngleActual = patchPixTexture / gratingTexPix * (360./numObjects)
     if abs(patchAngleActual - patchAngle) > .04:
         msg = 'Desired patchAngle = '+str(patchAngle)+' but closest can get with '+str(gratingTexPix)+' gratingTexPix is '+str(patchAngleActual); 
-        logging.warn(msg)
+        logging.warning(msg)
     #print('halfCyclePixTexture=',halfCyclePixTexture,' patchPixTexture=',patchPixTexture, ' patchFlankPix=',patchFlankPix)
     #patchFlankPix at 199 is way too big, because patchPixTexture = 114
 
