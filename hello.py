@@ -771,6 +771,7 @@ def oneFrameOfStim(thisTrial,speed,currFrame,clock,useClock,offsetXYeachRing,ini
   global cueRing,ringRadial, currentlyCuedBlob #makes explicit that will be working with the global vars, not creating a local variable
   global angleIniEachRing, correctAnswers
   angleIniEachRingRad = angleIniEachRing
+  print('line 776 drawing as blobs=', drawingAsGrating, ' numRing=',numRing,' angleObject0Rad=',angleObject0Rad)
   #Determine what frame we are on
   if useClock: #Don't count on not missing frames. Use actual time.
     t = clock.getTime()
@@ -1048,6 +1049,7 @@ def collectResponses(thisTrial,speed,n,responses,responsesAutopilot, respPromptS
     ####### #End of function definition that collects responses!!!! #################################################
     
 print('Starting experiment of',trials.nTotal,'trials, starting with trial 0.')
+print("DrawingAsBlob=",drawingAsBlobs," drawingAsGrating=",drawingAsGrating, " debugDrawBothAsGratingAndAsBlobs=",debugDrawBothAsGratingAndAsBlobs,"HELLO line 1052 XXXXXXXXXXXXXXXXX")
 #print header for data file
 print('trialnum\tsubject\tsession\tbasicShape\tnumObjects\tspeed\tinitialDirRing0', end='\t', file=dataFile)
 print('fixatnPeriodFrames', end='\t',file=dataFile) #So know when important part of eyetracking begins
