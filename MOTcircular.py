@@ -72,7 +72,7 @@ respTypes=['order']; respType=respTypes[0]
 rng_seed = int(time.time())
 rng = np.random.default_rng(rng_seed); random.seed(rng_seed)
 
-drawingAsGrating = False;  debugDrawBothAsGratingAndAsBlobs = False
+drawingAsGrating = True;  debugDrawBothAsGratingAndAsBlobs = False
 antialiasGrating = False; #True makes the mask not work perfectly at the center, so have to draw fixation over the center
 gratingTexPix=1024 #If go to 128, cue doesn't overlap well with grating #numpy textures must be a power of 2. So, if numColorsRoundTheRing not divide without remainder into textPix, there will be some rounding so patches will not all be same size
 
