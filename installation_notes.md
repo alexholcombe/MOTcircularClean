@@ -17,4 +17,5 @@ cp -r /Applications/EyeLink/SampleExperiments/Python/3.10/pylink /opt/miniconda3
 That seems to have worked! Because when I did the following, it imported:
 
 > conda activate psychopy310
+
 > import pylink
